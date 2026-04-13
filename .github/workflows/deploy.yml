@@ -33,7 +33,6 @@ jobs:
         run: |
           cd frontend
           npm install
-          npm run build # 构建出的文件在 dist 目录
 
   # 阶段三：部署到阿里云
   deploy:

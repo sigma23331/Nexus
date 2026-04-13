@@ -1,0 +1,56 @@
+name: Nexus CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ] # 当代码推送到 main 分支时触发
+
+jobs:
+  # 阶段一：后端测试
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      # 这里可以添加 pytest 等测试命令
+
+  # 阶段二：前端构建
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Build Vue App
+        run: |
+          cd frontend
+          npm install
+          npm run build # 构建出的文件在 dist 目录
+
+  # 阶段三：部署到阿里云
+  deploy:
+    needs: [test-backend, build-frontend] # 必须前两步成功才执行部署
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ALIYUN_SERVER_IP }}
+          username: root
+          key: ${{ secrets.ALIYUN_SSH_KEY }}
+          script: |
+            cd ${{ secrets.REMOTE_TARGET }}
+            git pull origin main
+            # 后端重启（假设你使用 gunicorn 或 pm2）
+            cd backend
+            source venv/bin/activate
+            pip install -r requirements.txt
+            # sudo systemctl restart nexus-backend (示例命令)

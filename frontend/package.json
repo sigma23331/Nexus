@@ -1,12 +1,17 @@
 {
   "name": "frontend",
-  "version": "1.0.0",
-  "main": "index.js",
+  "version": "0.0.0",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vue-tsc && vite build", 
+    "preview": "vite preview"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": ""
+  "dependencies": {
+    "vue": "^3.x.x"
+  },
+  "devDependencies": {
+    "vite": "^5.x.x",
+    "vue-tsc": "^2.x.x",
+    "typescript": "^5.x.x"
+  }
 }

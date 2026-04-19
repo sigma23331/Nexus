@@ -1,0 +1,11 @@
+# 依赖与构建产物（任意子目录下同名文件夹均忽略）
+node_modules/
+dist/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# 环境变量（勿提交密钥）
+.env

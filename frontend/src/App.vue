@@ -10,6 +10,11 @@
       点击请求后端数据
     </button>
   </div>
+
+  <div class="bg-blue-500 text-white p-4 text-center">
+    <h1 class="text-2xl font-bold">Tailwind CSS 测试</h1>
+    <p>如果背景是蓝色，文字白色，说明 Tailwind 工作正常。</p>
+  </div>
 </template>
 
 <script setup lang="ts">

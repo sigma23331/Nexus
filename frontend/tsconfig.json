@@ -1,17 +1,17 @@
 {
-    "compilerOptions": {
-        "target": "ES2020",
-        "module": "ESNext",
-        "strict": true,
-        "jsx": "preserve",
-        "moduleResolution": "bundler",
-        "baseUrl": ".",
-        "paths": {
-            "@/*": ["src/*"]
-        },
-        "types": ["vite/client", "node"],
-        "ignoreDeprecations": "6.0"   // 消除 baseUrl 弃用警告
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "strict": true,
+    "jsx": "preserve",
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
     },
-    "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue"],
-    "exclude": ["node_modules", "dist"]
+    "types": ["vite/client", "node"],
+    "ignoreDeprecations": "6.0" // 消除 baseUrl 弃用警告
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue"],
+  "exclude": ["node_modules", "dist"]
 }

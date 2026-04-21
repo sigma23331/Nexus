@@ -10,7 +10,9 @@
         <h2 class="text-lg font-semibold mb-3">生成与分享</h2>
         <div class="flex gap-3">
           <button class="flex-1 bg-purple-600 rounded-xl py-2">生成运势卡片</button>
-          <button class="flex-1 bg-white/10 border border-white/20 rounded-xl py-2">生成答案卡片</button>
+          <button class="flex-1 bg-white/10 border border-white/20 rounded-xl py-2">
+            生成答案卡片
+          </button>
         </div>
         <div class="mt-4 bg-white/5 rounded-xl p-6 text-center text-slate-400">🖼️ 卡片预览占位</div>
         <div class="mt-4">
@@ -36,11 +38,23 @@
         <h2 class="text-lg font-semibold mb-3">运势 PK / 好友对比</h2>
         <table class="w-full text-sm border border-white/10 rounded-xl overflow-hidden">
           <thead class="bg-white/5">
-            <tr><th class="p-2 text-left">项目</th><th>我</th><th>对方</th></tr>
+            <tr>
+              <th class="p-2 text-left">项目</th>
+              <th>我</th>
+              <th>对方</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td class="p-2">今日综合</td><td class="text-center">—</td><td class="text-center">—</td></tr>
-            <tr><td class="p-2">爱情</td><td class="text-center">—</td><td class="text-center">—</td></tr>
+            <tr>
+              <td class="p-2">今日综合</td>
+              <td class="text-center">—</td>
+              <td class="text-center">—</td>
+            </tr>
+            <tr>
+              <td class="p-2">爱情</td>
+              <td class="text-center">—</td>
+              <td class="text-center">—</td>
+            </tr>
           </tbody>
         </table>
         <div class="mt-4">

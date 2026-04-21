@@ -11,7 +11,8 @@
       <section>
         <h2 class="text-lg font-semibold mb-3">维度来源</h2>
         <div class="flex gap-4">
-          <label class="text-sm text-slate-300">模式
+          <label class="text-sm text-slate-300"
+            >模式
             <select class="ml-2 bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-sm">
               <option>星座</option>
               <option>生肖</option>
@@ -25,10 +26,18 @@
       <section>
         <h2 class="text-lg font-semibold mb-3">今日概览</h2>
         <ul class="space-y-2">
-          <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-pink-400"></span>爱情：中上</li>
-          <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-400"></span>事业：平稳</li>
-          <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-400"></span>健康：注意作息</li>
-          <li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-yellow-400"></span>财富：谨慎消费</li>
+          <li class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-pink-400"></span>爱情：中上
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-blue-400"></span>事业：平稳
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-green-400"></span>健康：注意作息
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-yellow-400"></span>财富：谨慎消费
+          </li>
         </ul>
       </section>
 
@@ -64,8 +73,16 @@
         <h2 class="text-lg font-semibold mb-3">运势卡片</h2>
         <div class="bg-white/5 rounded-xl p-6 text-center text-slate-400">🖼️ 卡片预览占位</div>
         <div class="flex gap-3 mt-4">
-          <button class="flex-1 bg-purple-600 hover:bg-purple-700 rounded-xl py-2 text-sm font-medium">生成卡片</button>
-          <button class="flex-1 bg-white/10 border border-white/20 rounded-xl py-2 text-sm font-medium">分享</button>
+          <button
+            class="flex-1 bg-purple-600 hover:bg-purple-700 rounded-xl py-2 text-sm font-medium"
+          >
+            生成卡片
+          </button>
+          <button
+            class="flex-1 bg-white/10 border border-white/20 rounded-xl py-2 text-sm font-medium"
+          >
+            分享
+          </button>
         </div>
       </section>
     </main>

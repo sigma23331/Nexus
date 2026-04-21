@@ -2,22 +2,22 @@
 
 ## 环境要求（需手动确认/配置）
 
-- Node.js >= **18.0.0**
+- Node.js >= **18.18.0**
 
 ## 配置说明（无需手动确认/配置）
 
-| 依赖 | 版本 |
-| ---- | ---- |
-| **Vue** | 3.5.32 |
-| **Vite** | 5.4.21 |
-| **TypeScript** | 5.9.3 |
-| **Tailwind CSS** | 3.4.19 |
-| Vue Router | 4.6.4 |
-| Pinia | 3.0.4 |
-| Axios | 1.15.1 |
-| ECharts | 6.0.0 |
-| html2canvas | 1.4.1 |
-| dayjs | 1.11.20 |
+| 依赖             | 版本    |
+| ---------------- | ------- |
+| **Vue**          | 3.5.32  |
+| **Vite**         | 5.4.21  |
+| **TypeScript**   | 5.9.3   |
+| **Tailwind CSS** | 3.4.19  |
+| Vue Router       | 4.6.4   |
+| Pinia            | 3.0.4   |
+| Axios            | 1.15.1  |
+| ECharts          | 6.0.0   |
+| html2canvas      | 1.4.1   |
+| dayjs            | 1.11.20 |
 
 ## 快速开始（开发）
 
@@ -35,13 +35,15 @@ npm run dev
 
 # 4.退出
 Ctrl + C -> Y
-```
 
-## 生产构建
-
-```bash
-# 输出 dist 目录
+# 生产构建： 输出 dist 目录
 npm run build
+
+# 代码规范
+# 检查是否有错误
+npm run lint
+# 格式化所有代码（frontend）
+npm run format
 ```
 
 ## 组织架构（同步修改）
@@ -50,6 +52,9 @@ npm run build
 frontend/
 │
 ├── .gitignore                      # Git 忽略文件（node_modules, dist, .env.local 等）
+├── .prettierignore                 # Prettier 忽略文件
+├── .prettierrc                     # Prettier 配置（代码格式化规则）
+├── eslint.config.js                # ESLint 扁平配置（代码检查规则）
 ├── index.html                      # HTML 入口（Vite 自动注入脚本）
 ├── package.json                    # 项目依赖与脚本
 ├── package-lock.json               # 依赖锁版本（必须提交）
@@ -133,32 +138,31 @@ frontend/
 
 ## 关键设计说明
 
-1. **API 层** (`api/`)  
-   - 按业务模块拆分，每个文件导出对应的请求函数（如 `login(phone, code)`）。  
+1. **API 层** (`api/`)
+   - 按业务模块拆分，每个文件导出对应的请求函数（如 `login(phone, code)`）。
    - 统一使用封装好的 `request` 实例，不直接在组件中调用 `axios`。
 
-2. **状态管理** (`stores/`)  
-   - Pinia 存储全局数据，例如用户 token、今日运势、历史答案列表。  
+2. **状态管理** (`stores/`)
+   - Pinia 存储全局数据，例如用户 token、今日运势、历史答案列表。
    - 避免在组件中重复请求同一数据，通过 store 的 `actions` 调用 API 并更新 state。
 
-3. **组合式函数** (`composables/`)  
-   - 封装带有响应式状态和逻辑的复用单元，例如 `useFortune` 内部可调用 API 并返回 `ref` 数据，供多个组件共享。  
+3. **组合式函数** (`composables/`)
+   - 封装带有响应式状态和逻辑的复用单元，例如 `useFortune` 内部可调用 API 并返回 `ref` 数据，供多个组件共享。
    - 与 Pinia 分工：Pinia 用于跨组件共享的**全局状态**；composables 用于封装**非持久化**或特定页面的逻辑。
 
-4. **组件划分**  
-   - `components/common/`：与业务无关的通用 UI（按钮、输入框、模态框）。  
-   - `components/business/`：跨页面使用的业务组件（如运势卡片、答案卡片）。  
+4. **组件划分**
+   - `components/common/`：与业务无关的通用 UI（按钮、输入框、模态框）。
+   - `components/business/`：跨页面使用的业务组件（如运势卡片、答案卡片）。
    - `views/*/components/`：仅属于某个页面的私有组件，避免全局污染。
 
-5. **类型安全**  
-   - `types/` 下定义所有数据模型，与 `API.md` 契约保持一致。  
+5. **类型安全**
+   - `types/` 下定义所有数据模型，与 `API.md` 契约保持一致。
    - API 响应类型可直接从后端契约生成（如使用 `openapi-typescript`），或手动定义。
 
-6. **工具函数**  
-   - `request.ts` 包含请求/响应拦截器，自动处理 token 注入、错误码跳转等。  
+6. **工具函数**
+   - `request.ts` 包含请求/响应拦截器，自动处理 token 注入、错误码跳转等。
    - `storage.ts` 封装 `localStorage` 读写，用于存储 token 和用户偏好。
 
-7. **路由与布局**  
-   - 默认使用 `App.vue` 作为根布局，内部包含 `<router-view>` 和 `<TabBar>`。  
+7. **路由与布局**
+   - 默认使用 `App.vue` 作为根布局，内部包含 `<router-view>` 和 `<TabBar>`。
    - 若需要无 TabBar 的页面（如登录页），可通过路由 `meta` 控制 TabBar 显隐。
-  

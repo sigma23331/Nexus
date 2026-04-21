@@ -18,15 +18,21 @@
       <section>
         <h2 class="text-lg font-semibold mb-3">偏好设置</h2>
         <div class="space-y-4">
-          <label class="block text-sm">默认运势模式
+          <label class="block text-sm"
+            >默认运势模式
             <select class="w-full mt-1 bg-white/10 border border-white/20 rounded-lg p-2">
               <option>星座</option>
               <option>生肖</option>
               <option>塔罗</option>
             </select>
           </label>
-          <label class="block text-sm">心情标签
-            <input type="text" placeholder="平静, 忙碌" class="w-full mt-1 bg-white/10 border border-white/20 rounded-lg p-2">
+          <label class="block text-sm"
+            >心情标签
+            <input
+              type="text"
+              placeholder="平静, 忙碌"
+              class="w-full mt-1 bg-white/10 border border-white/20 rounded-lg p-2"
+            />
           </label>
           <button class="w-full bg-purple-600 rounded-xl py-2">保存</button>
         </div>
@@ -35,18 +41,28 @@
       <section>
         <h2 class="text-lg font-semibold mb-3">情绪日记本</h2>
         <div class="space-y-4">
-          <label class="block text-sm">日期
-            <input type="date" value="2026-04-19" class="w-full mt-1 bg-white/10 border border-white/20 rounded-lg p-2">
+          <label class="block text-sm"
+            >日期
+            <input
+              type="date"
+              value="2026-04-19"
+              class="w-full mt-1 bg-white/10 border border-white/20 rounded-lg p-2"
+            />
           </label>
-          <label class="block text-sm">心情
+          <label class="block text-sm"
+            >心情
             <select class="w-full mt-1 bg-white/10 border border-white/20 rounded-lg p-2">
               <option>好</option>
               <option>一般</option>
               <option>差</option>
             </select>
           </label>
-          <label class="block text-sm">备注
-            <textarea rows="2" class="w-full mt-1 bg-white/10 border border-white/20 rounded-lg p-2"></textarea>
+          <label class="block text-sm"
+            >备注
+            <textarea
+              rows="2"
+              class="w-full mt-1 bg-white/10 border border-white/20 rounded-lg p-2"
+            ></textarea>
           </label>
           <button class="w-full bg-purple-600 rounded-xl py-2">保存日记</button>
         </div>

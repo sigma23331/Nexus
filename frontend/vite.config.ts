@@ -15,7 +15,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5000',  // 转发到你本地启动的Flask
+        target: 'http://127.0.0.1:5000', // 转发到你本地启动的Flask
         changeOrigin: true,
       },
     },

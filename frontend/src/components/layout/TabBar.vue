@@ -1,5 +1,7 @@
 <template>
-  <div class="fixed bottom-0 left-0 right-0 z-10 bg-[#0f0a1e] border-t border-white/10 flex justify-around items-center h-16 px-4 pb-2">
+  <div
+    class="fixed bottom-0 left-0 right-0 z-10 bg-[#0f0a1e] border-t border-white/10 flex justify-around items-center h-16 px-4 pb-2"
+  >
     <router-link
       v-for="tab in tabs"
       :key="tab.path"

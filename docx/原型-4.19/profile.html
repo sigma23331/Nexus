@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="theme-color" content="#6366f1"/>
+<title>我的</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<header class="page-head">
+<span class="head-ic" aria-hidden="true">👤</span>
+<h1>我的</h1>
+</header>
+
+<main class="stack">
+<section>
+<h2>快捷入口</h2>
+<ul class="plain">
+<li>⭐ 收藏的答案</li>
+<li>📅 历史运势记录</li>
+<li>⚙️ 偏好设置</li>
+</ul>
+</section>
+
+<section>
+<h2>偏好设置</h2>
+<label class="block">默认运势模式
+<select><option>星座</option><option>生肖</option><option>塔罗</option></select>
+</label>
+<label class="block">心情标签
+<input type="text" placeholder="平静, 忙碌"/>
+</label>
+<div class="btn-wrap">
+<button type="button" class="btn btn-primary">保存</button>
+</div>
+</section>
+
+<section>
+<h2>情绪日记本</h2>
+<label class="block">日期 <input type="date" value="2026-04-19"/></label>
+<label class="block">心情 <select><option>好</option><option>一般</option><option>差</option></select></label>
+<label class="block">备注 <textarea rows="2"></textarea></label>
+<div class="btn-wrap">
+<button type="button" class="btn btn-primary">保存日记</button>
+</div>
+</section>
+
+<section>
+<h2>个人运势图谱</h2>
+<div class="block" aria-hidden="true">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+</div>
+</section>
+</main>
+
+<nav class="tabbar">
+<a href="index.html" class="tab"><span class="tab-ic" aria-hidden="true">✨</span><span class="tab-tx">运势</span></a>
+<a href="answers.html" class="tab"><span class="tab-ic" aria-hidden="true">📖</span><span class="tab-tx">答案</span></a>
+<a href="community.html" class="tab"><span class="tab-ic" aria-hidden="true">💬</span><span class="tab-tx">社交</span></a>
+<a href="profile.html" class="tab active"><span class="tab-ic" aria-hidden="true">👤</span><span class="tab-tx">我的</span></a>
+</nav>
+</body>
+</html>

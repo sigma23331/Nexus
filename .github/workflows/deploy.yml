@@ -2,10 +2,9 @@ name: Nexus CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ] # 当代码推送到 main 分支时触发
+    branches: [ "main" ]
 
 jobs:
-  # 阶段一：后端测试
   test-backend:
     runs-on: ubuntu-latest
     steps:
@@ -17,10 +16,8 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install -r requirements.txt
-      # 这里可以添加 pytest 等测试命令
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-  # 阶段二：前端构建
   build-frontend:
     runs-on: ubuntu-latest
     steps:
@@ -33,13 +30,40 @@ jobs:
         run: |
           cd frontend
           npm install
+          npm run build # 确保这一步会生成 dist 目录
+      # 将构建好的 dist 目录临时保存，供下一个 job 使用
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-assets
+          path: frontend/dist/
 
-  # 阶段三：部署到阿里云
   deploy:
-    needs: [test-backend, build-frontend] # 必须前两步成功才执行部署
+    needs: [test-backend, build-frontend]
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to Server
+      - uses: actions/checkout@v4
+      
+      # 下载刚才构建好的前端网页
+      - name: Download dist
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-assets
+          path: ./dist-to-upload
+
+      # 1. 搬运前端文件到 Nginx 目录
+      - name: Copy Frontend to Aliyun
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.ALIYUN_SERVER_IP }}
+          username: root
+          key: ${{ secrets.ALIYUN_SSH_KEY }}
+          source: "./dist-to-upload/*"
+          target: "/var/www/mind-island/" # 服务器存放网页的地方
+          strip_components: 1
+
+      # 2. 远程执行后端重启逻辑
+      - name: Deploy Backend via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.ALIYUN_SERVER_IP }}
@@ -48,8 +72,13 @@ jobs:
           script: |
             cd ${{ secrets.REMOTE_TARGET }}
             git pull origin main
-            # 后端重启（假设你使用 gunicorn 或 pm2）
+            
+            # 后端环境处理
             cd backend
+            if [ ! -d "venv" ]; then python3 -m venv venv; fi
             source venv/bin/activate
             pip install -r requirements.txt
-            # sudo systemctl restart nexus-backend (示例命令)
+            
+            # 使用简单的 pkill 重启法（测试阶段够用）
+            pkill gunicorn || true
+            gunicorn -w 2 -b 127.0.0.1:5000 app:app --daemon

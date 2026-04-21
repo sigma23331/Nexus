@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="theme-color" content="#6366f1"/>
+<title>灵启 SoulLink - 答案之书</title>
+<link rel="stylesheet" href="../4.19 simple/style.css"/>
+<style>
+.sub-hint{margin:0 0 10px;font-size:.85rem;color:var(--muted)}
+.mood-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:4px}
+.mood-btn{
+  padding:6px 14px;border-radius:999px;border:1px solid var(--border);
+  background:linear-gradient(180deg,#fff,var(--accent-soft));
+  color:#4338ca;font-size:.8rem;font-weight:600;cursor:pointer;font:inherit;
+}
+.mood-btn:active{transform:scale(.98)}
+.book-wrap{text-align:center;margin-top:4px}
+.book-card{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:min(200px,70vw);height:260px;margin:0 auto;
+  border-radius:16px;
+  background:linear-gradient(145deg,#eef2ff 0%,#e0e7ff 40%,#c7d2fe 100%);
+  border:1px solid var(--border);
+  box-shadow:var(--shadow);
+  cursor:pointer;transition:transform .2s ease,box-shadow .2s ease;
+}
+.book-card:active{transform:scale(.97)}
+.book-emoji{font-size:4rem;line-height:1;opacity:.85;user-select:none}
+.book-hint{margin:10px 0 0;font-size:.8rem;color:var(--muted)}
+.sec-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.sec-head h2{margin-bottom:0}
+.link-more{font-size:.75rem;font-weight:600;color:var(--accent);text-decoration:none;background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:8px;font:inherit}
+.link-more:hover{background:var(--accent-soft)}
+.history-item{
+  display:flex;gap:12px;align-items:center;padding:12px;
+  background:#fafbff;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;
+}
+.history-item:last-child{margin-bottom:0}
+.hist-ic{
+  width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:1.25rem;flex-shrink:0;background:var(--accent-soft);
+}
+.hist-body{flex:1;min-width:0}
+.hist-q{font-size:.8rem;font-weight:600;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-a{font-size:.72rem;color:var(--muted);margin:0}
+.hist-date{font-size:.68rem;color:var(--muted);white-space:nowrap}
+.modal{
+  position:fixed;inset:0;z-index:100;
+  display:flex;align-items:center;justify-content:center;padding:20px 16px 96px;
+  background:rgba(15,23,42,.4);backdrop-filter:blur(6px);
+}
+.modal.hidden{display:none!important}
+.modal-panel{
+  width:100%;max-width:360px;background:var(--card);
+  border:1px solid var(--border);border-radius:16px;padding:24px 20px;
+  box-shadow:0 20px 50px rgba(15,23,42,.15);text-align:center;
+}
+.modal-ic{font-size:2.5rem;line-height:1;margin-bottom:12px}
+.modal-text{font-size:1.05rem;font-weight:700;line-height:1.55;margin:0 0 20px;color:var(--text)}
+.modal-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
+</style>
+</head>
+<body>
+<header class="page-head">
+<span class="head-ic" aria-hidden="true">📖</span>
+<h1>答案之书</h1>
+</header>
+
+<main class="stack">
+<section>
+<p class="sub-hint">闭上眼，在心里默念你的问题</p>
+<div class="mood-row">
+<button type="button" class="mood-btn">焦虑</button>
+<button type="button" class="mood-btn">迷茫</button>
+<button type="button" class="mood-btn">期待</button>
+</div>
+</section>
+
+<section>
+<h2>你的问题</h2>
+<textarea rows="3" placeholder="午饭吃啥？要不要回那条消息？还是先睡一觉再说…"></textarea>
+<div class="btn-wrap">
+<button type="button" class="btn btn-primary" onclick="showAnswer()">开启答案</button>
+<button type="button" class="btn btn-ghost" onclick="showAnswer()">模拟摇晃</button>
+</div>
+</section>
+
+<section>
+<h2>开启书籍</h2>
+<div class="book-wrap">
+<div class="book-card" onclick="showAnswer()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')showAnswer()">
+<span class="book-emoji" aria-hidden="true">📖</span>
+</div>
+<p class="book-hint">轻触书籍，抽一句指引</p>
+</div>
+</section>
+
+<section>
+<div class="sec-head">
+<h2>回溯复盘</h2>
+<button type="button" class="link-more">查看更多</button>
+</div>
+<div class="history-item">
+<div class="hist-ic" aria-hidden="true">✓</div>
+<div class="hist-body">
+<p class="hist-q">问：要不要去旅行？</p>
+<p class="hist-a">「最好的风景就在脚下」</p>
+</div>
+<span class="hist-date">4月10日</span>
+</div>
+<div class="history-item">
+<div class="hist-ic" aria-hidden="true">⏳</div>
+<div class="hist-body">
+<p class="hist-q">问：这次面试能过吗？</p>
+<p class="hist-a">「耐心等待，时机未到」</p>
+</div>
+<span class="hist-date">4月08日</span>
+</div>
+</section>
+</main>
+
+<div class="modal hidden" id="answerModal" aria-modal="true" role="dialog">
+<div class="modal-panel">
+<div class="modal-ic" aria-hidden="true">✨</div>
+<p class="modal-text" id="randomAnswer">宇宙说：不要害怕改变，那是生机。</p>
+<button type="button" class="btn btn-primary" style="width:100%" onclick="hideAnswer()">我明白了</button>
+<div class="modal-actions">
+<button type="button" class="btn btn-ghost btn-sm">分享卡片</button>
+<button type="button" class="btn btn-ghost btn-sm">存入收藏</button>
+</div>
+</div>
+</div>
+
+<nav class="tabbar">
+<a href="index.html" class="tab"><span class="tab-ic" aria-hidden="true">✨</span><span class="tab-tx">运势</span></a>
+<a href="answers.html" class="tab active"><span class="tab-ic" aria-hidden="true">📖</span><span class="tab-tx">答案</span></a>
+<a href="community.html" class="tab"><span class="tab-ic" aria-hidden="true">💬</span><span class="tab-tx">社交</span></a>
+<a href="profile.html" class="tab"><span class="tab-ic" aria-hidden="true">👤</span><span class="tab-tx">我的</span></a>
+</nav>
+
+<script>
+const answers = [
+  "答案就在你最初的想法里。",
+  "现在不是犹豫的时候，全速前进。",
+  "你需要寻求他人的建议再做决定。",
+  "放下执着，你会看到更好的选择。",
+  "答案比你想象的要简单得多。",
+  "有些事情值得你再等一等。",
+  "当你开始爱自己，答案就会浮现。"
+];
+function showAnswer() {
+  const random = answers[Math.floor(Math.random() * answers.length)];
+  document.getElementById("randomAnswer").innerText = "宇宙说：" + random;
+  document.getElementById("answerModal").classList.remove("hidden");
+}
+function hideAnswer() {
+  document.getElementById("answerModal").classList.add("hidden");
+}
+</script>
+</body>
+</html>

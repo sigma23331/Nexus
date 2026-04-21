@@ -24,4 +24,4 @@ USER flaskuser
 EXPOSE 5000
 
 # 运行应用 - 使用新的main.py
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "main:app"]

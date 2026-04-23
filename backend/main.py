@@ -62,8 +62,10 @@ def register_blueprints(app):
     """注册所有蓝图"""
     from routes.test import test_bp
     from routes.auth import auth_bp
+    from routes.user import user_bp
     app.register_blueprint(test_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/v1/auth')
+    app.register_blueprint(user_bp, url_prefix='/v1/user')
 
 
 def register_commands(app):

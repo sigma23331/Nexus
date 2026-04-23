@@ -5,3 +5,12 @@ services:
     ports:
       - "5000:5000"
     restart: always
+
+  frontend:
+    build: ./frontend
+    container_name: mind-island-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always

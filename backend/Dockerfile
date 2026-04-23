@@ -1,6 +1,10 @@
 FROM python:3.10-slim
 WORKDIR /app
 
+# 使用国内 Debian 镜像源（兼容 deb822 新格式与旧 sources.list）
+RUN (sed -i 's|http://deb.debian.org|https://mirrors.aliyun.com|g; s|http://security.debian.org|https://mirrors.aliyun.com|g' /etc/apt/sources.list.d/*.sources 2>/dev/null || true) \
+ && (sed -i 's|http://deb.debian.org|https://mirrors.aliyun.com|g; s|http://security.debian.org|https://mirrors.aliyun.com|g' /etc/apt/sources.list 2>/dev/null || true)
+
 # 安装系统依赖
 RUN apt-get update && apt-get install -y \
     gcc \
@@ -10,8 +14,8 @@ RUN apt-get update && apt-get install -y \
 # 复制依赖文件
 COPY requirements.txt .
 
-# 安装Python依赖
-RUN pip install --no-cache-dir -r requirements.txt
+# 安装Python依赖（使用清华 PyPI 镜像加速）
+RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 复制应用代码
 COPY . .

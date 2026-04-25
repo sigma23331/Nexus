@@ -1,3 +1,5 @@
+from extensions import db
+
 from .base import BaseModel
 from sqlalchemy import Column, String
 from sqlalchemy.orm import validates, relationship
@@ -37,6 +39,23 @@ class User(BaseModel):
         if phone and not re.match(r'^1[3-9]\d{9}$', phone):
             raise ValueError('Invalid phone number format')
         return phone
+
+    @classmethod
+    def create_with_profile(cls, **user_fields):
+        """Create user and default profile in one transaction."""
+        from services.user_profile_service import UserProfileService
+
+        try:
+            user = cls(**user_fields)
+            db.session.add(user)
+            db.session.flush()
+
+            UserProfileService.create_default_profile(db.session, user.id)
+            db.session.commit()
+            return user
+        except Exception:
+            db.session.rollback()
+            raise
 
     def __repr__(self):
         return f'<User {self.nickname} ({self.id})>'

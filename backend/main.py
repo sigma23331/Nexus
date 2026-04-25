@@ -63,6 +63,7 @@ def create_app():
 
 
 def register_blueprints(app):
+    from routes.test import test_bp
     from routes.auth import auth_bp
     from routes.user import user_bp
     from routes.fortune import fortune_bp
@@ -70,6 +71,7 @@ def register_blueprints(app):
     from routes.plaza import plaza_bp
     from routes.diary import diary_bp
 
+    app.register_blueprint(test_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/v1/auth')
     app.register_blueprint(user_bp, url_prefix='/v1/user')
     app.register_blueprint(fortune_bp, url_prefix='/v1/fortune')

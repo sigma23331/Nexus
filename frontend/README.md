@@ -27,11 +27,13 @@ cd frontend
 
 # 2. 安装依赖
 npm ci
-# 安装后出现两条警告，忽略
+# 安装后出现六条警告，忽略
+# 同时注意：使用 npm audit fix 而不带 --force（重点！会影响到版本配置同步）
 
 # 3. 启动开发服务器
 npm run dev
 # 该命令在终端上保持运行，修改前端页面可实现热更新
+# 同时注意：不要一边开着 npm run dev，一边随意点击陌生链接
 
 # 4.退出
 Ctrl + C -> Y
@@ -39,8 +41,8 @@ Ctrl + C -> Y
 # 生产构建： 输出 dist 目录
 npm run build
 
-# 代码规范
-# 检查是否有错误
+# 前端代码规范
+# 检查是否有错误（frontend）
 npm run lint
 # 格式化所有代码（frontend）
 npm run format
@@ -64,6 +66,13 @@ frontend/
 ├── tsconfig.json                   # TypeScript 配置（路径别名、严格模式等）
 ├── tsconfig.node.json              # Node 环境 TS 配置（用于 vite.config.ts，可选）
 ├── vite.config.ts                  # Vite 配置（插件、代理、路径别名）
+│
+├── public/                         # 静态资源目录（不经过构建，直接复制到 dist）
+│   ├── icons/
+│   │   ├── icon-192.png            # PWA 图标 192x192
+│   │   └── icon-512.png            # PWA 图标 512x512
+│   ├── manifest.json               # Web App Manifest
+│   └── favicon.ico                 # 网站图标
 │
 └── src/
     ├── api/                        # API 请求模块（按业务划分）

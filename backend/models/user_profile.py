@@ -7,11 +7,6 @@ class AnswerStyle(enum.Enum):
     PHILOSOPHICAL = 'philosophical'
     HUMOR = 'humor'
 
-class MoodTendency(enum.Enum):
-    OPTIMISTIC = 'optimistic'
-    CALM = 'calm'
-    ANXIOUS = 'anxious'
-
 class PreferredFeature(enum.Enum):
     MOOD_DIARY = 'mood_diary'
     FORTUNE = 'fortune'
@@ -53,9 +48,9 @@ class UserProfile(db.Model):
     )
 
     mood_tendency = db.Column(
-        db.Enum(MoodTendency),
+        db.String(50),
         nullable=True,
-        comment='情绪倾向：optimistic/calm/anxious'
+        comment='情绪倾向，AI分析生成，例如"optimistic"/"anxious"等'
     )
 
     preferred_feature = db.Column(

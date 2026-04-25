@@ -1,0 +1,24 @@
+{
+  "name": "心运岛",
+  "short_name": "心运岛",
+  "description": "轻量级心灵慰藉工具，每日运势、答案之书、情绪日记与轻社交分享",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#6366f1",
+  "background_color": "#0f0a1e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

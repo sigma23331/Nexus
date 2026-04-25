@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "nexus_user", "-d", "nexus_db" ]
+      test: ["CMD", "pg_isready", "-U", "nexus_user", "-d", "nexus_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,7 +32,8 @@ services:
     volumes:
       - .:/app
     command: >
-      sh -c "flask init-db &&
+      sh -c "flask db upgrade &&
              flask run --host=0.0.0.0 --port=5000"
+
 volumes:
   postgres_data:

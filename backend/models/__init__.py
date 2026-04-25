@@ -7,7 +7,7 @@ from .answer import AnswerRecord
 from .diary import DiaryEntry, MoodType
 from .plaza import PlazaCard, CardType
 from .association import Favorite, Like, SmsCode
-from .user_profile import UserProfile, AnswerStyle, MoodTendency, PreferredFeature, ActiveHourBucket
+from .user_profile import UserProfile, AnswerStyle, PreferredFeature, ActiveHourBucket
 
 
 __all__ = [
@@ -23,7 +23,6 @@ __all__ = [
     'SmsCode',
     'UserProfile',
     'AnswerStyle',
-    'MoodTendency',
     'PreferredFeature',
     'ActiveHourBucket',
 ]

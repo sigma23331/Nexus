@@ -91,12 +91,16 @@ frontend/
     │   ├── common/                 # 通用组件（按钮、输入框、弹窗、加载动画）
     │   ├── layout/                 # 布局组件（TabBar、Header、安全区容器）
     │   └── business/               # 业务组件（运势卡片、答案卡片、日记条目等）
+    │       └── MoodDiaryForm.vue   # 情绪日记表单组件
     │
     ├── composables/                # 组合式函数（封装可复用的响应式逻辑）
     │   ├── useAuth.ts              # 登录、token 管理
     │   ├── useFortune.ts           # 获取运势、轨迹等
     │   ├── useAnswer.ts            # 提问、历史、收藏
     │   └── usePlaza.ts             # 广场卡片加载、点赞
+    │
+    ├── config/
+    │   └── typography.ts           # 字体样式配置文件
     │
     ├── layouts/                    # 布局模板（可选，App.vue 已包含主布局）
     │   └── DefaultLayout.vue       # 含 TabBar 和路由视口的布局（若需要复杂布局）

@@ -1,5 +1,6 @@
 // eslint.config.js
 import js from '@eslint/js'
+import globals from 'globals'
 import vuePlugin from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
 import tseslint from 'typescript-eslint'
@@ -21,6 +22,10 @@ export default tseslint.config(
         parser: tseslint.parser, // 解析 <script> 中的 TypeScript
         sourceType: 'module',
         ecmaVersion: 'latest',
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.node,
       },
     },
     plugins: {

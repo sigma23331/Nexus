@@ -82,7 +82,7 @@
         <p class="text-xl font-bold leading-relaxed my-6 text-slate-900">{{ currentAnswer }}</p>
         <button
           @click="hideAnswer"
-          class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl font-bold"
+          class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl font-bold text-white"
         >
           我明白了
         </button>
@@ -98,6 +98,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+// ==================== 静态数据（暂未连接 Pinia） ====================
 const question = ref('')
 const modalVisible = ref(false)
 const currentAnswer = ref('')
@@ -112,17 +113,6 @@ const answerPool = [
   '当你开始爱自己，答案就会浮现。',
 ]
 
-const showAnswer = () => {
-  const random = answerPool[Math.floor(Math.random() * answerPool.length)]
-  currentAnswer.value = `宇宙说：${random}`
-  modalVisible.value = true
-}
-
-const hideAnswer = () => {
-  modalVisible.value = false
-}
-
-// 模拟历史数据
 const history = ref([
   { id: 1, icon: '✓', question: '要不要去旅行？', answer: '最好的风景就在脚下', date: '4月10日' },
   {
@@ -133,4 +123,59 @@ const history = ref([
     date: '4月08日',
   },
 ])
+
+// ==================== Pinia 接入示例（注释） ====================
+/*
+import { useAnswerStore } from '@/stores/answer'
+import { useUserStore } from '@/stores/user'
+
+const answerStore = useAnswerStore()
+const userStore = useUserStore()
+
+// 从 store 读取历史记录（假设已通过 API 设置）
+const history = computed(() => answerStore.historyList)
+
+// 提交答案后更新 store
+const showAnswer = () => {
+  const random = answerPool[Math.floor(Math.random() * answerPool.length)]
+  const newAnswer = {
+    id: `ans_${Date.now()}`,
+    question: question.value,
+    answerText: random,
+    createdAt: new Date().toISOString()
+  }
+  answerStore.setCurrentAnswer(newAnswer)
+  answerStore.appendHistoryItem({
+    id: newAnswer.id,
+    question: newAnswer.question,
+    answerText: newAnswer.answerText,
+    createdAt: newAnswer.createdAt
+  })
+  currentAnswer.value = `宇宙说：${random}`
+  modalVisible.value = true
+  question.value = ''   // 清空输入
+}
+
+// 在 onMounted 中加载历史记录
+import { onMounted } from 'vue'
+import { getAnswerHistory } from '@/api/answer'
+
+onMounted(async () => {
+  if (answerStore.historyList.length === 0) {
+    const res = await getAnswerHistory()
+    answerStore.setHistoryList(res.list, res.total)
+  }
+})
+*/
+
+// 当前使用纯静态数据，未连接 store
+function showAnswer() {
+  const random = answerPool[Math.floor(Math.random() * answerPool.length)]
+  currentAnswer.value = `宇宙说：${random}`
+  modalVisible.value = true
+}
+
+function hideAnswer() {
+  modalVisible.value = false
+}
 </script>

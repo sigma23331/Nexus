@@ -23,7 +23,7 @@ def create_app():
     # === 初始化扩展 ===
     db.init_app(app)
     migrate.init_app(app, db)
-    cors.init_app(app, resources={r"/api/*": {"origins": "*"}})
+    cors.init_app(app, resources={r"/v1/*": {"origins": "*"}})
     jwt.init_app(app)
 
     # === 导入模型（必须放在这里，确保表被 SQLAlchemy 识别） ===
@@ -63,7 +63,6 @@ def create_app():
 
 
 def register_blueprints(app):
-    from routes.test import test_bp
     from routes.auth import auth_bp
     from routes.user import user_bp
     from routes.fortune import fortune_bp
@@ -71,7 +70,6 @@ def register_blueprints(app):
     from routes.plaza import plaza_bp
     from routes.diary import diary_bp
 
-    app.register_blueprint(test_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/v1/auth')
     app.register_blueprint(user_bp, url_prefix='/v1/user')
     app.register_blueprint(fortune_bp, url_prefix='/v1/fortune')

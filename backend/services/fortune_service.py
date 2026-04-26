@@ -14,6 +14,8 @@ def _format_today_payload(record):
         "content": record.content,
         "yi": record.yi or [],
         "ji": record.ji or [],
+        "luckyColor": record.lucky_color,
+        "luckyDirection": record.lucky_direction,
     }
 
 
@@ -31,6 +33,8 @@ def get_today_fortune(user_id):
             content=defaults["content"],
             yi=defaults["yi"],
             ji=defaults["ji"],
+            lucky_color=defaults.get("luckyColor"),
+            lucky_direction=defaults.get("luckyDirection"),
         )
         db.session.add(record)
         db.session.commit()

@@ -72,9 +72,10 @@ class RealProvider(LLMProvider):
                 {
                     "role": "system",
                     "content": (
-                        "请输出JSON对象，包含字段：score,title,content,yi,ji。"
+                        "请输出JSON对象，包含字段：score,title,content,yi,ji,luckyColor,luckyDirection。"
                         "score是0-100整数；title不超过20字；content不超过200字；"
-                        "yi和ji是字符串数组且最多5项。只输出JSON。"
+                        "yi和ji是字符串数组且最多5项；luckyColor和luckyDirection是字符串各最多10字。"
+                        "只输出JSON。"
                     ),
                 },
                 {"role": "user", "content": f"日期: {target_date.isoformat()}"},
@@ -94,6 +95,8 @@ class RealProvider(LLMProvider):
             "content": str(data.get("content", "今日节奏平衡，先完成最重要的一件事。"))[:200],
             "yi": [str(item)[:20] for item in yi[:5]],
             "ji": [str(item)[:20] for item in ji[:5]],
+            "luckyColor": str(data.get("luckyColor", ""))[:10] or None,
+            "luckyDirection": str(data.get("luckyDirection", ""))[:10] or None,
         }
 
     def analyze_user_profile(self, diary_entries: list, answer_questions: list) -> dict:

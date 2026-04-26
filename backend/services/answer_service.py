@@ -29,6 +29,13 @@ def list_history(user_id, page, limit):
         .order_by(AnswerRecord.created_at.desc())\
         .paginate(page=page, per_page=limit, error_out=False)
 
+    answer_ids = [record.id for record in pagination.items]
+    favorited_ids = {
+        r.answer_id for r in Favorite.query.filter(
+            Favorite.user_id == user_id, Favorite.answer_id.in_(answer_ids)
+        ).all()
+    } if answer_ids else set()
+
     payload = []
     for record in pagination.items:
         payload.append({
@@ -36,6 +43,7 @@ def list_history(user_id, page, limit):
             "question": record.question,
             "answerText": record.answer_text,
             "createdAt": record.created_at.isoformat() + "Z" if record.created_at else None,
+            "isFavorited": record.id in favorited_ids,
         })
 
     return {

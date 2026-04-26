@@ -35,6 +35,8 @@ class MockProvider(LLMProvider):
             "content": "今日节奏平衡，先完成最重要的一件事。",
             "yi": ["规律作息", "专注学习", "温和沟通"],
             "ji": ["冲动决定", "过度熬夜", "拖延"],
+            "luckyColor": "天蓝",
+            "luckyDirection": "东南",
         }
 
     def analyze_user_profile(self, diary_entries: list, answer_questions: list) -> dict:

@@ -359,15 +359,18 @@
 - **返回 data**:
   ```json
   {
-    "id": "f_20260418_10086",    // 运势唯一ID (便于分享或追溯)
-    "date": "2026-04-18",       // 运势所属日期，格式YYYY-MM-DD 
-    // summary
-    "score": 88,                // 整数，0-100
-    "title": "大吉 · 宜行",     // 1-20字符
-    "content": "今日星象汇聚在你的心灵宫位，适合开启新计划。",  // 1-200字符
-    // dailyGuide
-    "yi": ["深度睡眠", "整理书桌", "远程问候"],  // 数组，最多5个
-    "ji": ["过度熬夜", "重体力劳动", "争论"]    // 数组，最多5个
+    "id": "f_20260418_10086",
+    "date": "2026-04-18",
+    "score": 88,
+    "title": "大吉 · 宜行/上上签",                      // 签文等级
+    "content_main": "风起云开，顺遂自来",   // 签文主旨
+    "content_sub": "今日宜稳中求进，心静则通达", // 签文解读
+    "yi": ["喝奶茶", "摸鱼五分钟"],
+    "ji": ["熬夜", "已读不回"],
+    "love": "中上",
+    "career": "平稳",
+    "health": "注意作息",
+    "wealth": "谨慎消费"
   }
   ```
 
@@ -722,15 +725,18 @@
 
 | 模型 | 字段 | 类型 | 必填 | 约束 |
 |------|------|------|------|------|
-| **FortuneResponse** | id | string | 是 | 唯一识别码 |
+| **FortuneToday** | id | string | 是 | 唯一识别码 |
 | | date | string | 是 | YYYY-MM-DD |
 | | score | integer | 是 | 0-100 整数 |
-| | title | string | 是 | 1-20字符 |
-| | content | string | 是 | 1-200字符 |
-| | luckyColor | string | 否 | 1-20字符 |
-| | luckyDirection | string | 否 | 1-20字符 |
-| | yi | array | 是 | string 数组，最多5个 |
-| | ji | array | 是 | string 数组，最多5个 |
+| | title | string | 是 | 签文等级，1-20字符，如“上上签” |
+| | content_main | string | 是 | 签文主旨，1-200字符，如“风起云开，顺遂自来” |
+| | content_sub | string | 是 | 签文解读，1-200字符，如“今日宜稳中求进，心静则通达” |
+| | yi | array | 是 | string 数组，最多5个，代表“宜”的事项 |
+| | ji | array | 是 | string 数组，最多5个，代表“忌”的事项 |
+| | love | string | 否 | 爱情运势描述，1-20字符 |
+| | career | string | 否 | 事业运势描述，1-20字符 |
+| | health | string | 否 | 健康运势描述，1-20字符 |
+| | wealth | string | 否 | 财富运势描述，1-20字符 |
 | **AnswerRequest** | question | string | 是 | 1-200字符 |
 | **AnswerResponse** | id | string | 是 | 唯一识别码 (ans_xxx) |
 | | question | string | 是 | 1-200字符 |

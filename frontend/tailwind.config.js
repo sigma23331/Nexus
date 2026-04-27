@@ -1,10 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   // 必须添加下面这一行，告诉 Tailwind 扫描哪些文件
-  content: [
-    "./index.html",
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {

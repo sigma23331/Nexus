@@ -20,10 +20,10 @@
               {{ fortuneData.title }}
             </span>
           </div>
-          <div class="rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-5 text-center">
-            <p class="text-lg font-semibold text-slate-900">{{ fortuneData.content_main }}</p>
-            <p class="mt-2 text-xs text-amber-700">{{ fortuneData.content_sub }}</p>
-          </div>
+          <TodayFortuneContent
+            :content-main="fortuneData.content_main"
+            :content-sub="fortuneData.content_sub"
+          />
 
           <div class="space-y-3">
             <h2 class="text-sm font-semibold text-slate-700">今日概览</h2>
@@ -105,9 +105,14 @@
       <!-- 运势卡片生成 -->
       <section>
         <h2 class="text-lg font-semibold mb-3">运势卡片</h2>
-        <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 text-center text-slate-400">
-          🖼️ 卡片预览占位
-        </div>
+        <FortuneCardPreview
+          :title="fortuneData.title"
+          :score="fortuneData.score"
+          :content-main="fortuneData.content_main"
+          :content-sub="fortuneData.content_sub"
+          :yi="fortuneData.yi"
+          :ji="fortuneData.ji"
+        />
         <div class="flex gap-3 mt-4">
           <button
             class="flex-1 bg-purple-600 hover:bg-purple-700 rounded-xl py-2 text-sm font-medium"
@@ -128,6 +133,8 @@
 <script setup lang="ts">
 import * as echarts from 'echarts'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import FortuneCardPreview from './components/FortuneCardPreview.vue'
+import TodayFortuneContent from './components/TodayFortuneContent.vue'
 // import { useFortuneStore } from '@/stores/fortune'
 
 // 静态数据（临时，后续替换为 store）

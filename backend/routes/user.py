@@ -6,6 +6,8 @@ from models.fortune import FortuneRecord
 from models.answer import AnswerRecord
 from models.diary import DiaryEntry
 from extensions import db
+from services.profile_analysis_service import ProfileAnalysisService
+from services.user_profile_service import UserProfileService
 
 user_bp = Blueprint('user', __name__)
 
@@ -32,6 +34,15 @@ def get_profile():
     answer_collected = user.favorites.count()      # 收藏的答案数
     plaza_post_count = user.plaza_cards.count()    # 广场发布卡片数
 
+    # AI 分析：冷却后自动更新 mood_tendency / topic_interests / self_context_tag
+    try:
+        ProfileAnalysisService.trigger_analysis_if_needed(user_id=user.id)
+    except Exception:
+        current_app.logger.warning(f"mood analysis failed for user {user.id}", exc_info=True)
+
+    profile = UserProfileService.get_by_user_id(user.id)
+    profile_data = UserProfileService.to_dict(profile) if profile else None
+
     return jsonify(code=200, message="success", data={
         "userInfo": {
             "uid": user.id,
@@ -42,7 +53,8 @@ def get_profile():
             "diaryCount": diary_count,
             "answerCollected": answer_collected,
             "plazaPostCount": plaza_post_count
-        }
+        },
+        "profile": profile_data,
     }), 200
 
 

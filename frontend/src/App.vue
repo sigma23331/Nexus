@@ -1,5 +1,7 @@
 <template>
-  <div class="app-container relative min-h-screen bg-[#0f0a1e]">
+  <div
+    class="app-container relative min-h-screen bg-white text-slate-900 w-full max-w-md mx-auto shadow-sm"
+  >
     <router-view v-slot="{ Component }">
       <keep-alive>
         <component :is="Component" />

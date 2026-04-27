@@ -81,4 +81,4 @@ jobs:
             
             # 使用简单的 pkill 重启法（测试阶段够用）
             pkill gunicorn || true
-            gunicorn -w 2 -b 127.0.0.1:5000 app:app --daemon
+            gunicorn -w 2 -b 127.0.0.1:5000 main:app --daemon

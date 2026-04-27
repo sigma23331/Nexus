@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-[#0f0a1e] text-white pb-20">
+  <div class="min-h-screen bg-white text-slate-900 pb-20">
     <header class="flex items-center gap-2 px-6 pt-6 pb-2">
       <span class="text-2xl">📖</span>
       <h1 class="text-2xl font-bold">答案之书</h1>
@@ -10,17 +10,17 @@
 
       <div class="flex gap-2 justify-center">
         <button
-          class="px-4 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-xs text-blue-300"
+          class="px-4 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs text-blue-700"
         >
           焦虑
         </button>
         <button
-          class="px-4 py-1 bg-purple-500/20 border border-purple-500/30 rounded-full text-xs text-purple-300"
+          class="px-4 py-1 bg-purple-50 border border-purple-200 rounded-full text-xs text-purple-700"
         >
           迷茫
         </button>
         <button
-          class="px-4 py-1 bg-pink-500/20 border border-pink-500/30 rounded-full text-xs text-pink-300"
+          class="px-4 py-1 bg-pink-50 border border-pink-200 rounded-full text-xs text-pink-700"
         >
           期待
         </button>
@@ -31,24 +31,16 @@
         <textarea
           v-model="question"
           rows="3"
-          class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-purple-500"
+          class="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-purple-500"
           placeholder="午饭吃啥？要不要回那条消息？..."
         ></textarea>
-        <div class="flex gap-3 mt-4">
-          <button @click="showAnswer" class="flex-1 bg-purple-600 rounded-xl py-2">开启答案</button>
-          <button
-            @click="showAnswer"
-            class="flex-1 bg-white/10 border border-white/20 rounded-xl py-2"
-          >
-            模拟摇晃
-          </button>
-        </div>
+        <p class="mt-3 text-xs text-slate-500">输入问题后，轻触书籍抽取答案。</p>
       </section>
 
       <section class="text-center">
         <div
           @click="showAnswer"
-          class="inline-flex items-center justify-center w-48 h-64 rounded-2xl bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-950 border-l-8 border-indigo-400 shadow-2xl cursor-pointer active:scale-95 transition"
+          class="inline-flex items-center justify-center w-48 h-64 rounded-2xl bg-gradient-to-br from-indigo-100 via-purple-100 to-indigo-50 border-l-8 border-indigo-300 shadow-xl cursor-pointer active:scale-95 transition"
         >
           <span class="text-6xl">📖</span>
         </div>
@@ -58,13 +50,13 @@
       <section>
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-lg font-semibold">回溯复盘</h2>
-          <button class="text-xs text-purple-400">查看更多</button>
+          <button class="text-xs text-purple-600">查看更多</button>
         </div>
         <div class="space-y-3">
           <div
             v-for="item in history"
             :key="item.id"
-            class="flex gap-3 items-center p-3 bg-white/5 rounded-xl"
+            class="flex gap-3 items-center p-3 bg-white border border-slate-200 rounded-xl"
           >
             <div class="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center">
               {{ item.icon }}
@@ -85,9 +77,9 @@
       class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
       @click.self="hideAnswer"
     >
-      <div class="bg-[#1e1932] border border-white/20 rounded-3xl w-full max-w-sm p-8 text-center">
+      <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-sm p-8 text-center">
         <span class="text-4xl">✨</span>
-        <p class="text-xl font-bold leading-relaxed my-6">{{ currentAnswer }}</p>
+        <p class="text-xl font-bold leading-relaxed my-6 text-slate-900">{{ currentAnswer }}</p>
         <button
           @click="hideAnswer"
           class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl font-bold"
@@ -95,8 +87,8 @@
           我明白了
         </button>
         <div class="flex justify-center gap-4 mt-6">
-          <button class="text-xs text-slate-400 flex items-center gap-1">📤 分享卡片</button>
-          <button class="text-xs text-slate-400 flex items-center gap-1">🔖 存入收藏</button>
+          <button class="text-xs text-slate-500 flex items-center gap-1">📤 分享卡片</button>
+          <button class="text-xs text-slate-500 flex items-center gap-1">🔖 存入收藏</button>
         </div>
       </div>
     </div>

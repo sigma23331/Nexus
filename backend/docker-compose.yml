@@ -14,13 +14,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-<<<<<<< Updated upstream
       test: ["CMD", "pg_isready", "-U", "nexus_user", "-d", "nexus_db"]
       interval: 10s
-=======
-      test: ["CMD-SHELL", "pg_isready -U nexus_user -d nexus_db"]
-      interval: 5s
->>>>>>> Stashed changes
       timeout: 5s
       retries: 5
 
@@ -46,18 +41,15 @@ services:
     build: ./frontend
     container_name: mind-island-frontend
     ports:
-<<<<<<< Updated upstream
-      - "5000:5000"
+      - "${BACKEND_PORT:-5000}:5000"
     volumes:
       - .:/app
     command: >
-      sh -c "flask db upgrade &&
+      sh -c "python -c 'from main import app; from extensions import db; ctx = app.app_context(); ctx.push(); db.create_all(); ctx.pop()' &&
              flask run --host=0.0.0.0 --port=5000"
-=======
       - "80:80"
     depends_on:
       - backend
->>>>>>> Stashed changes
 
 volumes:
   postgres_data:

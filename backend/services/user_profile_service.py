@@ -11,7 +11,6 @@ from models.fortune import FortuneRecord
 from models.user_profile import (
     ActiveHourBucket,
     AnswerStyle,
-    MoodTendency,
     PreferredFeature,
     UserProfile,
 )
@@ -250,7 +249,7 @@ class UserProfileService:
             'answer_style': profile.answer_style.value if profile.answer_style else None,
             'topic_interests': profile.topic_interests or [],
             'self_context_tag': profile.self_context_tag,
-            'mood_tendency': profile.mood_tendency.value if profile.mood_tendency else None,
+            'mood_tendency': profile.mood_tendency if profile.mood_tendency else None,
             'preferred_feature': profile.preferred_feature.value if profile.preferred_feature else None,
             'active_hour_bucket': profile.active_hour_bucket.value if profile.active_hour_bucket else None,
             'personalization_enabled': profile.personalization_enabled,
@@ -272,7 +271,6 @@ class UserProfileService:
 
         enum_maps = {
             'answer_style': AnswerStyle,
-            'mood_tendency': MoodTendency,
             'preferred_feature': PreferredFeature,
             'active_hour_bucket': ActiveHourBucket,
         }

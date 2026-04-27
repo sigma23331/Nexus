@@ -6,7 +6,7 @@
 - **Base URL**: `https://api.xinyundao.com/v1` (根据实际环境替换，开发环境可替换为 Mock 地址)
 - **Content-Type**: `application/json`
 - **认证方式**: 请求头携带 `Authorization: Bearer {token}`（通过登录接口获得，支持手机号/账密两种方式，微信方式预留）
-- **时间格式**: 所有时间字段统一使用 **ISO 8601** 格式，如 `2026-04-18T10:30:00+08:00`
+- **时间格式**: 所有时间字段统一使用 **ISO 8601** 格式（UTC），如 `2026-04-18T10:30:00Z`
 - **分页规范**:
   - 传统分页 (`page` + `limit`) 响应格式:
     ```json
@@ -79,6 +79,9 @@
 
 - **MoodType**: `happy` | `calm` | `sad` | `angry` | `tired` (情绪日记标签)
 - **CardType**: `fortune` | `answer` (广场卡片来源类型)
+- **AnswerStyle**: `philosophical` | `humor` (答案风格偏好)
+- **PreferredFeature**: `mood_diary` | `fortune` | `answer` (用户最常用功能)
+- **ActiveHourBucket**: `morning` | `afternoon` | `night` (用户活跃时段)
 
 ### 限流策略（未定）
 
@@ -332,7 +335,15 @@
 - **返回 data**:
   ```json
   {
-    "success": true
+    "id": "f_20260418_10086",    // 运势唯一ID (便于分享或追溯)
+    "date": "2026-04-18",       // 运势所属日期，格式YYYY-MM-DD 
+    "score": 88,                // 整数，0-100
+    "title": "大吉 · 宜行",     // 1-20字符
+    "content": "今日星象汇聚在你的心灵宫位，适合开启新计划。",  // 1-200字符
+    "yi": ["深度睡眠", "整理书桌", "远程问候"],  // 数组，最多5个
+    "ji": ["过度熬夜", "重体力劳动", "争论"],   // 数组，最多5个
+    "luckyColor": null,          // 可选，幸运颜色
+    "luckyDirection": null       // 可选，幸运方向
   }
   ```
   > 前端清除本地 token 即可，后端可选实现黑名单机制。
@@ -359,15 +370,18 @@
 - **返回 data**:
   ```json
   {
-    "id": "f_20260418_10086",    // 运势唯一ID (便于分享或追溯)
-    "date": "2026-04-18",       // 运势所属日期，格式YYYY-MM-DD 
-    // summary
-    "score": 88,                // 整数，0-100
-    "title": "大吉 · 宜行",     // 1-20字符
-    "content": "今日星象汇聚在你的心灵宫位，适合开启新计划。",  // 1-200字符
-    // dailyGuide
-    "yi": ["深度睡眠", "整理书桌", "远程问候"],  // 数组，最多5个
-    "ji": ["过度熬夜", "重体力劳动", "争论"]    // 数组，最多5个
+    "id": "f_20260418_10086",
+    "date": "2026-04-18",
+    "score": 88,
+    "title": "大吉 · 宜行/上上签",                      // 签文等级
+    "content_main": "风起云开，顺遂自来",   // 签文主旨
+    "content_sub": "今日宜稳中求进，心静则通达", // 签文解读
+    "yi": ["喝奶茶", "摸鱼五分钟"],
+    "ji": ["熬夜", "已读不回"],
+    "love": "中上",
+    "career": "平稳",
+    "health": "注意作息",
+    "wealth": "谨慎消费"
   }
   ```
 
@@ -426,7 +440,7 @@
     "id": "ans_1002",               // 答案记录唯一ID
     "question": "这周面试能过吗？",
     "answerText": "现在不是犹豫的时候，全心投入。",  // 1-100字符
-    "createdAt": "2026-04-10T00:00:00+08:00" 
+    "createdAt": "2026-04-10T00:00:00Z" 
   }
   ```
 
@@ -447,13 +461,15 @@
         "id": "1",
         "question": "该辞职吗？",
         "answerText": "寻找新的起点。",
-        "createdAt": "2026-04-10T00:00:00+08:00"
+        "createdAt": "2026-04-10T00:00:00Z",
+        "isFavorited": true
       },
       {
         "id": "2",
         "question": "要不要去旅行？",
         "answerText": "最好的风景就在脚下",
-        "createdAt": "2026-04-08T12:30:00+08:00"
+        "createdAt": "2026-04-08T12:30:00Z",
+        "isFavorited": false
       }
     ]
   }
@@ -511,7 +527,7 @@
           "likes": 24,
           "isLiked": false
         },
-        "createdAt": "2026-04-18T10:30:00+08:00"
+        "createdAt": "2026-04-18T10:30:00Z"
       }
     ],
     "nextCursor": "base64encoded_cursor",
@@ -567,7 +583,9 @@
 ## 6. 用户模块 (User) – 我的页面
 
 ### 6.1 获取个人中心概览
+
 - **接口**: `GET /user/profile`
+- **说明**: 返回用户信息、统计数据及 AI 绘制的用户画像（`profile`）。每次调用会检查画像冷却时间（默认 1 小时），过期则异步通过 LLM 自动更新情绪倾向、兴趣主题、个人情景。
 - **返回 data**:
   ```json
   {
@@ -580,9 +598,30 @@
       "diaryCount": 24,
       "answerCollected": 15,
       "plazaPostCount": 3
+    },
+    "profile": {
+      "answer_style": null,
+      "topic_interests": ["career", "health"],
+      "self_context_tag": "日常",
+      "mood_tendency": "optimistic",
+      "preferred_feature": "fortune",
+      "active_hour_bucket": "morning",
+      "personalization_enabled": true
     }
   }
   ```
+
+  `profile` 字段说明：
+
+  | 字段 | 类型 | 说明 | 更新方式 |
+  |------|------|------|----------|
+  | `answer_style` | enum \| null | 答案风格偏好：`philosophical` / `humor`，目前由用户显式设定 | 用户手动 |
+  | `topic_interests` | string[] | 兴趣标签，如 `["career","health","love"]`，由 AI 分析日记内容 + 提问记录生成 | AI 冷却触发 |
+  | `self_context_tag` | string \| null | 用户当前生活情景，如"备考期"、"职场新人"，由 AI 推断 | AI 冷却触发 |
+  | `mood_tendency` | string \| null | 情绪倾向，如 `optimistic` / `calm` / `anxious`，由 AI 分析日记 mood_tag + 内容生成 | AI 冷却触发 |
+  | `preferred_feature` | enum \| null | 最常用功能：`mood_diary` / `fortune` / `answer`，由各模块使用频次统计 | 写入时触发 |
+  | `active_hour_bucket` | enum \| null | 活跃时段：`morning` / `afternoon` / `night`，由行为时间分布统计 | 写入时触发 |
+  | `personalization_enabled` | boolean | 是否启用个性化推荐，默认 `true` | 用户手动 |
 
 ### 6.2 获取历史运势记录
 - **接口**: `GET /user/history/fortune`
@@ -627,13 +666,13 @@
         "id": "ans_1002",
         "question": "下周的项目会顺利吗？",
         "answerText": "现在的努力终将获得回报。",
-        "createdAt": "2026-04-15T14:20:00+08:00"
+        "createdAt": "2026-04-15T14:20:00Z"
       },
       {
         "id": "ans_985",
         "question": "要不要去吃火锅？",
         "answerText": "这取决于你当下的心情，随心而动。",
-        "createdAt": "2026-04-12T18:30:00+08:00"
+        "createdAt": "2026-04-12T18:30:00Z"
       }
     ]
   }
@@ -653,7 +692,7 @@
   ```json
   {
     "id": "diary_101",
-    "createdAt": "2026-04-18T10:30:00+08:00"
+    "createdAt": "2026-04-18T10:30:00Z"
   }
   ```
 
@@ -689,7 +728,7 @@
     "id": "diary_101",
     "moodTag": "happy",
     "content": "今天在公园看到了一只白色的流浪猫，很治愈。",
-    "createdAt": "2026-04-18T10:30:00+08:00"
+    "createdAt": "2026-04-18T10:30:00Z"
   }
   ```
 
@@ -722,15 +761,18 @@
 
 | 模型 | 字段 | 类型 | 必填 | 约束 |
 |------|------|------|------|------|
-| **FortuneResponse** | id | string | 是 | 唯一识别码 |
+| **FortuneToday** | id | string | 是 | 唯一识别码 |
 | | date | string | 是 | YYYY-MM-DD |
 | | score | integer | 是 | 0-100 整数 |
-| | title | string | 是 | 1-20字符 |
-| | content | string | 是 | 1-200字符 |
-| | luckyColor | string | 否 | 1-20字符 |
-| | luckyDirection | string | 否 | 1-20字符 |
-| | yi | array | 是 | string 数组，最多5个 |
-| | ji | array | 是 | string 数组，最多5个 |
+| | title | string | 是 | 签文等级，1-20字符，如“上上签” |
+| | content_main | string | 是 | 签文主旨，1-200字符，如“风起云开，顺遂自来” |
+| | content_sub | string | 是 | 签文解读，1-200字符，如“今日宜稳中求进，心静则通达” |
+| | yi | array | 是 | string 数组，最多5个，代表“宜”的事项 |
+| | ji | array | 是 | string 数组，最多5个，代表“忌”的事项 |
+| | love | string | 否 | 爱情运势描述，1-20字符 |
+| | career | string | 否 | 事业运势描述，1-20字符 |
+| | health | string | 否 | 健康运势描述，1-20字符 |
+| | wealth | string | 否 | 财富运势描述，1-20字符 |
 | **AnswerRequest** | question | string | 是 | 1-200字符 |
 | **AnswerResponse** | id | string | 是 | 唯一识别码 (ans_xxx) |
 | | question | string | 是 | 1-200字符 |
@@ -747,6 +789,13 @@
 | | snapshotUrl | url | 是 | https 图片链接 |
 | | stats | object | 是 | likes, isLiked |
 | | createdAt | ISO8601 | 是 | - |
+| **UserProfile** | answer_style | enum | 否 | philosophical, humor |
+| | topic_interests | array | 否 | string 数组，最长20字符/项 |
+| | self_context_tag | string | 否 | 最多20字 |
+| | mood_tendency | string | 否 | 最多50字符 |
+| | preferred_feature | enum | 否 | mood_diary, fortune, answer |
+| | active_hour_bucket | enum | 否 | morning, afternoon, night |
+| | personalization_enabled | boolean | 是 | 默认 true |
 
 ---
 

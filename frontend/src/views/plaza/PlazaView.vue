@@ -14,7 +14,9 @@
             生成答案卡片
           </button>
         </div>
-        <div class="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-6 text-center text-slate-400">
+        <div
+          class="mt-4 bg-slate-50 border border-slate-200 rounded-xl p-6 text-center text-slate-400"
+        >
           🖼️ 卡片预览占位
         </div>
         <div class="mt-4">
@@ -40,9 +42,7 @@
               </div>
               <button class="text-xs text-slate-400">···</button>
             </div>
-            <p class="mt-3 text-sm text-slate-700">
-              签文说今日宜请假，老板不信，我信了。
-            </p>
+            <p class="mt-3 text-sm text-slate-700">签文说今日宜请假，老板不信，我信了。</p>
             <div class="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
               <p class="text-xs text-slate-400">📌 运势卡片预览</p>
               <p class="mt-1 text-sm font-semibold text-slate-700">上上签 · 风起云开</p>
@@ -93,7 +93,9 @@
         <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <div class="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">🙂</div>
+              <div class="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
+                🙂
+              </div>
               <div>
                 <p class="text-sm font-semibold text-slate-900">我</p>
                 <p class="text-xs text-slate-400">今日综合</p>
@@ -103,7 +105,9 @@
           </div>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <div class="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">🧑</div>
+              <div class="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
+                🧑
+              </div>
               <div>
                 <p class="text-sm font-semibold text-slate-900">对方</p>
                 <p class="text-xs text-slate-400">今日综合</p>

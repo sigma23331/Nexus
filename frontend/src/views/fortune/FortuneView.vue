@@ -8,7 +8,9 @@
 
     <main class="px-6 py-4 space-y-8">
       <!-- 今日签文 -->
-      <section class="relative overflow-hidden rounded-3xl border border-amber-200 bg-white p-5 shadow-sm">
+      <section
+        class="relative overflow-hidden rounded-3xl border border-amber-200 bg-white p-5 shadow-sm"
+      >
         <div class="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-amber-100"></div>
         <div class="absolute -bottom-10 -left-10 h-24 w-24 rounded-full bg-rose-100"></div>
         <div class="relative space-y-4">

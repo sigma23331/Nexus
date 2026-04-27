@@ -46,7 +46,6 @@
               </div>
               <button class="text-xs text-slate-400">···</button>
             </div>
-            <p class="mt-3 text-sm text-slate-700">{{ card.content }}</p>
             <div class="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-center">
               <p class="text-xs text-slate-400">{{ card.cardType }}预览</p>
               <p class="mt-1 text-sm font-semibold text-slate-700">{{ card.cardTitle }}</p>

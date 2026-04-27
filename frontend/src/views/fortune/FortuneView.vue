@@ -7,7 +7,6 @@
     </header>
 
     <main class="px-6 py-4 space-y-8">
-      <!-- 今日签文卡片 -->
       <section
         class="relative overflow-hidden rounded-3xl border border-amber-200 bg-white p-5 shadow-sm"
       >

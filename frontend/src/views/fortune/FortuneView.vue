@@ -74,7 +74,9 @@
             {{ trendText }}
           </span>
         </div>
-        <div class="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-rose-50 p-4">
+        <div
+          class="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-rose-50 p-4"
+        >
           <div class="mb-4 grid grid-cols-3 gap-2 text-center">
             <div class="rounded-xl border border-amber-200 bg-white/80 px-2 py-2">
               <p class="text-[11px] text-amber-700">今日签象</p>
@@ -149,17 +151,14 @@ const chartRef = ref<HTMLElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
 
 const currentScore = computed(() => trendScores.value[trendScores.value.length - 1])
-const previousScore = computed(() => trendScores.value[trendScores.value.length - 2] ?? currentScore.value)
+const previousScore = computed(
+  () => trendScores.value[trendScores.value.length - 2] ?? currentScore.value,
+)
 const delta = computed(() => currentScore.value - previousScore.value)
 const trendText = computed(() => {
   if (delta.value >= 3) return '气运上扬'
   if (delta.value <= -3) return '气运回落'
   return '气运平稳'
-})
-const guaMeaning = computed(() => {
-  if (delta.value >= 3) return '火土相生，宜主动求进'
-  if (delta.value <= -3) return '水势偏重，宜静守内观'
-  return '阴阳守中，宜稳步前行'
 })
 const guaMeaningLines = computed(() => {
   if (delta.value >= 3) return ['火土相生', '宜主动求进']
@@ -201,7 +200,7 @@ const initChart = () => {
       backgroundColor: 'rgba(17,24,39,0.92)',
       borderWidth: 0,
       textStyle: { color: '#f8fafc' },
-      formatter: (params: any) => {
+      formatter: (params: echarts.CallbackDataParams | echarts.CallbackDataParams[]) => {
         const point = Array.isArray(params) ? params[0] : params
         return `第${point.axisValue}日 · ${scoreToSign(point.value)}`
       },

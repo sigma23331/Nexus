@@ -12,8 +12,8 @@ class PlazaCard(BaseModel):
     __tablename__ = 'plaza_cards'
     __table_args__ = (
         CheckConstraint(
-            "(type = 'fortune' AND fortune_id IS NOT NULL AND answer_id IS NULL) OR "
-            "(type = 'answer' AND answer_id IS NOT NULL AND fortune_id IS NULL)",
+            "(type = 'FORTUNE' AND fortune_id IS NOT NULL AND answer_id IS NULL) OR "
+            "(type = 'ANSWER' AND answer_id IS NOT NULL AND fortune_id IS NULL)",
             name='check_valid_source'
         ),
     )

@@ -29,6 +29,7 @@ cd frontend
 npm ci
 # 安装后出现六条警告，忽略
 # 同时注意：使用 npm audit fix 而不带 --force（重点！会影响到版本配置同步）
+# 千万不要使用 npm install
 
 # 3. 启动开发服务器
 npm run dev
@@ -89,14 +90,24 @@ frontend/
     │
     ├── components/                 # 公共组件（可复用 UI 单元）
     │   ├── common/                 # 通用组件（按钮、输入框、弹窗、加载动画）
+    │   │   ├── UserAgreementModal.vue  # 用户协议弹窗
+    │   │   └── PrivacyPolicyModal.vue  # 隐私政策弹窗
+    |   |
     │   ├── layout/                 # 布局组件（TabBar、Header、安全区容器）
     │   └── business/               # 业务组件（运势卡片、答案卡片、日记条目等）
+    │       ├── DiaryDetailModal.vue    # 日记详情弹窗
+    │       ├── MonthlyMoodOverview.vue # 月度情绪概览（日历）
+    │       ├── MoodDiaryForm.vue       # 情绪日记表单
+    │       └── MoodDiaryModal.vue      # 情绪日记弹窗（含表单）
     │
     ├── composables/                # 组合式函数（封装可复用的响应式逻辑）
     │   ├── useAuth.ts              # 登录、token 管理
     │   ├── useFortune.ts           # 获取运势、轨迹等
     │   ├── useAnswer.ts            # 提问、历史、收藏
     │   └── usePlaza.ts             # 广场卡片加载、点赞
+    │
+    ├── config/
+    │   └── typography.ts           # 字体样式配置文件
     │
     ├── layouts/                    # 布局模板（可选，App.vue 已包含主布局）
     │   └── DefaultLayout.vue       # 含 TabBar 和路由视口的布局（若需要复杂布局）

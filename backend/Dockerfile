@@ -14,8 +14,13 @@ RUN apt-get update && apt-get install -y \
 # 复制依赖文件
 COPY requirements.txt .
 
-# 安装Python依赖（使用清华 PyPI 镜像加速）
-RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+# 安装Python依赖（优先清华镜像，失败自动回退官方源）
+RUN pip install --no-cache-dir -r requirements.txt \
+    -i https://pypi.tuna.tsinghua.edu.cn/simple \
+    --retries 2 --timeout 30 \
+    || pip install --no-cache-dir -r requirements.txt \
+    -i https://pypi.org/simple \
+    --retries 5 --timeout 60
 
 # 复制应用代码
 COPY . .

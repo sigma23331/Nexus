@@ -1,24 +1,16 @@
-name: Nexus CI/CD Pipeline
+name: Mind Island CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ] # 严格遵循图片：push 触发范围
+  pull_request:
+    branches: [ "main" ]            # 严格遵循图片：PR 到 main 触发
+    types: [opened, edited, synchronize, reopened]
 
 jobs:
-  test-backend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - name: Install dependencies
-        run: |
-          cd backend
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-  build-frontend:
+  # 执行动作 1 & 2: 代码风格检查 (Lint) 与 格式检查 (Format-check)
+  frontend-quality:
+    name: Frontend Lint & Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,44 +18,98 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Build Vue App
-        run: |
-          cd frontend
-          npm install
-          npm run build # 确保这一步会生成 dist 目录
-      # 将构建好的 dist 目录临时保存，供下一个 job 使用
-      - name: Upload dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-assets
-          path: frontend/dist/
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+      
+      - name: Lint frontend
+        run: npm run lint:check # 对应执行动作: lint
+        working-directory: frontend
+      
+      - name: Check formatting
+        run: npm run format:check # 对应执行动作: format-check
+        working-directory: frontend
 
-  deploy:
-    needs: [test-backend, build-frontend]
+  # 执行动作 3: 提交信息格式检查 (commitlint)
+  commit-message-check:
+    name: Commit Message Check
+    if: github.event_name == 'pull_request' # 理由：避免不规范 PR 进入 main
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      # 下载刚才构建好的前端网页
-      - name: Download dist
-        uses: actions/download-artifact@v4
         with:
-          name: frontend-assets
-          path: ./dist-to-upload
+          fetch-depth: 0
+      - name: Validate commit messages
+        uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: commitlint.config.cjs
 
-      # 1. 搬运前端文件到 Nginx 目录
-      - name: Copy Frontend to Aliyun
+  # 执行动作 4: PR 标题/内容检查 (check-pr)
+  pr-metadata-check:
+    name: PR Metadata Check
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title (Conventional Commits)
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Validate PR description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request?.body || ''
+            const minLength = 20
+            if (body.trim().length < minLength) {
+              core.setFailed(`PR 描述过短（当前${body.trim().length}字），请至少填写 20 个字符说明变更内容。`)
+            }
+
+  # 后端校验（保留你原有的 Docker 检查逻辑）
+  backend-check:
+    name: Backend Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Docker Build Check
+        run: docker build ./backend -t mind-island-backend:test
+
+  # 自动化部署 (仅在 push 到 main 且质量检查通过后执行)
+  deploy:
+    name: Deploy to Aliyun
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [frontend-quality, backend-check] # 确保部署前通过了代码质量检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Build and Upload Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+      
+      - name: Copy to Server via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.ALIYUN_SERVER_IP }}
           username: root
           key: ${{ secrets.ALIYUN_SSH_KEY }}
-          source: "./dist-to-upload/*"
-          target: "/var/www/mind-island/" # 服务器存放网页的地方
-          strip_components: 1
+          source: "frontend/dist/*"
+          target: "/var/www/mind-island/"
+          strip_components: 2
 
-      # 2. 远程执行后端重启逻辑
-      - name: Deploy Backend via SSH
+      - name: Restart Backend via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.ALIYUN_SERVER_IP }}
@@ -72,13 +118,9 @@ jobs:
           script: |
             cd ${{ secrets.REMOTE_TARGET }}
             git pull origin main
-            
-            # 后端环境处理
             cd backend
             if [ ! -d "venv" ]; then python3 -m venv venv; fi
             source venv/bin/activate
             pip install -r requirements.txt
-            
-            # 使用简单的 pkill 重启法（测试阶段够用）
             pkill gunicorn || true
             gunicorn -w 2 -b 127.0.0.1:5000 main:app --daemon

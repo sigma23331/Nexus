@@ -72,6 +72,9 @@ frontend/
 │   ├── icons/
 │   │   ├── icon-192.png            # PWA 图标 192x192
 │   │   └── icon-512.png            # PWA 图标 512x512
+│   ├── images/
+│   │   ├── login_top.png           # 登录文字
+│   │   └── login_top2.png          # 登录文字
 │   ├── manifest.json               # Web App Manifest
 │   └── favicon.ico                 # 网站图标
 │
@@ -143,11 +146,13 @@ frontend/
     │   ├── plaza/                  # 分享广场模块
     │   │   ├── PlazaView.vue
     │   │   └── components/
+    │   │       └── PlazaCard.vue   # 卡片组件（支持点赞、时间格式化等）
     │   ├── profile/                # 我的页面模块
     │   │   ├── ProfileView.vue
     │   │   └── components/
     │   └── auth/                   # 认证相关页面
-    │       ├── LoginView.vue       # 手机号/验证码登录
+    │       ├── LoginView.vue       # 登录
+    │       ├── RegisterView.vue    # 注册
     │       └── BindPhoneView.vue   # 绑定手机号（可选）
     │
     ├── App.vue                     # 根组件（包含路由视图和 TabBar 控制）

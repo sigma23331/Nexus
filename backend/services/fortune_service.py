@@ -6,16 +6,26 @@ from services import content_generation_service
 
 
 def _format_today_payload(record):
+    content_main = record.content or ""
+    content_sub = "稳中求进，心静则通达。"
+    if "，" in content_main:
+        first, rest = content_main.split("，", 1)
+        content_main = first or content_main
+        content_sub = rest or content_sub
+
     return {
         "id": record.id,
         "date": record.date.isoformat(),
         "score": record.score,
         "title": record.title,
-        "content": record.content,
+        "content_main": content_main[:80],
+        "content_sub": content_sub[:80],
+        "love": "平稳",
+        "career": "平稳",
+        "health": "稳定",
+        "wealth": "平稳",
         "yi": record.yi or [],
         "ji": record.ji or [],
-        "luckyColor": record.lucky_color,
-        "luckyDirection": record.lucky_direction,
     }
 
 
@@ -30,11 +40,9 @@ def get_today_fortune(user_id):
             date=today,
             score=defaults["score"],
             title=defaults["title"],
-            content=defaults["content"],
+            content=f"{defaults['content_main']}，{defaults['content_sub']}",
             yi=defaults["yi"],
             ji=defaults["ji"],
-            lucky_color=defaults.get("luckyColor"),
-            lucky_direction=defaults.get("luckyDirection"),
         )
         db.session.add(record)
         db.session.commit()

@@ -81,7 +81,12 @@ def generate_fortune(user_id, target_date):
     return {
         "score": payload["score"],
         "title": payload["title"],
-        "content": payload["content"],
+        "content_main": payload["content_main"],
+        "content_sub": payload["content_sub"],
+        "love": payload["love"],
+        "career": payload["career"],
+        "health": payload["health"],
+        "wealth": payload["wealth"],
         "yi": payload.get("yi", []),
         "ji": payload.get("ji", []),
         "generatedBy": generated_by,

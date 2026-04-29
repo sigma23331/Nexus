@@ -12,3 +12,6 @@ __pycache__/
 
 # IDE
 .idea/
+
+# local git worktrees
+.worktrees/

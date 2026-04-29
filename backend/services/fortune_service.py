@@ -1,3 +1,4 @@
+import json
 from datetime import date, timedelta
 
 from models.fortune import FortuneRecord
@@ -5,13 +6,41 @@ from extensions import db
 from services import content_generation_service
 
 
+def _serialize_content_pair(content_main, content_sub):
+    main = str(content_main or "").strip()[:80]
+    sub = str(content_sub or "").strip()[:80]
+    return json.dumps([main, sub], ensure_ascii=False, separators=(",", ":"))
+
+
+def _deserialize_content_pair(raw_content):
+    fallback_sub = "稳中求进，心静则通达。"
+    text = str(raw_content or "").strip()
+    if not text:
+        return "", fallback_sub
+
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, list) and len(parsed) >= 2:
+            main = str(parsed[0] or "").strip()[:80]
+            sub = str(parsed[1] or "").strip()[:80]
+            return main, sub or fallback_sub
+        if isinstance(parsed, dict):
+            main = str(parsed.get("content_main", "") or "").strip()[:80]
+            sub = str(parsed.get("content_sub", "") or "").strip()[:80]
+            if main or sub:
+                return main, sub or fallback_sub
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
+
+    if "，" in text:
+        first, rest = text.split("，", 1)
+        return (first or text)[:80], (rest or fallback_sub)[:80]
+
+    return text[:80], fallback_sub
+
+
 def _format_today_payload(record):
-    content_main = record.content or ""
-    content_sub = "稳中求进，心静则通达。"
-    if "，" in content_main:
-        first, rest = content_main.split("，", 1)
-        content_main = first or content_main
-        content_sub = rest or content_sub
+    content_main, content_sub = _deserialize_content_pair(record.content)
 
     return {
         "id": record.id,
@@ -40,7 +69,7 @@ def get_today_fortune(user_id):
             date=today,
             score=defaults["score"],
             title=defaults["title"],
-            content=f"{defaults['content_main']}，{defaults['content_sub']}",
+            content=_serialize_content_pair(defaults["content_main"], defaults["content_sub"]),
             yi=defaults["yi"],
             ji=defaults["ji"],
         )

@@ -16,6 +16,26 @@ def _fallback_fortune(target_date):
     return MockProvider().generate_fortune(user_id="", target_date=target_date)
 
 
+def _normalize_score(score):
+    try:
+        value = int(score)
+    except Exception:
+        value = 70
+    return max(0, min(value, 100))
+
+
+def _score_to_title(score):
+    if score >= 85:
+        return "上上签"
+    if score >= 75:
+        return "上吉"
+    if score >= 65:
+        return "中平"
+    if score >= 55:
+        return "小谨"
+    return "守静"
+
+
 def get_provider(force_refresh=False):
     global _provider_cache
     if _provider_cache is not None and not force_refresh:
@@ -78,9 +98,11 @@ def generate_fortune(user_id, target_date):
         payload = _fallback_fortune(target_date)
         generated_by = "fallback"
 
+    score = _normalize_score(payload.get("score"))
+
     return {
-        "score": payload["score"],
-        "title": payload["title"],
+        "score": score,
+        "title": _score_to_title(score),
         "content_main": payload["content_main"],
         "content_sub": payload["content_sub"],
         "love": payload["love"],

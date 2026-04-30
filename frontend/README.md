@@ -96,7 +96,10 @@ frontend/
     ├── components/                 # 公共组件（可复用 UI 单元）
     │   ├── common/                 # 通用组件（按钮、输入框、弹窗、加载动画）
     │   │   ├── UserAgreementModal.vue  # 用户协议弹窗
-    │   │   └── PrivacyPolicyModal.vue  # 隐私政策弹窗
+    │   │   ├── PrivacyPolicyModal.vue  # 隐私政策弹窗
+    │   │   ├── SettingModal.vue        # 设置弹窗
+    │   │   ├── PromptModal.vue         # 自定义输入弹窗（修改昵称等）
+    │   │   └── ConfirmModal.vue        # 自定义确认弹窗（退出/切换/注销）
     |   |
     │   ├── layout/                 # 布局组件（TabBar、Header、安全区容器）
     │   └── business/               # 业务组件（运势卡片、答案卡片、日记条目等）

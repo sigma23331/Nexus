@@ -73,8 +73,10 @@ frontend/
 │   │   ├── icon-192.png            # PWA 图标 192x192
 │   │   └── icon-512.png            # PWA 图标 512x512
 │   ├── images/
-│   │   ├── login_top.png           # 登录文字
-│   │   └── login_top2.png          # 登录文字
+│   │   ├── login_top.png           # 登陆文字
+│   │   ├── login_top2.png          # 登陆文字
+│   │   ├── card_fortune.png        # 运势卡片模板
+│   │   └── card_answer.png         # 答案卡片模板
 │   ├── manifest.json               # Web App Manifest
 │   └── favicon.ico                 # 网站图标
 │
@@ -107,7 +109,8 @@ frontend/
     │   ├── useAuth.ts              # 登录、token 管理
     │   ├── useFortune.ts           # 获取运势、轨迹等
     │   ├── useAnswer.ts            # 提问、历史、收藏
-    │   └── usePlaza.ts             # 广场卡片加载、点赞
+    │   ├── usePlaza.ts             # 广场卡片加载、点赞
+    │   └── useCardGenerator.ts     # 卡片生成
     │
     ├── config/
     │   └── typography.ts           # 字体样式配置文件
@@ -134,7 +137,8 @@ frontend/
     │   ├── request.ts              # Axios 封装（拦截器、错误处理）
     │   ├── storage.ts              # 本地存储封装（token、用户偏好）
     │   ├── format.ts               # 日期格式化、运势分数映射等
-    │   └── validator.ts            # 表单校验（手机号、密码等）
+    │   ├── validator.ts            # 表单校验（手机号、密码等）
+    │   └── cardGenerator.ts        # 卡片生成核心逻辑
     │
     ├── views/                      # 页面级组件（按路由划分）
     │   ├── fortune/                # 运势看板模块

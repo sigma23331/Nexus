@@ -1,6 +1,9 @@
 <template>
   <div
-    class="app-container relative min-h-screen bg-white text-slate-900 w-full max-w-md mx-auto shadow-sm"
+    :class="[
+      'app-container relative min-h-screen text-slate-900 w-full mx-auto',
+      isWideLayout ? 'max-w-none shadow-none' : 'max-w-md bg-white shadow-sm',
+    ]"
   >
     <router-view v-slot="{ Component }">
       <keep-alive>
@@ -18,4 +21,5 @@ import TabBar from '@/components/layout/TabBar.vue'
 
 const route = useRoute()
 const showTabBar = computed(() => route.meta.tabBar === true)
+const isWideLayout = computed(() => route.meta.fullWidth === true)
 </script>

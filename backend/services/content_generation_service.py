@@ -3,6 +3,7 @@ from flask import current_app
 
 from services.llm.providers.mock_provider import MockProvider
 from services.llm.providers.real_provider import RealProvider
+from services.user_profile_service import UserProfileService
 
 
 _provider_cache = None
@@ -55,6 +56,12 @@ def get_provider(force_refresh=False):
                 timeout=current_app.config.get("LLM_TIMEOUT", 12),
                 max_retries=current_app.config.get("LLM_MAX_RETRIES", 1),
                 base_url=current_app.config.get("LLM_BASE_URL", "https://api.openai.com/v1"),
+                prompts_dir=current_app.config.get("LLM_PROMPTS_DIR"),
+                prompt_versions={
+                    "answer": current_app.config.get("LLM_PROMPT_ANSWER_VERSION", "v1"),
+                    "fortune": current_app.config.get("LLM_PROMPT_FORTUNE_VERSION", "v1"),
+                    "profile": current_app.config.get("LLM_PROMPT_PROFILE_VERSION", "v1"),
+                },
             )
             return _provider_cache
         except Exception:
@@ -91,8 +98,19 @@ def generate_fortune(user_id, target_date):
         raise ValueError("target_date 必须为 date")
 
     provider = get_provider()
+    profile_context = None
     try:
-        payload = provider.generate_fortune(user_id=user_id, target_date=target_date)
+        profile = UserProfileService.get_by_user_id(user_id)
+        if profile:
+            profile_context = UserProfileService.to_dict(profile)
+    except Exception:
+        profile_context = None
+
+    try:
+        try:
+            payload = provider.generate_fortune(user_id=user_id, target_date=target_date, profile_context=profile_context)
+        except TypeError:
+            payload = provider.generate_fortune(user_id=user_id, target_date=target_date)
         generated_by = "provider"
     except Exception:
         payload = _fallback_fortune(target_date)

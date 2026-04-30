@@ -32,11 +32,14 @@ class MockProvider(LLMProvider):
         return {
             "score": score,
             "title": title,
-            "content": "今日节奏平衡，先完成最重要的一件事。",
+            "content_main": "今日节奏平衡，先完成最重要的一件事。",
+            "content_sub": "稳中求进，避免分心。",
+            "love": "平稳",
+            "career": "向好",
+            "health": "稳定",
+            "wealth": "谨慎",
             "yi": ["规律作息", "专注学习", "温和沟通"],
             "ji": ["冲动决定", "过度熬夜", "拖延"],
-            "luckyColor": "天蓝",
-            "luckyDirection": "东南",
         }
 
     def analyze_user_profile(self, diary_entries: list, answer_questions: list) -> dict:

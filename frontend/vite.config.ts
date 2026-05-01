@@ -10,13 +10,14 @@ export default defineConfig({
   plugins: [
     vue(),
     VitePWA({
-      registerType: 'autoUpdate', // 自动更新 Service Worker
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'icons/*.png'],
-      manifest: false, // public 下手动创建了 manifest.json
+      manifest: false, // 使用 public/manifest.json
       workbox: {
+        // 预缓存静态资源（包括 index.html）
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/], // 避免拦截 API 请求
+        // 关键：删除 navigateFallback 和 navigateFallbackDenylist
+        // 避免无条件回退到 offline.html
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.xinyundao\.com\/.*/i,
@@ -25,16 +26,16 @@ export default defineConfig({
               cacheName: 'api-cache',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24, // 24小时
+                maxAgeSeconds: 60 * 60 * 24,
               },
             },
           },
         ],
       },
       devOptions: {
-        enabled: true, // 开发环境启用 PWA（方便调试）
+        enabled: true,
         type: 'module',
-        navigateFallback: 'index.html',
+        // 开发环境也移除 navigateFallback
       },
     }),
   ],

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>离线模式 - 心运岛</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        background: #f8fafc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 20px;
+      }
+      .card {
+        background: white;
+        border-radius: 32px;
+        padding: 32px 24px;
+        text-align: center;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        max-width: 320px;
+        width: 100%;
+      }
+      .icon {
+        font-size: 72px;
+        margin-bottom: 16px;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 12px;
+      }
+      p {
+        font-size: 14px;
+        color: #64748b;
+        margin-bottom: 24px;
+        line-height: 1.5;
+      }
+      button {
+        background: #7c3aed;
+        border: none;
+        color: white;
+        font-weight: 500;
+        padding: 12px 24px;
+        border-radius: 40px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      button:hover {
+        background: #6d28d9;
+      }
+      button:active {
+        transform: scale(0.96);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="icon">📡</div>
+      <h1>暂无网络连接</h1>
+      <p>请检查您的网络设置，连接后重新打开应用。</p>
+      <button onclick="window.location.reload()">重新加载</button>
+    </div>
+  </body>
+</html>

@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 全局安全区适配（iOS 刘海屏 / Android 全面屏） */
+body {
+  /* 顶部安全区（避开刘海区域） */
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+  /* 底部安全区（为 Home Indicator 留出空间） */
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+  background-color: white;
+}
+
+/* 注意：.app-container 的空规则集已移除，其样式已在 App.vue 中通过 Tailwind 类定义 */

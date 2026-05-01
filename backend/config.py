@@ -23,8 +23,8 @@ class Config:
     LLM_MAX_RETRIES = int(os.environ.get('LLM_MAX_RETRIES', '1'))
     PROMPT_LAB_DEV_ENABLED = os.environ.get('PROMPT_LAB_DEV_ENABLED', 'false').lower() == 'true'
     LLM_PROMPTS_DIR = os.environ.get('LLM_PROMPTS_DIR')
-    LLM_PROMPT_ANSWER_VERSION = os.environ.get('LLM_PROMPT_ANSWER_VERSION', 'v1')
-    LLM_PROMPT_FORTUNE_VERSION = os.environ.get('LLM_PROMPT_FORTUNE_VERSION', 'v1')
+    LLM_PROMPT_ANSWER_VERSION = os.environ.get('LLM_PROMPT_ANSWER_VERSION', 'v4')
+    LLM_PROMPT_FORTUNE_VERSION = os.environ.get('LLM_PROMPT_FORTUNE_VERSION', 'v4')
     LLM_PROMPT_PROFILE_VERSION = os.environ.get('LLM_PROMPT_PROFILE_VERSION', 'v1')
 
     # 数据库配置

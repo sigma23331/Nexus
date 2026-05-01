@@ -5,6 +5,7 @@ from urllib import error as urlerror
 from urllib import request as urlrequest
 
 from .base import LLMProvider
+from tools.prompt_lab.selector import AnswerStyleSelector, FortuneContentSelector
 
 
 FORTUNE_SCHEMA = {
@@ -42,8 +43,8 @@ PROFILE_SCHEMA = {
 
 
 DEFAULT_PROMPT_VERSIONS = {
-    "answer": "v1",
-    "fortune": "v1",
+    "answer": "v4",
+    "fortune": "v4",
     "profile": "v1",
 }
 
@@ -95,6 +96,7 @@ class RealProvider(LLMProvider):
         rendered = str(template or "")
         for key, value in (variables or {}).items():
             rendered = rendered.replace("{{" + key + "}}", str(value))
+            rendered = rendered.replace("{" + key + "}", str(value))
         return rendered
 
     def _load_prompt_template(self, task):
@@ -105,7 +107,7 @@ class RealProvider(LLMProvider):
         except Exception:
             return DEFAULT_PROMPT_TEXT[task]
 
-    def _chat(self, messages, temperature=0.7, response_format=None, max_tokens=None):
+    def _chat(self, messages, temperature=0.7, response_format=None, max_tokens=None, frequency_penalty=None, top_p=None):
         payload = {
             "model": self.model_name,
             "messages": messages,
@@ -115,6 +117,10 @@ class RealProvider(LLMProvider):
             payload["response_format"] = response_format
         if max_tokens is not None:
             payload["max_tokens"] = max_tokens
+        if frequency_penalty is not None:
+            payload["frequency_penalty"] = frequency_penalty
+        if top_p is not None:
+            payload["top_p"] = top_p
         body = json.dumps(payload).encode("utf-8")
         req = urlrequest.Request(
             url=f"{self.base_url}/chat/completions",
@@ -250,8 +256,20 @@ class RealProvider(LLMProvider):
 
     def generate_answer(self, question, user_id):
         _ = user_id
+        version = self.prompt_versions.get("answer")
+        if version == "v4":
+            selector = AnswerStyleSelector(self.prompts_dir / "answer" / "styles")
+            style = selector.select()
+        else:
+            style = ""
         prompt_text = self._load_prompt_template("answer")
-        rendered = self._render_inline(prompt_text, {"question": question})
+        rendered = self._render_inline(
+            prompt_text,
+            {
+                "question": question,
+                "selected_style": style,
+            },
+        )
         text = self._chat(
             messages=[
                 {
@@ -259,23 +277,54 @@ class RealProvider(LLMProvider):
                     "content": rendered,
                 }
             ],
-            temperature=0.7,
+            temperature=1.2,
         )
         return self._truncate_answer_by_sentence(text, limit=100)
 
-    def generate_fortune(self, user_id, target_date: date, profile_context=None):
+    def generate_fortune(self, user_id, target_date: date, profile_context=None, score=None, title_template=None, keywords=None, yiji_items=None):
         _ = user_id
         profile_context = profile_context or {}
+        if score is not None and title_template is not None:
+            version = "v4"
+        else:
+            version = self.prompt_versions.get("fortune")
         prompt_text = self._load_prompt_template("fortune")
-        rendered = self._render_inline(
-            prompt_text,
-            {
-                "target_date": target_date.isoformat(),
-                "mood_tendency": profile_context.get("mood_tendency", "calm"),
-                "topic_interests": ",".join(profile_context.get("topic_interests", [])) if isinstance(profile_context.get("topic_interests"), list) else profile_context.get("topic_interests", "health"),
-                "self_context_tag": profile_context.get("self_context_tag", "日常"),
-            },
-        )
+        if version == "v4":
+            selector = None
+            if title_template is None or keywords is None or yiji_items is None:
+                selector = FortuneContentSelector(self.prompts_dir / "fortune")
+
+            score_value = int(score) if score is not None else 70
+            score_value = max(0, min(score_value, 100))
+            title_template = title_template or selector.select_title(score_value)
+            keywords = keywords or selector.select_keywords(profile_context)
+            yiji_items = yiji_items or selector.select_yiji(profile_context)
+
+            rendered = self._render_inline(
+                prompt_text,
+                {
+                    "target_date": target_date.isoformat(),
+                    "score": str(score_value),
+                    "title_main": title_template.get("main", "今日宜静待时机"),
+                    "title_sub": title_template.get("sub", "稳中求进"),
+                    "love_keyword": keywords.get("love", "平稳"),
+                    "career_keyword": keywords.get("career", "平稳"),
+                    "health_keyword": keywords.get("health", "稳定"),
+                    "wealth_keyword": keywords.get("wealth", "平稳"),
+                    "yi_samples": "\n".join(yiji_items.get("yi", [])),
+                    "ji_samples": "\n".join(yiji_items.get("ji", [])),
+                },
+            )
+        else:
+            rendered = self._render_inline(
+                prompt_text,
+                {
+                    "target_date": target_date.isoformat(),
+                    "mood_tendency": profile_context.get("mood_tendency", "calm"),
+                    "topic_interests": ",".join(profile_context.get("topic_interests", [])) if isinstance(profile_context.get("topic_interests"), list) else profile_context.get("topic_interests", "health"),
+                    "self_context_tag": profile_context.get("self_context_tag", "日常"),
+                },
+            )
         data = self._chat_json_schema(
             messages=[
                 {
@@ -285,7 +334,7 @@ class RealProvider(LLMProvider):
             ],
             schema_name="fortune_schema",
             schema=FORTUNE_SCHEMA,
-            temperature=0.7,
+            temperature=1.2,
             max_tokens=512,
         )
         return self._normalize_fortune(data if isinstance(data, dict) else {})
@@ -321,7 +370,7 @@ class RealProvider(LLMProvider):
             ],
             schema_name="profile_schema",
             schema=PROFILE_SCHEMA,
-            temperature=0.7,
+            temperature=0.6,
             max_tokens=400,
         )
         return self._normalize_profile(data if isinstance(data, dict) else {})

@@ -1,6 +1,8 @@
 import json
+import random
 import time
 from datetime import datetime
+from pathlib import Path
 
 try:
     from services.llm.providers.mock_provider import MockProvider
@@ -8,6 +10,11 @@ try:
 except ImportError:
     from backend.services.llm.providers.mock_provider import MockProvider
     from backend.services.llm.providers.real_provider import RealProvider
+
+try:
+    from tools.prompt_lab.selector import AnswerStyleSelector, FortuneContentSelector
+except ImportError:
+    from backend.tools.prompt_lab.selector import AnswerStyleSelector, FortuneContentSelector
 
 
 def _preview(value, limit=80):
@@ -19,6 +26,7 @@ def _render_inline(prompt_text, variables):
     rendered = str(prompt_text or "")
     for key, value in (variables or {}).items():
         rendered = rendered.replace("{{" + key + "}}", str(value))
+        rendered = rendered.replace("{" + key + "}", str(value))
     return rendered
 
 
@@ -112,7 +120,15 @@ class PromptLabProviderAdapter:
     def run_answer(self, question, prompt_text, temperature, frequency_penalty=None, top_p=None):
         start = time.perf_counter()
         try:
-            rendered = _render_inline(prompt_text, {"question": question})
+            style = ""
+            provider_prompts_dir = getattr(self.provider, "prompts_dir", None)
+            if provider_prompts_dir:
+                try:
+                    selector = AnswerStyleSelector(Path(provider_prompts_dir) / "answer" / "styles")
+                    style = selector.select()
+                except Exception:
+                    style = ""
+            rendered = _render_inline(prompt_text, {"question": question, "selected_style": style})
             if self.provider_mode == "mock":
                 output = self.provider.generate_answer(question=question, user_id="prompt-lab")
             else:
@@ -141,10 +157,43 @@ class PromptLabProviderAdapter:
         except Exception as exc:
             return _error_row(start, "provider_error", exc, parse_success=None, schema_valid=None)
 
-    def run_fortune(self, target_date, prompt_text, temperature, frequency_penalty=None, top_p=None):
+    def run_fortune(self, target_date, prompt_text, temperature, frequency_penalty=None, top_p=None, profile_context=None):
         start = time.perf_counter()
         try:
-            rendered = _render_inline(prompt_text, {"target_date": target_date})
+            context = profile_context or {}
+            score = random.randint(0, 100)
+            title_template = {"main": "今日宜静待时机", "sub": "稳中求进"}
+            keywords = {"love": "平稳", "career": "平稳", "health": "稳定", "wealth": "平稳"}
+            yiji_items = {"yi": [], "ji": []}
+
+            provider_prompts_dir = getattr(self.provider, "prompts_dir", None)
+            if provider_prompts_dir:
+                try:
+                    selector = FortuneContentSelector(Path(provider_prompts_dir) / "fortune")
+                    title_template = selector.select_title(score)
+                    keywords = selector.select_keywords(context)
+                    yiji_items = selector.select_yiji(context)
+                except Exception:
+                    pass
+
+            rendered = _render_inline(
+                prompt_text,
+                {
+                    "target_date": target_date,
+                    "score": str(score),
+                    "title_main": title_template.get("main", "今日宜静待时机"),
+                    "title_sub": title_template.get("sub", "稳中求进"),
+                    "love_keyword": keywords.get("love", "平稳"),
+                    "career_keyword": keywords.get("career", "平稳"),
+                    "health_keyword": keywords.get("health", "稳定"),
+                    "wealth_keyword": keywords.get("wealth", "平稳"),
+                    "yi_samples": "\n".join(yiji_items.get("yi", [])),
+                    "ji_samples": "\n".join(yiji_items.get("ji", [])),
+                    "mood_tendency": str(context.get("mood_tendency") or "calm"),
+                    "topic_interests": ",".join(context.get("topic_interests") or []) if isinstance(context.get("topic_interests"), list) else str(context.get("topic_interests") or ""),
+                    "self_context_tag": str(context.get("self_context_tag") or "日常"),
+                },
+            )
             if self.provider_mode == "mock":
                 data = self.provider.generate_fortune(user_id="prompt-lab", target_date=datetime.strptime(target_date, "%Y-%m-%d").date())
                 parse_success = True

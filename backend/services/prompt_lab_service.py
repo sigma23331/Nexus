@@ -53,6 +53,14 @@ def run_prompt_lab(task, prompt_text, temperature, input_payload, frequency_pena
                 fortune_kwargs["frequency_penalty"] = validated["frequency_penalty"]
             if validated["top_p"] is not None:
                 fortune_kwargs["top_p"] = validated["top_p"]
+            profile_input = validated["input_payload"]
+            context = {
+                "mood_tendency": profile_input.get("mood_tendency"),
+                "topic_interests": profile_input.get("topic_interests"),
+                "self_context_tag": profile_input.get("self_context_tag"),
+            }
+            if any(v is not None for v in context.values()):
+                fortune_kwargs["profile_context"] = context
             row = adapter.run_fortune(**fortune_kwargs)
         else:
             profile_kwargs = {

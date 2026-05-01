@@ -12,6 +12,7 @@
         <article class="panel controls">
           <div class="control-row">
             <label for="task">Task</label>
+            <span class="help-text">answer=答案之书 / fortune=运势 / profile=用户画像分析</span>
             <select id="task" v-model="task" :disabled="loading">
               <option value="answer">answer</option>
               <option value="fortune">fortune</option>
@@ -21,6 +22,7 @@
 
           <div class="control-row temp-row">
             <label for="temperature">Temperature</label>
+            <span class="help-text">越高输出越随机（0-2）</span>
             <input
               id="temperature"
               type="number"
@@ -45,6 +47,7 @@
 
           <div class="control-row temp-row">
             <label for="frequency-penalty">Frequency Penalty</label>
+            <span class="help-text">负值鼓励重复用词，正值抑制重复（-2~2），默认 0</span>
             <input
               id="frequency-penalty"
               type="number"
@@ -69,6 +72,7 @@
 
           <div class="control-row temp-row">
             <label for="top-p">Top P</label>
+            <span class="help-text">核采样阈值（0-1），1=不做限制，值越小输出越确定</span>
             <input
               id="top-p"
               type="number"
@@ -93,11 +97,13 @@
 
           <div class="control-row block">
             <label for="prompt">Prompt Text</label>
+            <span class="help-text">发给 LLM 的提示词模板，支持 {{question}} {{target_date}} {{diary_summary}} {{question_summary}} {{mood_tendency}} {{topic_interests}} {{self_context_tag}} 以及 v4 的 {selected_style}/{score}/{title_main} 等占位符</span>
             <textarea id="prompt" v-model="promptText" rows="10" :disabled="loading"></textarea>
           </div>
 
           <div class="control-row block">
             <label for="input">Input JSON</label>
+            <span class="help-text">answer: &#123;"question":"..."&#125; / fortune: &#123;"target_date":"2026-04-29"&#125; / profile: &#123;"diary_entries":[...],"answer_questions":[...]&#125;</span>
             <textarea id="input" v-model="inputText" rows="10" :disabled="loading"></textarea>
           </div>
 
@@ -129,6 +135,7 @@
 
           <section class="metrics">
             <h2>Metrics</h2>
+            <span class="help-text margin-b">latency_ms=请求耗时 / success=是否执行成功 / parse_success=JSON解析成功 / schema_valid=字段校验通过 / fallback_used=是否触发降级兜底</span>
             <dl>
               <div>
                 <dt>latency_ms</dt>
@@ -161,6 +168,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import {
+  fetchPromptTemplate,
   runPromptLab,
   type PromptLabRequest,
   type PromptLabRunData,
@@ -182,22 +190,60 @@ type ErrorCard = {
 
 const TASK_DEFAULTS: Record<PromptLabTask, TaskDefaults> = {
   answer: {
-    promptText:
-      'You are a concise answer assistant. Respond in 1-2 short paragraphs and keep a calm, direct tone.',
+    promptText: [
+      '## 角色',
+      '你是心运岛的答案之书',
+      '## 风格',
+      '本次请用以下风格回答：',
+      '{selected_style}',
+      '## 任务',
+      '用户问了以下问题：',
+      '{{question}}',
+      '',
+      '请你翻到某一页，告诉我那一页的答案是什么，只输出答案',
+      '## constraint',
+      '- 输出格式为一句话，不要包含"答案："/"答案是"',
+      '- 长度自然，不要超过20个字',
+    ].join('\n'),
     temperature: 0.7,
     frequencyPenalty: 0,
     topP: 1,
     inputText: JSON.stringify(
       {
-        question: 'Should I refactor this module before adding new features?',
+        question: '这周面试能过吗？',
       },
       null,
       2,
     ),
   },
   fortune: {
-    promptText:
-      'You are a practical daily fortune guide. Keep guidance realistic, encouraging, and specific to one day.',
+    promptText: [
+      '## 角色',
+      '你是心运岛的中文运势助手',
+      '## 约束',
+      '今天是 {target_date}，用户整体运势分数为 {score}。',
+      '请基于以下信息生成运势，只输出 JSON。',
+      '',
+      '## 主副标题风格',
+      '主标题参考：{title_main}',
+      '副标题参考：{title_sub}',
+      '要求：主标题10-20字富有哲理；副标题15-30字具体建议。不要直接照搬参考，需结合分数重新创作。',
+      '',
+      '## 分项运势',
+      '请根据以下关键词倾向生成各分项一句话：',
+      '- 爱情：{love_keyword}',
+      '- 事业：{career_keyword}',
+      '- 健康：{health_keyword}',
+      '- 财富：{wealth_keyword}',
+      '',
+      '## 宜忌参考',
+      '宜参考：{yi_samples}',
+      '忌参考：{ji_samples}',
+      '要求：结合参考项为今日生成 3 条宜、3 条忌，语言贴近日常生活。',
+      '',
+      '## 输出格式',
+      '严格输出 JSON：score/content_main/content_sub/love/career/health/wealth/yi/ji',
+    ].join('\n'),
     temperature: 0.8,
     frequencyPenalty: 0,
     topP: 1,
@@ -210,19 +256,26 @@ const TASK_DEFAULTS: Record<PromptLabTask, TaskDefaults> = {
     ),
   },
   profile: {
-    promptText:
-      'You are a profile synthesis assistant. Summarize behavior patterns with balanced strengths, blind spots, and next actions.',
+    promptText: [
+      '## 角色',
+      '你是专业的心理与行为分析助手。',
+      '## 约束',
+      '请仅输出json对象，不要输出额外说明。',
+      '字段必须包含：mood_tendency,topic_interests,self_context_tag。',
+      '示例json：',
+      '{"mood_tendency":"anxious","topic_interests":["study","career"],"self_context_tag":"备考期"}',
+    ].join('\n'),
     temperature: 0.6,
     frequencyPenalty: 0,
     topP: 1,
     inputText: JSON.stringify(
       {
         diary_entries: [
-          { content: 'I focused well in the morning but got distracted after lunch by chat notifications.' },
-          { content: 'I finished one difficult task after breaking it into three smaller steps.' },
+          { content: '今天专注学习了3小时，但下午被消息打断了节奏。' },
+          { content: '完成了一个复杂任务，拆分步骤的方法很有效。' },
         ],
         answer_questions: [
-          { question: 'How do you handle stress?', answer: 'I walk for 10 minutes and then return with a checklist.' },
+          { question: '怎么应对焦虑？', answer: '先深呼吸，然后列出具体可以做的事。' },
         ],
       },
       null,
@@ -251,6 +304,7 @@ const frequencyPenalty = ref(0)
 const topP = ref(1)
 const inputText = ref('')
 const loading = ref(false)
+const templateLoading = ref(false)
 const result = ref<PromptLabRunData>({ ...EMPTY_RESULT })
 const errorCard = ref<ErrorCard | null>(null)
 
@@ -263,13 +317,29 @@ function applyTaskDefaults(nextTask: PromptLabTask): void {
   inputText.value = defaults.inputText
 }
 
+async function loadPromptTemplate(nextTask: PromptLabTask): Promise<void> {
+  templateLoading.value = true
+  try {
+    const response = await fetchPromptTemplate(nextTask)
+    if (response.data?.code === 200 && response.data?.data?.prompt_text) {
+      promptText.value = response.data.data.prompt_text
+    }
+  } catch {
+    // keep local defaults when backend template API is unavailable
+  } finally {
+    templateLoading.value = false
+  }
+}
+
 watch(task, (nextTask) => {
   applyTaskDefaults(nextTask)
+  void loadPromptTemplate(nextTask)
   result.value = { ...EMPTY_RESULT, task: nextTask }
   errorCard.value = null
 })
 
 applyTaskDefaults(task.value)
+void loadPromptTemplate(task.value)
 
 function clampTemperature(value: number): number {
   const safe = Number.isFinite(value) ? value : 0
@@ -548,6 +618,18 @@ textarea {
 
 textarea {
   resize: vertical;
+}
+
+.help-text {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--lab-muted);
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+
+.help-text.margin-b {
+  margin-bottom: 8px;
 }
 
 .temp-row {

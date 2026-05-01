@@ -52,4 +52,9 @@ def render_template(template_path, variables):
     output = template
     for key, value in mapping.items():
         output = output.replace("{{" + key + "}}", value)
+        output = output.replace("{" + key + "}", value)
+    for key, value in variables.items():
+        text = _to_str(value)
+        output = output.replace("{{" + key + "}}", text)
+        output = output.replace("{" + key + "}", text)
     return output

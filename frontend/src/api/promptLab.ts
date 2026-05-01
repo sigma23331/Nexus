@@ -67,8 +67,28 @@ export interface PromptLabRunEnvelope {
   data: PromptLabRunData | null
 }
 
+export interface PromptLabTemplateData {
+  task: PromptLabTask
+  version: string
+  prompt_text: string
+}
+
+export interface PromptLabTemplateEnvelope {
+  code: number
+  message: string
+  data: PromptLabTemplateData | null
+}
+
 export function runPromptLab(
   payload: PromptLabRequest,
 ): Promise<{ data: PromptLabRunEnvelope }> {
   return promptLabClient.post('/v1/dev/prompt-lab/run', payload)
+}
+
+export function fetchPromptTemplate(
+  task: PromptLabTask,
+): Promise<{ data: PromptLabTemplateEnvelope }> {
+  return promptLabClient.get('/v1/dev/prompt-lab/prompt-template', {
+    params: { task },
+  })
 }

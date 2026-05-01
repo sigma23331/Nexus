@@ -1,9 +1,12 @@
 from datetime import date, datetime
+from pathlib import Path
 from flask import current_app
+import random as _random
 
 from services.llm.providers.mock_provider import MockProvider
 from services.llm.providers.real_provider import RealProvider
 from services.user_profile_service import UserProfileService
+from tools.prompt_lab.selector import FortuneContentSelector
 
 
 _provider_cache = None
@@ -98,23 +101,60 @@ def generate_fortune(user_id, target_date):
         raise ValueError("target_date 必须为 date")
 
     provider = get_provider()
-    profile_context = None
-    try:
-        profile = UserProfileService.get_by_user_id(user_id)
-        if profile:
-            profile_context = UserProfileService.to_dict(profile)
-    except Exception:
-        profile_context = None
+    version = getattr(provider, "prompt_versions", {}).get("fortune", "")
 
-    try:
+    if version == "v4":
+        score = _random.randint(0, 100)
+        profile = None
         try:
-            payload = provider.generate_fortune(user_id=user_id, target_date=target_date, profile_context=profile_context)
+            profile_model = UserProfileService.get_by_user_id(user_id)
+            if profile_model:
+                profile = UserProfileService.to_dict(profile_model)
+        except Exception:
+            profile = None
+
+        prompts_dir = getattr(provider, "prompts_dir", None)
+        if prompts_dir:
+            selector = FortuneContentSelector(Path(prompts_dir) / "fortune")
+            title_template = selector.select_title(score)
+            keywords = selector.select_keywords(profile)
+            yiji_items = selector.select_yiji(profile)
+        else:
+            title_template = {"main": "今日宜静待时机", "sub": "稳中求进"}
+            keywords = {"love": "平稳", "career": "平稳", "health": "稳定", "wealth": "平稳"}
+            yiji_items = {"yi": [], "ji": []}
+
+        try:
+            payload = provider.generate_fortune(
+                user_id=user_id,
+                target_date=target_date,
+                score=score,
+                title_template=title_template,
+                keywords=keywords,
+                yiji_items=yiji_items,
+            )
+            generated_by = "provider"
         except TypeError:
-            payload = provider.generate_fortune(user_id=user_id, target_date=target_date)
-        generated_by = "provider"
-    except Exception:
-        payload = _fallback_fortune(target_date)
-        generated_by = "fallback"
+            payload = _fallback_fortune(target_date)
+            generated_by = "fallback"
+    else:
+        profile_context = None
+        try:
+            profile = UserProfileService.get_by_user_id(user_id)
+            if profile:
+                profile_context = UserProfileService.to_dict(profile)
+        except Exception:
+            profile_context = None
+
+        try:
+            try:
+                payload = provider.generate_fortune(user_id=user_id, target_date=target_date, profile_context=profile_context)
+            except TypeError:
+                payload = provider.generate_fortune(user_id=user_id, target_date=target_date)
+            generated_by = "provider"
+        except Exception:
+            payload = _fallback_fortune(target_date)
+            generated_by = "fallback"
 
     score = _normalize_score(payload.get("score"))
 

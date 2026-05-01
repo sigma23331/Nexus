@@ -87,10 +87,12 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { sendSmsCode, loginBySms, loginByPassword } from '@/api/auth'
-import type { LoginResponse } from '@/types/api'
+import { getUserProfile } from '@/api/user'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 
 // 登录模式
 const loginMode = ref<'sms' | 'password'>('sms')
@@ -157,20 +159,20 @@ const handleLogin = async () => {
   if (!isFormValid.value) return
   loginLoading.value = true
   try {
-    let response: LoginResponse
+    let response
     if (loginMode.value === 'sms') {
-      response = (await loginBySms(phone.value, smsCode.value)) as unknown as LoginResponse
+      response = await loginBySms(phone.value, smsCode.value)
     } else {
-      response = (await loginByPassword(phone.value, password.value)) as unknown as LoginResponse
+      response = await loginByPassword(phone.value, password.value)
     }
-    localStorage.setItem('token', response.token)
-    // 可选的 Pinia 存储
-    // const userStore = useUserStore()
-    // userStore.loginSuccess(response.token, response.userInfo)
+    userStore.setToken(response.token)
+    const profile = await getUserProfile()
+    userStore.setUserInfo(profile.userInfo)
+
     const redirectPath = (route.query.redirect as string) || '/'
     router.replace(redirectPath)
   } catch (err) {
-    const message = err instanceof Error ? err.message : '登录失败，请检查手机号/验证码/密码'
+    const message = err instanceof Error ? err.message : '登录失败'
     alert(message)
   } finally {
     loginLoading.value = false

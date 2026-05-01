@@ -41,6 +41,8 @@ Ctrl + C -> Y
 
 # 生产构建： 输出 dist 目录
 npm run build
+# 生产构建： 执行预览
+npm run preview
 
 # 前端代码规范
 # 检查是否有错误（frontend）
@@ -77,6 +79,7 @@ frontend/
 │   │   ├── login_top2.png          # 登陆文字
 │   │   ├── card_fortune.png        # 运势卡片模板
 │   │   └── card_answer.png         # 答案卡片模板
+│   ├── offline.html                # 离线占位页
 │   ├── manifest.json               # Web App Manifest
 │   └── favicon.ico                 # 网站图标
 │
@@ -96,7 +99,10 @@ frontend/
     ├── components/                 # 公共组件（可复用 UI 单元）
     │   ├── common/                 # 通用组件（按钮、输入框、弹窗、加载动画）
     │   │   ├── UserAgreementModal.vue  # 用户协议弹窗
-    │   │   └── PrivacyPolicyModal.vue  # 隐私政策弹窗
+    │   │   ├── PrivacyPolicyModal.vue  # 隐私政策弹窗
+    │   │   ├── SettingModal.vue        # 设置弹窗
+    │   │   ├── PromptModal.vue         # 自定义输入弹窗（修改昵称等）
+    │   │   └── ConfirmModal.vue        # 自定义确认弹窗（退出/切换/注销）
     |   |
     │   ├── layout/                 # 布局组件（TabBar、Header、安全区容器）
     │   └── business/               # 业务组件（运势卡片、答案卡片、日记条目等）

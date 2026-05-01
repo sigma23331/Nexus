@@ -57,6 +57,10 @@ router.beforeEach((to, _from, next) => {
   if (to.meta.title) {
     document.title = `${to.meta.title} | 心运岛`
   }
+  if (isAuthenticated() && (to.name === 'login' || to.name === 'register')) {
+    next('/')
+    return
+  }
   if (to.meta.requiresAuth && !isAuthenticated()) {
     next({ name: 'login', query: { redirect: to.fullPath } })
   } else {

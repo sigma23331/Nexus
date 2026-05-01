@@ -41,6 +41,8 @@ Ctrl + C -> Y
 
 # 生产构建： 输出 dist 目录
 npm run build
+# 生产构建： 执行预览
+npm run preview
 
 # 前端代码规范
 # 检查是否有错误（frontend）
@@ -72,6 +74,12 @@ frontend/
 │   ├── icons/
 │   │   ├── icon-192.png            # PWA 图标 192x192
 │   │   └── icon-512.png            # PWA 图标 512x512
+│   ├── images/
+│   │   ├── login_top.png           # 登陆文字
+│   │   ├── login_top2.png          # 登陆文字
+│   │   ├── card_fortune.png        # 运势卡片模板
+│   │   └── card_answer.png         # 答案卡片模板
+│   ├── offline.html                # 离线占位页
 │   ├── manifest.json               # Web App Manifest
 │   └── favicon.ico                 # 网站图标
 │
@@ -91,7 +99,10 @@ frontend/
     ├── components/                 # 公共组件（可复用 UI 单元）
     │   ├── common/                 # 通用组件（按钮、输入框、弹窗、加载动画）
     │   │   ├── UserAgreementModal.vue  # 用户协议弹窗
-    │   │   └── PrivacyPolicyModal.vue  # 隐私政策弹窗
+    │   │   ├── PrivacyPolicyModal.vue  # 隐私政策弹窗
+    │   │   ├── SettingModal.vue        # 设置弹窗
+    │   │   ├── PromptModal.vue         # 自定义输入弹窗（修改昵称等）
+    │   │   └── ConfirmModal.vue        # 自定义确认弹窗（退出/切换/注销）
     |   |
     │   ├── layout/                 # 布局组件（TabBar、Header、安全区容器）
     │   └── business/               # 业务组件（运势卡片、答案卡片、日记条目等）
@@ -104,7 +115,8 @@ frontend/
     │   ├── useAuth.ts              # 登录、token 管理
     │   ├── useFortune.ts           # 获取运势、轨迹等
     │   ├── useAnswer.ts            # 提问、历史、收藏
-    │   └── usePlaza.ts             # 广场卡片加载、点赞
+    │   ├── usePlaza.ts             # 广场卡片加载、点赞
+    │   └── useCardGenerator.ts     # 卡片生成
     │
     ├── config/
     │   └── typography.ts           # 字体样式配置文件
@@ -131,7 +143,8 @@ frontend/
     │   ├── request.ts              # Axios 封装（拦截器、错误处理）
     │   ├── storage.ts              # 本地存储封装（token、用户偏好）
     │   ├── format.ts               # 日期格式化、运势分数映射等
-    │   └── validator.ts            # 表单校验（手机号、密码等）
+    │   ├── validator.ts            # 表单校验（手机号、密码等）
+    │   └── cardGenerator.ts        # 卡片生成核心逻辑
     │
     ├── views/                      # 页面级组件（按路由划分）
     │   ├── fortune/                # 运势看板模块
@@ -143,11 +156,13 @@ frontend/
     │   ├── plaza/                  # 分享广场模块
     │   │   ├── PlazaView.vue
     │   │   └── components/
+    │   │       └── PlazaCard.vue   # 卡片组件（支持点赞、时间格式化等）
     │   ├── profile/                # 我的页面模块
     │   │   ├── ProfileView.vue
     │   │   └── components/
     │   └── auth/                   # 认证相关页面
-    │       ├── LoginView.vue       # 手机号/验证码登录
+    │       ├── LoginView.vue       # 登录
+    │       ├── RegisterView.vue    # 注册
     │       └── BindPhoneView.vue   # 绑定手机号（可选）
     │
     ├── App.vue                     # 根组件（包含路由视图和 TabBar 控制）

@@ -20,10 +20,10 @@
               {{ fortuneData.title }}
             </span>
           </div>
-          <div class="rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-5 text-center">
-            <p class="text-lg font-semibold text-slate-900">{{ fortuneData.content_main }}</p>
-            <p class="mt-2 text-xs text-amber-700">{{ fortuneData.content_sub }}</p>
-          </div>
+          <TodayFortuneContent
+            :content-main="fortuneData.content_main"
+            :content-sub="fortuneData.content_sub"
+          />
 
           <div class="space-y-3">
             <h2 class="text-sm font-semibold text-slate-700">今日概览</h2>
@@ -75,8 +75,14 @@
           </span>
         </div>
         <div
-          class="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-rose-50 p-4"
+          class="relative overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-rose-50 p-4 shadow-[0_10px_30px_rgba(180,83,9,0.16)]"
         >
+          <div
+            class="pointer-events-none absolute -left-16 top-6 h-36 w-36 rounded-full bg-amber-200/35 blur-3xl"
+          ></div>
+          <div
+            class="pointer-events-none absolute -right-12 bottom-8 h-32 w-32 rounded-full bg-rose-200/40 blur-3xl"
+          ></div>
           <div class="mb-4 grid grid-cols-3 gap-2 text-center">
             <div class="rounded-xl border border-amber-200 bg-white/80 px-2 py-2">
               <p class="text-[11px] text-amber-700">今日签象</p>
@@ -97,17 +103,62 @@
               </p>
             </div>
           </div>
-          <div ref="chartRef" class="h-56 w-full"></div>
+          <div ref="chartRef" class="relative h-60 w-full"></div>
           <p class="mt-3 text-center text-xs text-amber-700/90">太极流转，顺势而为</p>
+        </div>
+      </section>
+
+      <section>
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-lg font-semibold">历史运势记录</h2>
+          <span class="text-xs text-slate-500">最近 7 天</span>
+        </div>
+        <div class="space-y-3">
+          <article
+            v-for="record in historyFortunes"
+            :key="record.id"
+            class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+          >
+            <div class="mb-2 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold text-slate-900">{{ record.date }}</p>
+                <p class="text-xs text-slate-500">{{ record.title }}</p>
+              </div>
+              <span
+                class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                :class="scoreLevelClass(record.score)"
+              >
+                {{ record.score }} 分
+              </span>
+            </div>
+            <p class="text-sm text-slate-700">{{ record.contentMain }}</p>
+            <div class="mt-3 flex gap-2 text-xs">
+              <span
+                class="inline-flex max-w-[48%] items-center rounded-full bg-emerald-50 px-2 py-1 text-emerald-700"
+              >
+                宜：{{ record.yi[0] }}
+              </span>
+              <span
+                class="inline-flex max-w-[48%] items-center rounded-full bg-rose-50 px-2 py-1 text-rose-700"
+              >
+                忌：{{ record.ji[0] }}
+              </span>
+            </div>
+          </article>
         </div>
       </section>
 
       <!-- 运势卡片生成 -->
       <section>
         <h2 class="text-lg font-semibold mb-3">运势卡片</h2>
-        <div class="bg-slate-50 border border-slate-200 rounded-xl p-6 text-center text-slate-400">
-          🖼️ 卡片预览占位
-        </div>
+        <FortuneCardPreview
+          :title="fortuneData.title"
+          :score="fortuneData.score"
+          :content-main="fortuneData.content_main"
+          :content-sub="fortuneData.content_sub"
+          :yi="fortuneData.yi"
+          :ji="fortuneData.ji"
+        />
         <div class="flex gap-3 mt-4">
           <button
             class="flex-1 bg-purple-600 hover:bg-purple-700 rounded-xl py-2 text-sm font-medium"
@@ -128,6 +179,8 @@
 <script setup lang="ts">
 import * as echarts from 'echarts'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import FortuneCardPreview from './components/FortuneCardPreview.vue'
+import TodayFortuneContent from './components/TodayFortuneContent.vue'
 // import { useFortuneStore } from '@/stores/fortune'
 
 // 静态数据（临时，后续替换为 store）
@@ -147,6 +200,44 @@ const fortuneData = ref({
 })
 
 const trendScores = ref([63, 68, 65, 74, 71, 79, fortuneData.value.score])
+const historyFortunes = ref([
+  {
+    id: 'h_1',
+    date: '04-29',
+    score: 88,
+    title: '上上签',
+    contentMain: '风起云开，顺遂自来',
+    yi: ['清单复盘'],
+    ji: ['情绪内耗'],
+  },
+  {
+    id: 'h_2',
+    date: '04-28',
+    score: 79,
+    title: '上吉',
+    contentMain: '脚步放稳，事有回响',
+    yi: ['推进计划'],
+    ji: ['临时起意'],
+  },
+  {
+    id: 'h_3',
+    date: '04-27',
+    score: 71,
+    title: '中平',
+    contentMain: '守住节奏，静待转机',
+    yi: ['专注一事'],
+    ji: ['频繁切换'],
+  },
+  {
+    id: 'h_4',
+    date: '04-26',
+    score: 65,
+    title: '小谨',
+    contentMain: '宜慢不宜急，稳妥优先',
+    yi: ['及时休息'],
+    ji: ['熬夜透支'],
+  },
+])
 const chartRef = ref<HTMLElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
 
@@ -186,6 +277,12 @@ const scoreToSign = (score: number) => {
   if (score >= 65) return '中平'
   if (score >= 55) return '小谨'
   return '守静'
+}
+const scoreLevelClass = (score: number) => {
+  if (score >= 85) return 'bg-emerald-50 text-emerald-700'
+  if (score >= 75) return 'bg-blue-50 text-blue-700'
+  if (score >= 65) return 'bg-amber-50 text-amber-700'
+  return 'bg-rose-50 text-rose-700'
 }
 
 const initChart = () => {
@@ -228,17 +325,31 @@ const initChart = () => {
     series: [
       {
         type: 'line',
-        smooth: true,
+        smooth: 0.55,
         data: trendScores.value,
         symbol: 'circle',
         symbolSize: 8,
-        lineStyle: { width: 3, color: '#b45309' },
+        lineStyle: {
+          width: 4,
+          color: '#b45309',
+          shadowColor: 'rgba(180,83,9,0.35)',
+          shadowBlur: 12,
+          shadowOffsetY: 4,
+        },
         itemStyle: { color: '#f59e0b', borderColor: '#fffbeb', borderWidth: 2 },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(245,158,11,0.35)' },
+            { offset: 0, color: 'rgba(245,158,11,0.42)' },
+            { offset: 0.55, color: 'rgba(251,191,36,0.20)' },
             { offset: 1, color: 'rgba(245,158,11,0.05)' },
           ]),
+        },
+        emphasis: {
+          focus: 'series',
+          itemStyle: {
+            shadowColor: 'rgba(245,158,11,0.45)',
+            shadowBlur: 18,
+          },
         },
       },
     ],

@@ -1,3 +1,4 @@
+// src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
@@ -43,22 +44,29 @@ const router = createRouter({
       component: () => import('@/views/auth/LoginView.vue'),
       meta: { title: '登录' },
     },
+    {
+      path: '/register',
+      name: 'register',
+      component: () => import('@/views/auth/RegisterView.vue'),
+      meta: { title: '注册' },
+    },
   ],
 })
 
-// 登录状态检测（示例：检查 localStorage 中是否有 token）
+// 登录状态检测
 function isAuthenticated(): boolean {
   return !!localStorage.getItem('token')
 }
 
 // 全局前置守卫
 router.beforeEach((to, _from, next) => {
-  // 设置页面标题
   if (to.meta.title) {
     document.title = `${to.meta.title} | 心运岛`
   }
-
-  // 需要登录的页面
+  if (isAuthenticated() && (to.name === 'login' || to.name === 'register')) {
+    next('/')
+    return
+  }
   if (to.meta.requiresAuth && !isAuthenticated()) {
     next({ name: 'login', query: { redirect: to.fullPath } })
   } else {

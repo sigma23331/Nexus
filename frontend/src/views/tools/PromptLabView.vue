@@ -97,13 +97,21 @@
 
           <div class="control-row block">
             <label for="prompt">Prompt Text</label>
-            <span class="help-text">发给 LLM 的提示词模板，支持 {{question}} {{target_date}} {{diary_summary}} {{question_summary}} {{mood_tendency}} {{topic_interests}} {{self_context_tag}} 以及 v4 的 {selected_style}/{score}/{title_main} 等占位符</span>
+            <span class="help-text"
+              >发给 LLM 的提示词模板，支持 {{ question }} {{ target_date }} {{ diary_summary }}
+              {{ question_summary }} {{ mood_tendency }} {{ topic_interests }}
+              {{ self_context_tag }} 以及 v4 的 {selected_style}/{score}/{title_main} 等占位符</span
+            >
             <textarea id="prompt" v-model="promptText" rows="10" :disabled="loading"></textarea>
           </div>
 
           <div class="control-row block">
             <label for="input">Input JSON</label>
-            <span class="help-text">answer: &#123;"question":"..."&#125; / fortune: &#123;"target_date":"2026-04-29"&#125; / profile: &#123;"diary_entries":[...],"answer_questions":[...]&#125;</span>
+            <span class="help-text"
+              >answer: &#123;"question":"..."&#125; / fortune:
+              &#123;"target_date":"2026-04-29"&#125; / profile:
+              &#123;"diary_entries":[...],"answer_questions":[...]&#125;</span
+            >
             <textarea id="input" v-model="inputText" rows="10" :disabled="loading"></textarea>
           </div>
 
@@ -135,7 +143,10 @@
 
           <section class="metrics">
             <h2>Metrics</h2>
-            <span class="help-text margin-b">latency_ms=请求耗时 / success=是否执行成功 / parse_success=JSON解析成功 / schema_valid=字段校验通过 / fallback_used=是否触发降级兜底</span>
+            <span class="help-text margin-b"
+              >latency_ms=请求耗时 / success=是否执行成功 / parse_success=JSON解析成功 /
+              schema_valid=字段校验通过 / fallback_used=是否触发降级兜底</span
+            >
             <dl>
               <div>
                 <dt>latency_ms</dt>

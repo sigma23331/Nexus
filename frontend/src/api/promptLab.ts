@@ -79,9 +79,7 @@ export interface PromptLabTemplateEnvelope {
   data: PromptLabTemplateData | null
 }
 
-export function runPromptLab(
-  payload: PromptLabRequest,
-): Promise<{ data: PromptLabRunEnvelope }> {
+export function runPromptLab(payload: PromptLabRequest): Promise<{ data: PromptLabRunEnvelope }> {
   return promptLabClient.post('/v1/dev/prompt-lab/run', payload)
 }
 

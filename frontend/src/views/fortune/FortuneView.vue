@@ -297,8 +297,11 @@ const initChart = () => {
       backgroundColor: 'rgba(17,24,39,0.92)',
       borderWidth: 0,
       textStyle: { color: '#f8fafc' },
-      formatter: (params: any) => {
-        const point = Array.isArray(params) ? params[0] : params
+      formatter: (params: unknown) => {
+        const point = (Array.isArray(params) ? params[0] : params) as {
+          axisValue: string | number
+          value: number
+        }
         return `第${point.axisValue}日 · ${scoreToSign(point.value)}`
       },
     },

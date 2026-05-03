@@ -1,14 +1,11 @@
-version: '3.8'
-
 services:
-  # 数据库服务
   db:
     image: postgres:15-alpine
-    container_name: mind-island-db
+    container_name: nexus_postgres
     environment:
-      POSTGRES_USER: ${DB_USER:-nexus_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-nexus_password123}
-      POSTGRES_DB: ${DB_NAME:-nexus_db}
+      POSTGRES_USER: nexus_user
+      POSTGRES_PASSWORD: nexus_password123
+      POSTGRES_DB: nexus_db
     ports:
       - "5432:5432"
     volumes:
@@ -18,38 +15,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
-  # 后端服务 (Flask)
   backend:
-    build: ./backend
-    container_name: mind-island-backend
-    ports:
-      - "5000:5000"
-    environment:
-      - DATABASE_URL=postgresql://${DB_USER:-nexus_user}:${DB_PASSWORD:-nexus_password123}@db:5432/${DB_NAME:-nexus_db}
-      - FLASK_ENV=development
-      - SECRET_KEY=${SECRET_KEY:-dev_secret_key}
+    build: .
+    container_name: nexus_backend
     depends_on:
       db:
         condition: service_healthy
-    # 如果本地开发需要热更新，可以取消下面注释
-    # volumes:
-    #   - ./backend:/app
-
-  # 前端服务 (Vue 3 + Nginx)
-  frontend:
-    build: ./frontend
-    container_name: mind-island-frontend
+    environment:
+      FLASK_APP: main.py
+      FLASK_ENV: development
+      DATABASE_URL: postgresql://nexus_user:nexus_password123@db:5432/nexus_db
     ports:
-      - "${BACKEND_PORT:-5000}:5000"
+      - "5000:5000"
     volumes:
       - .:/app
     command: >
-      sh -c "python -c 'from main import app; from extensions import db; ctx = app.app_context(); ctx.push(); db.create_all(); ctx.pop()' &&
+      sh -c "flask db upgrade &&
              flask run --host=0.0.0.0 --port=5000"
-      - "80:80"
-    depends_on:
-      - backend
 
 volumes:
   postgres_data:

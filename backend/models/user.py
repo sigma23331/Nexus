@@ -1,9 +1,9 @@
 from extensions import db
-
 from .base import BaseModel
 from sqlalchemy import Column, String
 from sqlalchemy.orm import validates, relationship
 import re
+from werkzeug.security import generate_password_hash, check_password_hash  # 新增
 
 
 class User(BaseModel):
@@ -16,7 +16,7 @@ class User(BaseModel):
     avatar = Column(String(255), default='', comment='头像URL')
 
     # 密码字段（文档2.1节，账密登录备用）
-    password_hash = Column(String(128), nullable=True, comment='密码哈希（bcrypt）')
+    password_hash = Column(String(256), nullable=True, comment='密码哈希（bcrypt）')
 
     # 微信字段（文档2.3节，预留）
     wechat_openid = Column(String(128), unique=True, nullable=True, index=True, comment='微信OpenID')
@@ -39,6 +39,19 @@ class User(BaseModel):
         if phone and not re.match(r'^1[3-9]\d{9}$', phone):
             raise ValueError('Invalid phone number format')
         return phone
+
+    # ---------- 新增：密码加密与校验 ----------
+    def set_password(self, password: str):
+        """使用 werkzeug 生成密码哈希，并存入 password_hash"""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        """校验明文密码是否与哈希匹配"""
+        if not self.password_hash:
+            return False
+        return check_password_hash(self.password_hash, password)
+
+    # ----------------------------------------
 
     @classmethod
     def create_with_profile(cls, **user_fields):

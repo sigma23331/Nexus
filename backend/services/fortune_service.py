@@ -1,3 +1,4 @@
+import json
 from datetime import date, timedelta
 
 from models.fortune import FortuneRecord
@@ -5,17 +6,55 @@ from extensions import db
 from services import content_generation_service
 
 
+def _serialize_content_pair(content_main, content_sub):
+    main = str(content_main or "").strip()[:80]
+    sub = str(content_sub or "").strip()[:80]
+    return json.dumps([main, sub], ensure_ascii=False, separators=(",", ":"))
+
+
+def _deserialize_content_pair(raw_content):
+    fallback_sub = "稳中求进，心静则通达。"
+    text = str(raw_content or "").strip()
+    if not text:
+        return "", fallback_sub
+
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, list) and len(parsed) >= 2:
+            main = str(parsed[0] or "").strip()[:80]
+            sub = str(parsed[1] or "").strip()[:80]
+            return main, sub or fallback_sub
+        if isinstance(parsed, dict):
+            main = str(parsed.get("content_main", "") or "").strip()[:80]
+            sub = str(parsed.get("content_sub", "") or "").strip()[:80]
+            if main or sub:
+                return main, sub or fallback_sub
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
+
+    if "，" in text:
+        first, rest = text.split("，", 1)
+        return (first or text)[:80], (rest or fallback_sub)[:80]
+
+    return text[:80], fallback_sub
+
+
 def _format_today_payload(record):
+    content_main, content_sub = _deserialize_content_pair(record.content)
+
     return {
         "id": record.id,
         "date": record.date.isoformat(),
         "score": record.score,
         "title": record.title,
-        "content": record.content,
+        "content_main": content_main[:80],
+        "content_sub": content_sub[:80],
+        "love": "平稳",
+        "career": "平稳",
+        "health": "稳定",
+        "wealth": "平稳",
         "yi": record.yi or [],
         "ji": record.ji or [],
-        "luckyColor": record.lucky_color,
-        "luckyDirection": record.lucky_direction,
     }
 
 
@@ -30,11 +69,9 @@ def get_today_fortune(user_id):
             date=today,
             score=defaults["score"],
             title=defaults["title"],
-            content=defaults["content"],
+            content=_serialize_content_pair(defaults["content_main"], defaults["content_sub"]),
             yi=defaults["yi"],
             ji=defaults["ji"],
-            lucky_color=defaults.get("luckyColor"),
-            lucky_direction=defaults.get("luckyDirection"),
         )
         db.session.add(record)
         db.session.commit()

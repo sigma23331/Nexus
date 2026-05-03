@@ -16,11 +16,16 @@ class Config:
 
     # LLM 配置
     LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'real')
-    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://openrouter.ai/api/v1')
-    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'tencent/hy3-preview:free')
+    LLM_BASE_URL = os.environ.get('LLM_BASE_URL')
+    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME')
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
     LLM_TIMEOUT = int(os.environ.get('LLM_TIMEOUT', '12'))
     LLM_MAX_RETRIES = int(os.environ.get('LLM_MAX_RETRIES', '1'))
+    PROMPT_LAB_DEV_ENABLED = os.environ.get('PROMPT_LAB_DEV_ENABLED', 'false').lower() == 'true'
+    LLM_PROMPTS_DIR = os.environ.get('LLM_PROMPTS_DIR')
+    LLM_PROMPT_ANSWER_VERSION = os.environ.get('LLM_PROMPT_ANSWER_VERSION', 'v4')
+    LLM_PROMPT_FORTUNE_VERSION = os.environ.get('LLM_PROMPT_FORTUNE_VERSION', 'v4')
+    LLM_PROMPT_PROFILE_VERSION = os.environ.get('LLM_PROMPT_PROFILE_VERSION', 'v1')
 
     # 数据库配置
     if os.environ.get('DATABASE_URL'):

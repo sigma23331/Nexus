@@ -34,15 +34,34 @@
           class="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-purple-500"
           placeholder="午饭吃啥？要不要回那条消息？..."
         ></textarea>
-        <p class="mt-3 text-xs text-slate-500">输入问题后，轻触书籍抽取答案。</p>
+        <div class="mt-3 flex items-center justify-between gap-3">
+          <p class="text-xs text-slate-500">输入问题后，轻触书籍抽取答案。</p>
+          <button
+            class="rounded-full px-4 py-1.5 text-xs font-semibold transition"
+            :class="
+              canSubmit
+                ? 'bg-purple-600 text-white hover:bg-purple-700'
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+            "
+            :disabled="!canSubmit"
+            @click="drawAnswer"
+          >
+            {{ isDrawing ? '抽取中...' : '提交问题' }}
+          </button>
+        </div>
       </section>
 
       <section class="text-center">
-        <div
-          @click="showAnswer"
-          class="inline-flex items-center justify-center w-48 h-64 rounded-2xl bg-gradient-to-br from-indigo-100 via-purple-100 to-indigo-50 border-l-8 border-indigo-300 shadow-xl cursor-pointer active:scale-95 transition"
-        >
-          <span class="text-6xl">📖</span>
+        <div class="book-wrap mx-auto" :class="{ shaking: isShaking }" @click="drawAnswer">
+          <div class="book-3d">
+            <div class="book-front">
+              <p class="text-xs tracking-[0.2em] text-indigo-100">BOOK OF ANSWERS</p>
+              <p class="mt-3 text-xl font-bold text-white">答案之书</p>
+              <p class="mt-2 text-[11px] text-indigo-100/90">轻触抽一条宇宙提示</p>
+            </div>
+            <div class="book-spine"></div>
+            <div class="book-glow"></div>
+          </div>
         </div>
         <p class="text-xs text-slate-500 mt-3">轻触书籍，抽一句指引</p>
       </section>
@@ -61,7 +80,7 @@
             <div class="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center">
               {{ item.icon }}
             </div>
-            <div class="flex-1">
+            <div class="flex-1 min-w-0">
               <p class="text-xs font-medium truncate">问：{{ item.question }}</p>
               <p class="text-[10px] text-slate-500">「{{ item.answer }}」</p>
             </div>
@@ -72,36 +91,44 @@
     </main>
 
     <!-- 答案弹窗 -->
-    <div
-      v-if="modalVisible"
-      class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
-      @click.self="hideAnswer"
-    >
-      <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-sm p-8 text-center">
-        <span class="text-4xl">✨</span>
-        <p class="text-xl font-bold leading-relaxed my-6 text-slate-900">{{ currentAnswer }}</p>
-        <button
-          @click="hideAnswer"
-          class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl font-bold text-white"
+    <Transition name="answer-modal">
+      <div
+        v-if="modalVisible"
+        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-6"
+        @click.self="hideAnswer"
+      >
+        <div
+          class="answer-modal-panel bg-white border border-slate-200 rounded-3xl w-full max-w-sm p-8 text-center"
         >
-          我明白了
-        </button>
-        <div class="flex justify-center gap-4 mt-6">
-          <button class="text-xs text-slate-500 flex items-center gap-1">📤 分享卡片</button>
-          <button class="text-xs text-slate-500 flex items-center gap-1">🔖 存入收藏</button>
+          <span class="text-4xl">✨</span>
+          <p class="mt-3 text-xs text-slate-500">你问：{{ currentQuestion }}</p>
+          <p class="text-xl font-bold leading-relaxed my-6 text-slate-900">{{ currentAnswer }}</p>
+          <button
+            @click="hideAnswer"
+            class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl font-bold text-white"
+          >
+            我明白了
+          </button>
+          <div class="flex justify-center gap-4 mt-6">
+            <button class="text-xs text-slate-500 flex items-center gap-1">📤 分享卡片</button>
+            <button class="text-xs text-slate-500 flex items-center gap-1">🔖 存入收藏</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 // ==================== 静态数据（暂未连接 Pinia） ====================
 const question = ref('')
 const modalVisible = ref(false)
 const currentAnswer = ref('')
+const currentQuestion = ref('')
+const isShaking = ref(false)
+const isDrawing = ref(false)
 
 const answerPool = [
   '答案就在你最初的想法里。',
@@ -168,14 +195,183 @@ onMounted(async () => {
 })
 */
 
-// 当前使用纯静态数据，未连接 store
-function showAnswer() {
-  const random = answerPool[Math.floor(Math.random() * answerPool.length)]
-  currentAnswer.value = `宇宙说：${random}`
-  modalVisible.value = true
+const canSubmit = computed(() => question.value.trim().length > 0 && !isDrawing.value)
+
+function drawAnswer() {
+  if (!canSubmit.value) return
+  isDrawing.value = true
+  isShaking.value = true
+
+  window.setTimeout(() => {
+    const random = answerPool[Math.floor(Math.random() * answerPool.length)]
+    const q = question.value.trim()
+    currentQuestion.value = q
+    currentAnswer.value = `宇宙说：${random}`
+    modalVisible.value = true
+
+    history.value.unshift({
+      id: Date.now(),
+      icon: '✨',
+      question: q,
+      answer: random,
+      date: new Date().toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }),
+    })
+    question.value = ''
+    isShaking.value = false
+    isDrawing.value = false
+  }, 900)
 }
 
 function hideAnswer() {
   modalVisible.value = false
 }
 </script>
+
+<style scoped>
+.book-wrap {
+  width: 192px;
+  height: 256px;
+  perspective: 1000px;
+  cursor: pointer;
+}
+
+.book-3d {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 18px;
+  transform-style: preserve-3d;
+  transform: rotateY(-18deg) rotateX(9deg) translateY(0);
+  transition: transform 220ms ease;
+  animation: floatBook 2.8s ease-in-out infinite;
+}
+
+.book-wrap:hover .book-3d {
+  transform: rotateY(-23deg) rotateX(11deg) translateY(-4px);
+}
+
+.book-front {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  border: 1px solid #a5b4fc;
+  background: linear-gradient(145deg, #6366f1 0%, #8b5cf6 62%, #a855f7 100%);
+  box-shadow: 0 18px 36px rgba(99, 102, 241, 0.34);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 18px 14px;
+}
+
+.book-spine {
+  position: absolute;
+  left: -14px;
+  top: 10px;
+  width: 16px;
+  height: calc(100% - 20px);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #4338ca 0%, #312e81 70%, #1e1b4b 100%);
+  transform: rotateY(90deg);
+  transform-origin: left center;
+}
+
+.book-spine::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 12px;
+  width: 10px;
+  height: calc(100% - 24px);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(199, 210, 254, 0.7), rgba(165, 180, 252, 0.2));
+}
+
+.book-glow {
+  position: absolute;
+  left: 50%;
+  bottom: -20px;
+  width: 70%;
+  height: 18px;
+  background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.36), transparent 70%);
+  transform: translateX(-50%);
+  filter: blur(4px);
+}
+
+.book-front::after {
+  content: '';
+  position: absolute;
+  right: -9px;
+  top: 10px;
+  width: 12px;
+  height: calc(100% - 20px);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #eef2ff 0%, #dbeafe 40%, #c7d2fe 100%);
+  opacity: 0.92;
+}
+
+.shaking .book-3d {
+  animation: shakeBook 0.9s ease;
+}
+
+@keyframes floatBook {
+  0%,
+  100% {
+    transform: rotateY(-18deg) rotateX(9deg) translateY(0);
+  }
+  50% {
+    transform: rotateY(-18deg) rotateX(9deg) translateY(-8px);
+  }
+}
+
+@keyframes shakeBook {
+  0% {
+    transform: rotateY(-18deg) rotateX(9deg) rotateZ(0deg) scale(1);
+  }
+  20% {
+    transform: rotateY(-18deg) rotateX(9deg) rotateZ(-2deg) scale(1.02);
+  }
+  40% {
+    transform: rotateY(-18deg) rotateX(9deg) rotateZ(2deg) scale(1.03);
+  }
+  60% {
+    transform: rotateY(-18deg) rotateX(9deg) rotateZ(-2deg) scale(1.02);
+  }
+  80% {
+    transform: rotateY(-18deg) rotateX(9deg) rotateZ(1deg) scale(1.01);
+  }
+  100% {
+    transform: rotateY(-18deg) rotateX(9deg) rotateZ(0deg) scale(1);
+  }
+}
+
+.answer-modal-enter-active,
+.answer-modal-leave-active {
+  transition: background-color 260ms ease;
+}
+
+.answer-modal-enter-active .answer-modal-panel,
+.answer-modal-leave-active .answer-modal-panel {
+  transition:
+    transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 300ms ease;
+}
+
+.answer-modal-enter-from {
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.answer-modal-enter-from .answer-modal-panel {
+  opacity: 0;
+  transform: translateY(18px) scale(0.96);
+}
+
+.answer-modal-leave-to {
+  background-color: rgba(0, 0, 0, 0);
+}
+
+.answer-modal-leave-to .answer-modal-panel {
+  opacity: 0;
+  transform: translateY(14px) scale(0.98);
+}
+</style>

@@ -50,7 +50,6 @@ export const useUserStore = defineStore('user', () => {
   function logout() {
     setToken(null)
     setUserInfo(null)
-    // 可选：清空其他 store 的敏感数据
   }
 
   return {

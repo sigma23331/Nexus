@@ -21,6 +21,12 @@ const router = createRouter({
       meta: { title: '答案之书', tabBar: true, requiresAuth: true },
     },
     {
+      path: '/answer/history',
+      name: 'answer-history',
+      component: () => import('@/views/answer/AnswerHistoryView.vue'),
+      meta: { title: '答案历史', tabBar: false, requiresAuth: true },
+    },
+    {
       path: '/plaza',
       name: 'plaza',
       component: () => import('@/views/plaza/PlazaView.vue'),
@@ -31,6 +37,12 @@ const router = createRouter({
       name: 'profile',
       component: () => import('@/views/profile/ProfileView.vue'),
       meta: { title: '我的', tabBar: true, requiresAuth: true },
+    },
+    {
+      path: '/profile/mood-timeline',
+      name: 'mood-timeline',
+      component: () => import('@/views/profile/MoodTimelineView.vue'),
+      meta: { title: '心情时间轴', tabBar: false, requiresAuth: true },
     },
     {
       path: '/tools/prompt-lab',

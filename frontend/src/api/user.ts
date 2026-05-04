@@ -11,9 +11,9 @@ export interface UserProfileResponse {
 }
 
 export const getUserProfile = (): Promise<UserProfileResponse> => {
-  return request.get('/user/profile')
+  return request.get('/v1/user/profile')
 }
 
 export const updateUserProfile = (data: Partial<UserInfo>): Promise<void> => {
-  return request.put('/user/profile', data)
+  return request.put('/v1/user/profile', data)
 }

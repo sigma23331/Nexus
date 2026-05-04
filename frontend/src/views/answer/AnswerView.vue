@@ -67,24 +67,31 @@
       </section>
 
       <section>
-        <div class="flex justify-between items-center mb-4">
+        <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold">回溯复盘</h2>
-          <button class="text-xs text-purple-600">查看更多</button>
+          <router-link
+            :to="{ name: 'answer-history' }"
+            class="text-xs font-medium text-purple-600 hover:text-purple-700"
+          >
+            查看更多
+          </router-link>
         </div>
         <div class="space-y-3">
           <div
             v-for="item in history"
             :key="item.id"
-            class="flex gap-3 items-center p-3 bg-white border border-slate-200 rounded-xl"
+            class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"
           >
-            <div class="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center">
+            <div
+              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-pink-500/20"
+            >
               {{ item.icon }}
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-xs font-medium truncate">问：{{ item.question }}</p>
-              <p class="text-[10px] text-slate-500">「{{ item.answer }}」</p>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-xs font-medium">问：{{ item.question }}</p>
+              <p class="line-clamp-1 text-[10px] text-slate-500">「{{ item.answer }}」</p>
             </div>
-            <span class="text-[10px] text-slate-500">{{ item.date }}</span>
+            <span class="shrink-0 text-[10px] text-slate-500">{{ item.date }}</span>
           </div>
         </div>
       </section>
@@ -102,16 +109,20 @@
         >
           <span class="text-4xl">✨</span>
           <p class="mt-3 text-xs text-slate-500">你问：{{ currentQuestion }}</p>
-          <p class="text-xl font-bold leading-relaxed my-6 text-slate-900">{{ currentAnswer }}</p>
+          <p class="my-6 text-xl font-bold leading-relaxed text-slate-900">{{ currentAnswer }}</p>
           <button
             @click="hideAnswer"
-            class="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl font-bold text-white"
+            class="w-full rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 py-4 font-bold text-white"
           >
             我明白了
           </button>
-          <div class="flex justify-center gap-4 mt-6">
-            <button class="text-xs text-slate-500 flex items-center gap-1">📤 分享卡片</button>
-            <button class="text-xs text-slate-500 flex items-center gap-1">🔖 存入收藏</button>
+          <div class="mt-6 flex justify-center gap-4">
+            <button type="button" class="flex items-center gap-1 text-xs text-slate-500">
+              📤 分享卡片
+            </button>
+            <button type="button" class="flex items-center gap-1 text-xs text-slate-500">
+              🔖 存入收藏
+            </button>
           </div>
         </div>
       </div>
@@ -122,7 +133,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-// ==================== 静态数据（暂未连接 Pinia） ====================
 const question = ref('')
 const modalVisible = ref(false)
 const currentAnswer = ref('')
@@ -150,50 +160,6 @@ const history = ref([
     date: '4月08日',
   },
 ])
-
-// ==================== Pinia 接入示例（注释） ====================
-/*
-import { useAnswerStore } from '@/stores/answer'
-import { useUserStore } from '@/stores/user'
-
-const answerStore = useAnswerStore()
-const userStore = useUserStore()
-
-// 从 store 读取历史记录（假设已通过 API 设置）
-const history = computed(() => answerStore.historyList)
-
-// 提交答案后更新 store
-const showAnswer = () => {
-  const random = answerPool[Math.floor(Math.random() * answerPool.length)]
-  const newAnswer = {
-    id: `ans_${Date.now()}`,
-    question: question.value,
-    answerText: random,
-    createdAt: new Date().toISOString()
-  }
-  answerStore.setCurrentAnswer(newAnswer)
-  answerStore.appendHistoryItem({
-    id: newAnswer.id,
-    question: newAnswer.question,
-    answerText: newAnswer.answerText,
-    createdAt: newAnswer.createdAt
-  })
-  currentAnswer.value = `宇宙说：${random}`
-  modalVisible.value = true
-  question.value = ''   // 清空输入
-}
-
-// 在 onMounted 中加载历史记录
-import { onMounted } from 'vue'
-import { getAnswerHistory } from '@/api/answer'
-
-onMounted(async () => {
-  if (answerStore.historyList.length === 0) {
-    const res = await getAnswerHistory()
-    answerStore.setHistoryList(res.list, res.total)
-  }
-})
-*/
 
 const canSubmit = computed(() => question.value.trim().length > 0 && !isDrawing.value)
 

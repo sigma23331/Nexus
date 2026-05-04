@@ -53,6 +53,7 @@ export interface AnswerHistoryItem {
   question: string
   answerText: string
   createdAt: string
+  isFavorited?: boolean
 }
 
 // 收藏项
@@ -80,4 +81,31 @@ export interface PlazaCard {
   }
   tags?: string[]
   createdAt: string
+}
+
+/** GET /v1/diary/timeline 单条摘要 */
+export interface DiaryTimelineItem {
+  id: string
+  date: string
+  weekday: string
+  moodTag: string
+  snippet: string
+  /** 来自本机 localStorage，无服务端 id 时详情走本地缓存 */
+  localOnly?: boolean
+}
+
+/** GET /v1/diary/timeline 分页 */
+export interface DiaryTimelinePage {
+  totalDays: number
+  page: number
+  limit: number
+  list: DiaryTimelineItem[]
+}
+
+/** GET /v1/diary/entry/:id */
+export interface DiaryEntryDetail {
+  id: string
+  moodTag: string
+  content: string
+  createdAt: string | null
 }

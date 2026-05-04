@@ -1,16 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { AnswerResponse, AnswerHistoryItem, AnswerFavoriteItem } from '@/types/models'
+import type { AnswerFavoriteItem, AnswerHistoryItem, AnswerResponse } from '@/types/models'
 
 export const useAnswerStore = defineStore('answer', () => {
-  // State
   const currentAnswer = ref<AnswerResponse | null>(null)
   const historyList = ref<AnswerHistoryItem[]>([])
   const historyTotal = ref(0)
   const favoriteList = ref<AnswerFavoriteItem[]>([])
   const favoriteTotal = ref(0)
 
-  // Actions
   function setCurrentAnswer(answer: AnswerResponse) {
     currentAnswer.value = answer
   }
@@ -22,7 +20,12 @@ export const useAnswerStore = defineStore('answer', () => {
 
   function appendHistoryItem(item: AnswerHistoryItem) {
     historyList.value.unshift(item)
-    historyTotal.value++
+    historyTotal.value += 1
+  }
+
+  /** 分页追加（历史列表页「加载更多」） */
+  function appendHistoryItems(items: AnswerHistoryItem[]) {
+    historyList.value = [...historyList.value, ...items]
   }
 
   function setFavoriteList(list: AnswerFavoriteItem[], total: number) {
@@ -31,11 +34,9 @@ export const useAnswerStore = defineStore('answer', () => {
   }
 
   function toggleFavorite(answerId: string, isFavorited: boolean) {
-    // 更新当前答案的收藏状态
     if (currentAnswer.value && currentAnswer.value.id === answerId) {
       currentAnswer.value.isFavorited = isFavorited
     }
-    // 可选：同步更新历史列表和收藏列表中的状态
   }
 
   function clearAnswers() {
@@ -55,6 +56,7 @@ export const useAnswerStore = defineStore('answer', () => {
     setCurrentAnswer,
     setHistoryList,
     appendHistoryItem,
+    appendHistoryItems,
     setFavoriteList,
     toggleFavorite,
     clearAnswers,

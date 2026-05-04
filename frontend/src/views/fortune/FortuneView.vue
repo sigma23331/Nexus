@@ -159,6 +159,7 @@
           :yi="fortuneData.yi"
           :ji="fortuneData.ji"
         />
+
         <div class="flex gap-3 mt-4">
           <button
             class="flex-1 bg-purple-600 hover:bg-purple-700 rounded-xl py-2 text-sm font-medium"
@@ -166,13 +167,41 @@
             生成卡片
           </button>
           <button
+            type="button"
             class="flex-1 bg-white border border-slate-200 text-slate-700 rounded-xl py-2 text-sm font-medium"
+            @click="sharePreviewOpen = true"
           >
             分享
           </button>
         </div>
       </section>
     </main>
+
+    <Teleport to="body">
+      <Transition name="fortune-share">
+        <div
+          v-if="sharePreviewOpen"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          @click.self="sharePreviewOpen = false"
+        >
+          <div
+            class="fortune-share-panel max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
+          >
+            <div class="mb-4 flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-slate-900">分享运势</h3>
+              <button
+                type="button"
+                class="rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+                @click="sharePreviewOpen = false"
+              >
+                关闭
+              </button>
+            </div>
+            <FortuneShareReveal :fortune="fortuneSharePayload" />
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -180,6 +209,7 @@
 import * as echarts from 'echarts'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import FortuneCardPreview from './components/FortuneCardPreview.vue'
+import FortuneShareReveal from './components/FortuneShareReveal.vue'
 import TodayFortuneContent from './components/TodayFortuneContent.vue'
 // import { useFortuneStore } from '@/stores/fortune'
 
@@ -198,6 +228,17 @@ const fortuneData = ref({
   yi: ['喝奶茶', '摸鱼五分钟'],
   ji: ['熬夜', '已读不回'],
 })
+
+const sharePreviewOpen = ref(false)
+
+const fortuneSharePayload = computed(() => ({
+  title: fortuneData.value.title,
+  score: fortuneData.value.score,
+  content_main: fortuneData.value.content_main,
+  content_sub: fortuneData.value.content_sub,
+  yi: fortuneData.value.yi,
+  ji: fortuneData.value.ji,
+}))
 
 const trendScores = ref([63, 68, 65, 74, 71, 79, fortuneData.value.score])
 const historyFortunes = ref([
@@ -395,3 +436,30 @@ onBeforeUnmount(() => {
 
 // 为了不破坏当前显示，暂时不调用真实 API，保留静态数据
 </script>
+
+<style scoped>
+.fortune-share-enter-active,
+.fortune-share-leave-active {
+  transition: background-color 0.22s ease;
+}
+.fortune-share-enter-active .fortune-share-panel,
+.fortune-share-leave-active .fortune-share-panel {
+  transition:
+    transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.28s ease;
+}
+.fortune-share-enter-from {
+  background-color: rgba(0, 0, 0, 0);
+}
+.fortune-share-enter-from .fortune-share-panel {
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+}
+.fortune-share-leave-to {
+  background-color: rgba(0, 0, 0, 0);
+}
+.fortune-share-leave-to .fortune-share-panel {
+  opacity: 0;
+  transform: translateY(8px) scale(0.99);
+}
+</style>

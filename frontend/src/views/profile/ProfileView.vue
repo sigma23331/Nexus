@@ -36,19 +36,19 @@
         <h2 class="text-lg font-semibold mb-3">快捷入口</h2>
         <ul class="space-y-2">
           <li
-            class="p-3 bg-white border border-slate-200 rounded-xl flex justify-between items-center cursor-pointer"
+            class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
           >
             <span>⭐ 收藏的答案</span>
             <span class="text-sm text-slate-500">{{ favoriteCount }}</span>
           </li>
           <li
-            class="p-3 bg-white border border-slate-200 rounded-xl flex justify-between items-center cursor-pointer"
+            class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
           >
             <span>⭐ 收藏的答案</span>
             <span class="text-sm text-slate-500">{{ favoriteCount }}</span>
           </li>
           <li
-            class="p-3 bg-white border border-slate-200 rounded-xl flex justify-between items-center cursor-pointer"
+            class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
           >
             <span>📅 历史运势记录</span>
             <span class="text-sm text-slate-500">{{ historyCount }}</span>
@@ -59,6 +59,13 @@
       <!-- 情绪日记本 -->
       <section>
         <h2 class="text-lg font-semibold mb-3">情绪日记本</h2>
+        <router-link
+          to="/profile/mood-timeline"
+          class="mb-3 flex items-center justify-between rounded-xl border border-violet-200 bg-violet-50/80 px-4 py-3 text-sm font-medium text-violet-900 shadow-sm transition hover:bg-violet-100"
+        >
+          <span>📿 心情时间轴</span>
+          <span class="text-xs text-violet-600">按日查看</span>
+        </router-link>
         <MonthlyMoodOverview ref="monthlyOverviewRef" />
         <div class="mt-4">
           <button

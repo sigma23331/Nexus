@@ -72,12 +72,12 @@ def register_blueprints(app):
     from routes.diary_route import diary_bp
     from routes.prompt_lab_route import prompt_lab_bp
 
-    app.register_blueprint(auth_bp, url_prefix='/v1/auth')
-    app.register_blueprint(user_bp, url_prefix='/v1/user')
-    app.register_blueprint(fortune_bp, url_prefix='/v1/fortune')
-    app.register_blueprint(answer_bp, url_prefix='/v1/answer')
-    app.register_blueprint(plaza_bp, url_prefix='/v1/plaza')
-    app.register_blueprint(diary_bp, url_prefix='/v1/diary')
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(user_bp, url_prefix='/user')
+    app.register_blueprint(fortune_bp, url_prefix='/fortune')
+    app.register_blueprint(answer_bp, url_prefix='/answer')
+    app.register_blueprint(plaza_bp, url_prefix='/plaza')
+    app.register_blueprint(diary_bp, url_prefix='/diary')
 
     env = app.config.get('APP_ENV', 'development')
     if env in {'development', 'local'} and bool(app.config.get('PROMPT_LAB_DEV_ENABLED', False)):

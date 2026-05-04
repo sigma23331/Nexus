@@ -66,7 +66,7 @@ def sms_login():
         return jsonify(code=400, message="phone 和 code 不能为空", data=None), 400
 
     record = _sms_store.get(phone)
-    if not record or record.get('action') != 'login':
+    if not record or record.get('action') not in ('login', 'register'):
         return jsonify(code=400, message="未找到验证码，请先发送", data=None), 400
     if datetime.utcnow() > record['expires_at']:
         return jsonify(code=400, message="验证码已过期", data=None), 400

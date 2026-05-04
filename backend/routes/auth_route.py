@@ -23,6 +23,19 @@ def _check_sms_rate(phone: str) -> bool:
         return False
     return True
 
+def _make_unique_nickname(phone: str) -> str:
+    """根据手机号后四位生成不重复的默认昵称（用于自动注册）"""
+    base = f"用户{phone[-4:]}"
+    nickname = base
+    suffix = 1
+    while User.query.filter_by(nickname=nickname).first():
+        nickname = f"{base}_{suffix}"
+        suffix += 1
+        if len(nickname) > 20:
+            # 超长保护，截断并保留唯一标识
+            nickname = f"{base[:16]}_{suffix}"
+    return nickname
+
 # ---------- 短信验证码发送 ----------
 @auth_bp.route('/sms/send', methods=['POST'])
 def send_sms():
@@ -35,10 +48,12 @@ def send_sms():
     if not phone:
         return jsonify(code=400, message="phone 字段不能为空", data=None), 400
 
+    if not re.match(r'^1[3-9]\d{9}$', phone):
+        return jsonify(code=400, message="无效的手机号格式", data=None), 400
+
     if not _check_sms_rate(phone):
         return jsonify(code=429, message="发送频率过高，请60秒后再试", data=None), 429
 
-    # 根据手机号是否已注册，自动区分场景
     existing = User.query.filter_by(phone=phone).first()
     action = 'login' if existing else 'register'
 
@@ -78,7 +93,11 @@ def sms_login():
     user = User.query.filter_by(phone=phone).first()
     is_new = False
     if not user:
-        user = User(phone=phone, nickname=f"用户{phone[-4:]}")
+        # 昵称唯一性处理
+        user = User(
+            phone=phone,
+            nickname=_make_unique_nickname(phone)
+        )
         db.session.add(user)
         db.session.commit()
         db.session.refresh(user)
@@ -118,7 +137,7 @@ def register():
     if User.query.filter_by(phone=phone).first():
         return jsonify(code=400, message="该手机号已注册，请直接登录", data=None), 400
 
-    # 验证验证码（注册或登录场景均可，因为 /sms/send 已自动区分）
+    # 验证验证码
     record = _sms_store.get(phone)
     if not record or record.get('action') not in ('login', 'register'):
         return jsonify(code=400, message="未找到验证码，请先发送", data=None), 400
@@ -127,10 +146,12 @@ def register():
     if record['code'] != code:
         return jsonify(code=400, message="验证码错误", data=None), 400
 
-    # 创建用户并设置密码
     try:
-        user = User(phone=phone, nickname=f"用户{phone[-4:]}")
-        user.set_password(password)  # 密码哈希写入数据库
+        user = User(
+            phone=phone,
+            nickname=_make_unique_nickname(phone)
+        )
+        user.set_password(password)
         db.session.add(user)
         db.session.commit()
         db.session.refresh(user)
@@ -152,29 +173,93 @@ def register():
         "isNewUser": True
     }), 200
 
-# ---------- 密码登录 ----------
-@auth_bp.route('/password/login', methods=['POST'])
-def password_login():
-    """手机号 + 密码登录"""
+# ---------- 新增：昵称+密码注册（无验证码） ----------
+@auth_bp.route('/register/nickname', methods=['POST'])
+def register_nickname():
+    """昵称 + 密码注册（无需手机号、无需验证码）"""
     data = request.get_json(silent=True)
     if not data:
         return jsonify(code=400, message="请求体必须是有效的JSON", data=None), 400
 
-    phone = data.get('phone')
+    nickname = data.get('nickname')
     password = data.get('password')
 
-    if not phone or not password:
-        return jsonify(code=400, message="phone 和 password 不能为空", data=None), 400
-    if not isinstance(phone, str) or not re.match(r'^1[3-9]\d{9}$', phone):
-        return jsonify(code=400, message="无效的手机号格式", data=None), 400
+    if not nickname or not password:
+        return jsonify(code=400, message="nickname 和 password 不能为空", data=None), 400
+    if not isinstance(nickname, str) or not (1 <= len(nickname.strip()) <= 20):
+        return jsonify(code=400, message="昵称长度为1-20个字符", data=None), 400
+    if not isinstance(password, str) or len(password) < 6 or len(password) > 20:
+        return jsonify(code=400, message="密码长度需为6-20位", data=None), 400
 
-    user = User.query.filter_by(phone=phone).first()
+    nickname = nickname.strip()
+
+    # 检查昵称唯一性
+    if User.query.filter_by(nickname=nickname).first():
+        return jsonify(code=400, message="该昵称已被占用", data=None), 400
+
+    try:
+        user = User(nickname=nickname)  # phone 为 None
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+        db.session.refresh(user)
+    except Exception as e:
+        current_app.logger.error(f"昵称注册失败: {str(e)}")
+        db.session.rollback()
+        return jsonify(code=500, message="注册失败，请稍后重试", data=None), 500
+
+    token = create_access_token(identity=user.id)
+    return jsonify(code=200, message="注册成功", data={
+        "token": token,
+        "userInfo": {
+            "uid": user.id,
+            "nickname": user.nickname,
+            "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png"
+        },
+        "isNewUser": True
+    }), 200
+
+# ---------- 密码登录（支持手机号或昵称） ----------
+@auth_bp.route('/password/login', methods=['POST'])
+def password_login():
+    """
+    手机号/昵称 + 密码登录
+    支持字段：
+      - account: 手机号或昵称（推荐）
+      - phone: 仅手机号（向后兼容，优先于 account 中的手机号）
+    """
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify(code=400, message="请求体必须是有效的JSON", data=None), 400
+
+    password = data.get('password')
+    if not password:
+        return jsonify(code=400, message="password 不能为空", data=None), 400
+
+    # 优先使用 account 字段，若没有则回退到 phone 字段
+    account = data.get('account')
+    phone = data.get('phone')
+
+    user = None
+    if account:
+        # 判断输入是否手机号格式
+        if re.match(r'^1[3-9]\d{9}$', account):
+            user = User.query.filter_by(phone=account).first()
+        else:
+            user = User.query.filter_by(nickname=account).first()
+    elif phone:
+        if not isinstance(phone, str) or not re.match(r'^1[3-9]\d{9}$', phone):
+            return jsonify(code=400, message="无效的手机号格式", data=None), 400
+        user = User.query.filter_by(phone=phone).first()
+    else:
+        return jsonify(code=400, message="请提供 account（手机号/昵称）或 phone", data=None), 400
+
     if not user:
-        return jsonify(code=400, message="手机号或密码错误", data=None), 400
+        return jsonify(code=400, message="账号或密码错误", data=None), 400
     if not user.password_hash:
         return jsonify(code=400, message="该账号未设置密码，请使用验证码登录", data=None), 400
     if not user.check_password(password):
-        return jsonify(code=400, message="手机号或密码错误", data=None), 400
+        return jsonify(code=400, message="账号或密码错误", data=None), 400
 
     token = create_access_token(identity=user.id)
     return jsonify(code=200, message="登录成功", data={
@@ -200,7 +285,9 @@ def send_bind_sms():
     if not phone:
         return jsonify(code=400, message="phone 字段不能为空", data=None), 400
 
-    # 检查手机号是否已被其他用户使用
+    if not re.match(r'^1[3-9]\d{9}$', phone):
+        return jsonify(code=400, message="无效的手机号格式", data=None), 400
+
     existing = User.query.filter_by(phone=phone).first()
     current_uid = get_jwt_identity()
     if existing and existing.id != current_uid:

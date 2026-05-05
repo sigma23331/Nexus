@@ -93,7 +93,7 @@ import { getUserProfile } from '@/api/user'
 import MonthlyMoodOverview from '@/components/business/MonthlyMoodOverview.vue'
 import MoodDiaryModal from '@/components/business/MoodDiaryModal.vue'
 import SettingModal from '@/components/common/SettingModal.vue'
-import { saveDiary } from '@/utils/storage'
+import { saveDiaryOfflineFirst } from '@/utils/diaryService'
 import type { MoodTag } from '@/utils/storage'
 
 interface DiaryData {
@@ -113,8 +113,13 @@ const settingModalRef = ref<InstanceType<typeof SettingModal> | null>(null)
 const openMoodModal = () => moodModalRef.value?.open()
 const openSettings = () => settingModalRef.value?.open()
 
-const onDiarySubmitted = (data: DiaryData) => {
-  saveDiary({ date: data.date, moodTag: data.moodTag, content: data.content })
+const onDiarySubmitted = async (data: DiaryData) => {
+  await saveDiaryOfflineFirst({
+    date: data.date,
+    moodTag: data.moodTag,
+    content: data.content,
+  })
+  // 刷新月度概览
   monthlyOverviewRef.value?.refresh()
 }
 

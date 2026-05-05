@@ -116,7 +116,9 @@ frontend/
     │   ├── useFortune.ts           # 获取运势、轨迹等
     │   ├── useAnswer.ts            # 提问、历史、收藏
     │   ├── usePlaza.ts             # 广场卡片加载、点赞
-    │   └── useCardGenerator.ts     # 卡片生成
+    │   ├── useCardGenerator.ts     # 卡片生成
+    │   ├── diaryService.ts         # 日记服务：本地存储 + 后台同步队列（离线优先）
+    │   └── networkSync.ts          # 网络监听与自动同步未上传日记
     │
     ├── config/
     │   └── typography.ts           # 字体样式配置文件

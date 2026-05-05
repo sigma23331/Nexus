@@ -52,12 +52,14 @@
       <div
         v-for="(day, index) in calendarDays"
         :key="index"
-        class="aspect-square flex flex-col items-center justify-center rounded-lg transition cursor-pointer hover:bg-slate-50"
+        class="aspect-square flex flex-col items-center justify-center rounded-lg transition"
         :class="{
-          'opacity-40': !day.isCurrentMonth,
+          'opacity-40': !day.isCurrentMonth || day.isFuture,
           'bg-purple-50 ring-1 ring-purple-200': day.isToday,
+          'cursor-pointer hover:bg-slate-50': day.isCurrentMonth && !day.isFuture,
+          'cursor-default': !day.isCurrentMonth || day.isFuture,
         }"
-        @click="showDayDetail(day)"
+        @click="day.isCurrentMonth && !day.isFuture && showDayDetail(day)"
       >
         <span
           class="text-sm font-medium"
@@ -112,10 +114,13 @@ const moodLegend = [
   { emoji: '😢', value: 'sad', label: '难过' },
 ]
 
-// 当前真实时间限制
+// 当前真实时间限制（服务器时间此处用本地时间模拟）
 const today = new Date()
 const maxYear = today.getFullYear()
 const maxMonth = today.getMonth()
+// 今天的日期字符串 YYYY-MM-DD
+const todayStr = today.toISOString().slice(0, 10)
+
 const currentYear = ref(today.getFullYear())
 const currentMonth = ref(today.getMonth())
 const isNextMonthDisabled = computed(
@@ -131,6 +136,7 @@ interface CalendarDay {
   dayNumber: number
   isCurrentMonth: boolean
   isToday: boolean
+  isFuture: boolean // 是否未来日期
   moodTag: string | null
   content: string
 }
@@ -160,7 +166,6 @@ const handleDiariesUpdated = (event: Event) => {
 onMounted(() => {
   loadDiaries()
   window.addEventListener('diaries-updated', handleDiariesUpdated)
-  // 原有月份选择器初始化逻辑...
   if (
     currentYear.value > maxYear ||
     (currentYear.value === maxYear && currentMonth.value > maxMonth)
@@ -186,7 +191,7 @@ const availableMonths = computed(() => {
       if (y === startYear && m < startMonth) continue
       months.push({
         value: `${y}-${String(m + 1).padStart(2, '0')}`,
-        label: `${y}年${String(m + 1).padStart(2, '0')}月`,
+        label: `${y}/${String(m + 1).padStart(2, '0')}`, // 格式改为 YYYY/MM
       })
     }
   }
@@ -259,7 +264,6 @@ const calendarDays = computed(() => {
     diaryMap.set(entry.date, entry)
   })
 
-  const todayStr = new Date().toISOString().slice(0, 10)
   const fullDays: CalendarDay[] = []
 
   // 上月补位
@@ -271,6 +275,7 @@ const calendarDays = computed(() => {
       dayNumber: dayNum,
       isCurrentMonth: false,
       isToday: false,
+      isFuture: dateStr > todayStr,
       moodTag: null,
       content: '',
     })
@@ -285,6 +290,7 @@ const calendarDays = computed(() => {
       dayNumber: d,
       isCurrentMonth: true,
       isToday: dateStr === todayStr,
+      isFuture: dateStr > todayStr,
       moodTag: diary?.moodTag || null,
       content: diary?.content || '',
     })
@@ -306,6 +312,7 @@ const calendarDays = computed(() => {
       dayNumber: i,
       isCurrentMonth: false,
       isToday: false,
+      isFuture: dateStr > todayStr,
       moodTag: null,
       content: '',
     })
@@ -323,17 +330,19 @@ const calendarDays = computed(() => {
   return weeks.flat()
 })
 
-const currentYearMonth = computed(
-  () => `${currentYear.value}年${String(currentMonth.value + 1).padStart(2, '0')}月`,
-)
+const currentYearMonth = computed(() => {
+  const year = currentYear.value
+  const month = currentMonth.value + 1
+  return `${year}/${String(month).padStart(2, '0')}`
+})
 const getMoodEmoji = (tag: string | null) => moodEmoji[tag ?? 'null']
 
 // 弹窗相关
 const diaryModalRef = ref<InstanceType<typeof DiaryDetailModal> | null>(null)
 
-// 点击日期显示详情
+// 点击日期显示详情（未来日期不可点击，已由模板控制）
 const showDayDetail = async (day: CalendarDay) => {
-  if (!day.isCurrentMonth) return
+  if (!day.isCurrentMonth || day.isFuture) return
   let content = day.content
   const entry = diaryEntries.value.find((e) => e.date === day.date)
   // 如果本地内容为空且有服务端ID，尝试拉取完整内容

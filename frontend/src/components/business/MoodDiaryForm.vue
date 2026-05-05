@@ -7,6 +7,7 @@
       <input
         type="date"
         v-model="form.date"
+        :max="maxDate"
         class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/60 focus:border-purple-400"
       />
     </div>
@@ -62,7 +63,7 @@
       {{ submitting ? '保存中…' : '保存日记' }}
     </button>
 
-    <!-- 提示消息（不固定定位，改为相对布局内嵌） -->
+    <!-- 提示消息 -->
     <p
       v-if="message.text"
       class="text-center text-sm py-2 rounded-lg"
@@ -93,6 +94,9 @@ const MOOD_OPTIONS: readonly MoodOption[] = [
   { emoji: '😢', value: 'sad', label: '难过' },
 ]
 
+// 最大可选日期为今天
+const maxDate = new Date().toISOString().slice(0, 10)
+
 // 表单逻辑
 const useMoodForm = () => {
   const form = reactive({
@@ -110,7 +114,7 @@ const useMoodForm = () => {
   return { form, setMood, resetContent, getSubmitData }
 }
 
-// 提示消息（不自动消失，由父组件控制关闭弹窗时可清空）
+// 提示消息
 const useToastMessage = () => {
   const message = reactive({ text: '', type: 'success' as 'success' | 'error' })
   const show = (text: string, type: 'success' | 'error' = 'success') => {
@@ -133,6 +137,12 @@ const emit = defineEmits<{
 }>()
 
 const handleSubmit = async () => {
+  // 二次校验：日期不能大于今天
+  const selectedDate = form.date
+  if (selectedDate > maxDate) {
+    showToast('不能记录未来日期的日记', 'error')
+    return
+  }
   if (!form.content.trim()) {
     showToast('请填写备注内容', 'error')
     return
@@ -142,7 +152,6 @@ const handleSubmit = async () => {
     emit('submit', getSubmitData())
     resetContent()
     showToast('保存成功！', 'success')
-    // 通知父组件刷新数据并关闭弹窗（延迟一下，让提示可见）
     setTimeout(() => {
       emit('success')
     }, 800)

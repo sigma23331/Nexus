@@ -27,6 +27,14 @@ class Config:
     LLM_PROMPT_FORTUNE_VERSION = os.environ.get('LLM_PROMPT_FORTUNE_VERSION', 'v4')
     LLM_PROMPT_PROFILE_VERSION = os.environ.get('LLM_PROMPT_PROFILE_VERSION', 'v1')
 
+    # SMS / phone verification
+    SMS_PROVIDER = os.environ.get('SMS_PROVIDER', 'mock')
+    SMS_SIGN_NAME = os.environ.get('SMS_SIGN_NAME', '速通互联验证码')
+    SMS_TEMPLATE_CODE = os.environ.get('SMS_TEMPLATE_CODE', '100001')
+    SMS_CODE_LENGTH = int(os.environ.get('SMS_CODE_LENGTH', '6'))
+    SMS_SEND_INTERVAL = int(os.environ.get('SMS_SEND_INTERVAL', '60'))
+    DYPNS_API_ENDPOINT = os.environ.get('DYPNS_API_ENDPOINT', 'dypnsapi.aliyuncs.com')
+
     # 数据库配置
     if os.environ.get('DATABASE_URL'):
         SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')

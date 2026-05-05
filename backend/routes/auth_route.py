@@ -1,28 +1,23 @@
+import os
 import re
-from datetime import datetime, timedelta
+import logging
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from alibabacloud_credentials.credentials import AccessKeyCredential
+from alibabacloud_dypnsapi20170525 import models as dypns_models
+from alibabacloud_dypnsapi20170525.client import Client as DypnsClient
+from alibabacloud_tea_openapi import models as open_api_models
 from models.user import User
 from extensions import db
+from services import sms_service
 
 auth_bp = Blueprint('auth', __name__)
+logger = logging.getLogger(__name__)
 
-# 模拟短信验证码存储（生产环境请改用 Redis）
-_sms_store = {}
+# 全局阿里云客户端缓存
+_dypns_client = None
 
 # ---------- 工具函数 ----------
-def _generate_code(length: int = 6) -> str:
-    """生成指定长度的数字验证码"""
-    return ''.join(__import__('random').choices(__import__('string').digits, k=length))
-
-def _check_sms_rate(phone: str) -> bool:
-    """同一手机号 60 秒内只允许发一次验证码"""
-    now = datetime.utcnow()
-    record = _sms_store.get(phone)
-    if record and (now - record['sent_at']).seconds < 60:
-        return False
-    return True
-
 def _make_unique_nickname(phone: str) -> str:
     """根据手机号后四位生成不重复的默认昵称（用于自动注册）"""
     base = f"用户{phone[-4:]}"
@@ -35,6 +30,63 @@ def _make_unique_nickname(phone: str) -> str:
             # 超长保护，截断并保留唯一标识
             nickname = f"{base[:16]}_{suffix}"
     return nickname
+
+
+def _get_dypns_client() -> DypnsClient:
+    """获取或创建阿里云号码认证 DYPNS 客户端"""
+    global _dypns_client
+    if _dypns_client is None:
+        try:
+            access_key = os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_ID', '')
+            secret_key = os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_SECRET', '')
+            if not access_key or not secret_key:
+                raise ValueError("缺少阿里云AccessKey配置")
+
+            credential = AccessKeyCredential(access_key, secret_key)
+            config = open_api_models.Config(credential=credential)
+            config.endpoint = current_app.config.get('DYPNS_API_ENDPOINT', 'dypnsapi.aliyuncs.com')
+            config.region_id = os.environ.get('ALIBABA_CLOUD_REGION_ID', 'cn-hangzhou')
+            _dypns_client = DypnsClient(config)
+        except Exception as e:
+            logger.error(f"创建DYPNS客户端失败: {e}")
+            raise
+    return _dypns_client
+
+
+def _find_phone_value(payload):
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            if key and key.lower() in {'phonenumber', 'phone_number', 'phoneno', 'phone_no', 'mobile', 'phone'} and value:
+                return value
+            nested = _find_phone_value(value)
+            if nested:
+                return nested
+    return None
+
+
+def _extract_phone_number_from_response(response):
+    """从阿里云号码认证返回结果中解析手机号"""
+    if response is None:
+        return None
+
+    if isinstance(response, dict):
+        body = response.get('body')
+        if isinstance(body, dict):
+            data = body.get('data')
+            if isinstance(data, dict):
+                return data.get('mobile') or data.get('phone')
+        return _find_phone_value(response)
+
+    body = getattr(response, 'body', None)
+    if body:
+        data = getattr(body, 'data', None)
+        if data:
+            return getattr(data, 'mobile', None) or getattr(data, 'phone', None)
+        phone = getattr(body, 'mobile', None) or getattr(body, 'phone', None)
+        if phone:
+            return phone
+
+    return _find_phone_value(response)
 
 # ---------- 短信验证码发送 ----------
 @auth_bp.route('/sms/send', methods=['POST'])
@@ -51,21 +103,23 @@ def send_sms():
     if not re.match(r'^1[3-9]\d{9}$', phone):
         return jsonify(code=400, message="无效的手机号格式", data=None), 400
 
-    if not _check_sms_rate(phone):
+    if not sms_service.can_send(phone):
         return jsonify(code=429, message="发送频率过高，请60秒后再试", data=None), 429
 
     existing = User.query.filter_by(phone=phone).first()
     action = 'login' if existing else 'register'
 
-    code = _generate_code()
-    _sms_store[phone] = {
-        'code': code,
-        'expires_at': datetime.utcnow() + timedelta(seconds=300),
-        'sent_at': datetime.utcnow(),
-        'action': action
+    result = sms_service.send_verify_code(phone=phone, action=action)
+    data = {
+        "success": result.success,
+        "provider": result.provider,
+        "expiresIn": result.expires_in,
     }
-    current_app.logger.info(f"[模拟短信] 手机 {phone} 验证码: {code} (场景: {action})")
-    return jsonify(code=200, message="验证码已发送", data={"success": True, "expiresIn": 300}), 200
+    if result.error:
+        data["error"] = result.error
+
+    status_code = 200 if result.success else 500
+    return jsonify(code=status_code, message=result.message, data=data), status_code
 
 # ---------- 短信验证码登录（自动注册） ----------
 @auth_bp.route('/sms/login', methods=['POST'])
@@ -80,15 +134,13 @@ def sms_login():
     if not phone or not code:
         return jsonify(code=400, message="phone 和 code 不能为空", data=None), 400
 
-    record = _sms_store.get(phone)
-    if not record or record.get('action') not in ('login', 'register'):
-        return jsonify(code=400, message="未找到验证码，请先发送", data=None), 400
-    if datetime.utcnow() > record['expires_at']:
-        return jsonify(code=400, message="验证码已过期", data=None), 400
-    if record['code'] != code:
-        return jsonify(code=400, message="验证码错误", data=None), 400
-
-    del _sms_store[phone]
+    verify_result = sms_service.verify_code(
+        phone=phone,
+        code=code,
+        allowed_actions=('login', 'register'),
+    )
+    if not verify_result.success:
+        return jsonify(code=400, message=verify_result.message, data=None), 400
 
     user = User.query.filter_by(phone=phone).first()
     is_new = False
@@ -137,14 +189,14 @@ def register():
     if User.query.filter_by(phone=phone).first():
         return jsonify(code=400, message="该手机号已注册，请直接登录", data=None), 400
 
-    # 验证验证码
-    record = _sms_store.get(phone)
-    if not record or record.get('action') not in ('login', 'register'):
-        return jsonify(code=400, message="未找到验证码，请先发送", data=None), 400
-    if datetime.utcnow() > record['expires_at']:
-        return jsonify(code=400, message="验证码已过期", data=None), 400
-    if record['code'] != code:
-        return jsonify(code=400, message="验证码错误", data=None), 400
+    # 验证验证码（注册或登录场景均可，因为 /sms/send 已自动区分）
+    verify_result = sms_service.verify_code(
+        phone=phone,
+        code=code,
+        allowed_actions=('login', 'register'),
+    )
+    if not verify_result.success:
+        return jsonify(code=400, message=verify_result.message, data=None), 400
 
     try:
         user = User(
@@ -159,8 +211,6 @@ def register():
         current_app.logger.error(f"注册用户失败: {str(e)}")
         db.session.rollback()
         return jsonify(code=500, message="注册失败，请稍后重试", data=None), 500
-
-    del _sms_store[phone]
 
     token = create_access_token(identity=user.id)
     return jsonify(code=200, message="注册成功", data={
@@ -293,18 +343,20 @@ def send_bind_sms():
     if existing and existing.id != current_uid:
         return jsonify(code=400, message="该手机号已被其他用户绑定", data=None), 400
 
-    if not _check_sms_rate(phone):
+    if not sms_service.can_send(phone):
         return jsonify(code=429, message="发送频率过高，请60秒后再试", data=None), 429
 
-    code = _generate_code()
-    _sms_store[phone] = {
-        'code': code,
-        'expires_at': datetime.utcnow() + timedelta(seconds=300),
-        'sent_at': datetime.utcnow(),
-        'action': 'bind'
+    result = sms_service.send_verify_code(phone=phone, action='bind')
+    data = {
+        "success": result.success,
+        "provider": result.provider,
+        "expiresIn": result.expires_in,
     }
-    current_app.logger.info(f"[模拟短信] 手机 {phone} 绑定验证码: {code}")
-    return jsonify(code=200, message="验证码已发送", data={"success": True, "expiresIn": 300}), 200
+    if result.error:
+        data["error"] = result.error
+
+    status_code = 200 if result.success else 500
+    return jsonify(code=status_code, message=result.message, data=data), status_code
 
 @auth_bp.route('/sms/bind/confirm', methods=['POST'])
 @jwt_required()
@@ -319,13 +371,13 @@ def confirm_bind_sms():
     if not phone or not code:
         return jsonify(code=400, message="phone 和 code 不能为空", data=None), 400
 
-    record = _sms_store.get(phone)
-    if not record or record.get('action') != 'bind':
-        return jsonify(code=400, message="未找到验证码，请先发送", data=None), 400
-    if datetime.utcnow() > record['expires_at']:
-        return jsonify(code=400, message="验证码已过期", data=None), 400
-    if record['code'] != code:
-        return jsonify(code=400, message="验证码错误", data=None), 400
+    verify_result = sms_service.verify_code(
+        phone=phone,
+        code=code,
+        allowed_actions=('bind',),
+    )
+    if not verify_result.success:
+        return jsonify(code=400, message=verify_result.message, data=None), 400
 
     current_uid = get_jwt_identity()
     existing = User.query.filter_by(phone=phone).first()
@@ -338,9 +390,57 @@ def confirm_bind_sms():
 
     user.phone = phone
     db.session.commit()
-    del _sms_store[phone]
-
     return jsonify(code=200, message="手机号绑定成功", data={"success": True}), 200
+
+
+@auth_bp.route('/mobile/verify', methods=['POST'])
+def verify_mobile():
+    """号码认证回调：使用阿里云 DYPNS access_code 解析手机号并登录/注册用户"""
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify(code=400, message="请求体必须是有效的JSON", data=None), 400
+
+    access_code = data.get('access_code') or data.get('accessCode')
+    requested_phone = data.get('phone')
+    if not access_code:
+        return jsonify(code=400, message="access_code 不能为空", data=None), 400
+
+    try:
+        dypns_client = _get_dypns_client()
+        request_model = dypns_models.GetPhoneWithTokenRequest(sp_token=access_code)
+        response = dypns_client.get_phone_with_token(request_model)
+        phone = _extract_phone_number_from_response(response)
+    except Exception as e:
+        current_app.logger.exception("号码认证失败")
+        return jsonify(code=500, message=f"号码认证失败: {str(e)}", data=None), 500
+
+    if not phone:
+        return jsonify(code=500, message="未能解析到认证手机号", data=None), 500
+    if requested_phone and requested_phone != phone:
+        return jsonify(code=400, message="认证结果手机号与请求手机号不匹配", data=None), 400
+    if not isinstance(phone, str) or not re.match(r'^1[3-9]\d{9}$', phone):
+        return jsonify(code=400, message="认证结果手机号格式不正确", data=None), 400
+
+    user = User.query.filter_by(phone=phone).first()
+    is_new = False
+    if not user:
+        user = User(phone=phone, nickname=f"用户{phone[-4:]}")
+        db.session.add(user)
+        db.session.commit()
+        db.session.refresh(user)
+        is_new = True
+
+    token = create_access_token(identity=user.id)
+    return jsonify(code=200, message="认证成功", data={
+        "token": token,
+        "userInfo": {
+            "uid": user.id,
+            "nickname": user.nickname,
+            "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png",
+            "phone": user.phone
+        },
+        "isNewUser": is_new
+    }), 200
 
 # ---------- 通用认证接口 ----------
 @auth_bp.route('/verify', methods=['GET'])

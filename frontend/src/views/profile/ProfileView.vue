@@ -33,14 +33,7 @@
     <main class="px-6 py-4 space-y-8">
       <!-- 快捷入口 -->
       <section>
-        <h2 class="text-lg font-semibold mb-3">快捷入口</h2>
         <ul class="space-y-2">
-          <li
-            class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
-          >
-            <span>⭐ 收藏的答案</span>
-            <span class="text-sm text-slate-500">{{ favoriteCount }}</span>
-          </li>
           <li
             class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
           >
@@ -100,7 +93,7 @@ import { getUserProfile } from '@/api/user'
 import MonthlyMoodOverview from '@/components/business/MonthlyMoodOverview.vue'
 import MoodDiaryModal from '@/components/business/MoodDiaryModal.vue'
 import SettingModal from '@/components/common/SettingModal.vue'
-import { saveDiary } from '@/utils/storage'
+import { saveDiaryOfflineFirst } from '@/utils/diaryService'
 import type { MoodTag } from '@/utils/storage'
 
 interface DiaryData {
@@ -120,8 +113,13 @@ const settingModalRef = ref<InstanceType<typeof SettingModal> | null>(null)
 const openMoodModal = () => moodModalRef.value?.open()
 const openSettings = () => settingModalRef.value?.open()
 
-const onDiarySubmitted = (data: DiaryData) => {
-  saveDiary({ date: data.date, moodTag: data.moodTag, content: data.content })
+const onDiarySubmitted = async (data: DiaryData) => {
+  await saveDiaryOfflineFirst({
+    date: data.date,
+    moodTag: data.moodTag,
+    content: data.content,
+  })
+  // 刷新月度概览
   monthlyOverviewRef.value?.refresh()
 }
 

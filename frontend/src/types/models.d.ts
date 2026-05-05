@@ -6,16 +6,17 @@ export interface UserInfo {
   phone?: string | null
 }
 
+// 情绪标签（与后端 MoodType 枚举对齐）
+export type MoodType = 'happy' | 'calm' | 'sad' | 'angry' | 'tired'
+
 // 今日运势
 export interface FortuneToday {
   id: string
   date: string
-  // 今日签文
-  score: number // 用于全站数据统计
-  title: string // “上上签”
-  content_main: string // "风起云开，顺遂自来"
-  content_sub: string // "今日宜稳中求进，心静则通达"
-  // 今日概览
+  score: number
+  title: string
+  content_main: string
+  content_sub: string
   yi: string[]
   ji: string[]
   love?: string
@@ -79,22 +80,20 @@ export interface PlazaCard {
     likes: number
     isLiked: boolean
   }
-  tags?: string[]
   createdAt: string
 }
 
-/** GET /v1/diary/timeline 单条摘要 */
+// 日记时间轴项（来自 API）
 export interface DiaryTimelineItem {
   id: string
   date: string
   weekday: string
-  moodTag: string
+  moodTag: MoodType
   snippet: string
-  /** 来自本机 localStorage，无服务端 id 时详情走本地缓存 */
-  localOnly?: boolean
+  localOnly?: boolean // 标记是否仅为本地数据（无服务端ID）
 }
 
-/** GET /v1/diary/timeline 分页 */
+// 日记时间轴分页
 export interface DiaryTimelinePage {
   totalDays: number
   page: number
@@ -102,10 +101,10 @@ export interface DiaryTimelinePage {
   list: DiaryTimelineItem[]
 }
 
-/** GET /v1/diary/entry/:id */
+// 日记详情（用于单条查看）
 export interface DiaryEntryDetail {
   id: string
-  moodTag: string
+  moodTag: MoodType
   content: string
-  createdAt: string | null
+  createdAt: string
 }

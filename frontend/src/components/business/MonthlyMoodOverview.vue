@@ -15,6 +15,7 @@
           class="font-semibold text-slate-800 px-4 py-2 rounded-lg hover:bg-slate-100 transition flex items-center gap-1"
         >
           {{ currentYearMonth }}
+          <span class="text-sm">▼</span>
         </button>
         <div
           v-if="showMonthSelector"
@@ -61,8 +62,9 @@
         <span
           class="text-sm font-medium"
           :class="day.isToday ? 'text-purple-600' : 'text-slate-700'"
-          >{{ day.dayNumber }}</span
         >
+          {{ day.dayNumber }}
+        </span>
         <span class="text-lg mt-0.5">{{ getMoodEmoji(day.moodTag) }}</span>
       </div>
     </div>
@@ -87,7 +89,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import DiaryDetailModal from './DiaryDetailModal.vue'
-import { getDiariesByMonth, type DiaryEntry, type MoodTag } from '@/utils/storage'
+import { loadMonthDiaries, type LocalDiary } from '@/utils/diaryService'
+import { getDiaryEntry } from '@/api/diary'
 
 // 心情映射
 const moodEmoji: Record<string, string> = {
@@ -120,24 +123,56 @@ const isNextMonthDisabled = computed(
 )
 
 // 日记数据
-const diaryEntries = ref<DiaryEntry[]>([])
+const diaryEntries = ref<LocalDiary[]>([])
 
+// 日历数据类型
 interface CalendarDay {
   date: string
   dayNumber: number
   isCurrentMonth: boolean
   isToday: boolean
-  moodTag: MoodTag | null
+  moodTag: string | null
   content: string
 }
 
+// 加载日记（本地优先，后台同步）
 async function loadDiaries() {
-  const entries = await getDiariesByMonth(currentYear.value, currentMonth.value + 1)
+  const year = currentYear.value
+  const month = currentMonth.value + 1
+  const entries = await loadMonthDiaries(year, month)
   diaryEntries.value = entries
 }
 
+// 监听年月变化
 watch([currentYear, currentMonth], () => {
   loadDiaries()
+})
+
+// 监听全局更新事件（当远程数据合并完成后触发）
+const handleDiariesUpdated = (event: Event) => {
+  const customEvent = event as CustomEvent<{ year: number; month: number }>
+  const { year, month } = customEvent.detail
+  if (year === currentYear.value && month === currentMonth.value + 1) {
+    loadDiaries()
+  }
+}
+
+onMounted(() => {
+  loadDiaries()
+  window.addEventListener('diaries-updated', handleDiariesUpdated)
+  // 原有月份选择器初始化逻辑...
+  if (
+    currentYear.value > maxYear ||
+    (currentYear.value === maxYear && currentMonth.value > maxMonth)
+  ) {
+    currentYear.value = maxYear
+    currentMonth.value = maxMonth
+    selectedYearMonth.value = `${maxYear}-${String(maxMonth + 1).padStart(2, '0')}`
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('diaries-updated', handleDiariesUpdated)
 })
 
 // 月份选择器逻辑
@@ -162,6 +197,7 @@ const monthSelectorRef = ref<HTMLElement | null>(null)
 const selectedYearMonth = ref(
   `${currentYear.value}-${String(currentMonth.value + 1).padStart(2, '0')}`,
 )
+
 const toggleMonthSelector = () => {
   showMonthSelector.value = !showMonthSelector.value
 }
@@ -173,8 +209,9 @@ const selectMonth = (value: string) => {
   showMonthSelector.value = false
 }
 const handleClickOutside = (event: MouseEvent) => {
-  if (monthSelectorRef.value && !monthSelectorRef.value.contains(event.target as Node))
+  if (monthSelectorRef.value && !monthSelectorRef.value.contains(event.target as Node)) {
     showMonthSelector.value = false
+  }
 }
 onMounted(() => document.addEventListener('click', handleClickOutside))
 onUnmounted(() => document.removeEventListener('click', handleClickOutside))
@@ -204,7 +241,7 @@ const nextMonth = () => {
   selectedYearMonth.value = `${newYear}-${String(newMonth + 1).padStart(2, '0')}`
 }
 
-// 生成日历网格（使用真实日记数据）
+// 生成日历网格（使用 diaryEntries 数据）
 const calendarDays = computed(() => {
   const year = currentYear.value
   const month = currentMonth.value
@@ -217,7 +254,7 @@ const calendarDays = computed(() => {
   const prevMonth = prevMonthDate.getMonth()
   const daysInPrevMonth = new Date(prevYear, prevMonth + 1, 0).getDate()
 
-  const diaryMap = new Map<string, DiaryEntry>()
+  const diaryMap = new Map<string, LocalDiary>()
   diaryEntries.value.forEach((entry) => {
     diaryMap.set(entry.date, entry)
   })
@@ -289,34 +326,35 @@ const calendarDays = computed(() => {
 const currentYearMonth = computed(
   () => `${currentYear.value}年${String(currentMonth.value + 1).padStart(2, '0')}月`,
 )
-const getMoodEmoji = (tag: MoodTag | null) => moodEmoji[tag ?? 'null']
+const getMoodEmoji = (tag: string | null) => moodEmoji[tag ?? 'null']
 
 // 弹窗相关
 const diaryModalRef = ref<InstanceType<typeof DiaryDetailModal> | null>(null)
 
-const showDayDetail = (day: CalendarDay) => {
+// 点击日期显示详情
+const showDayDetail = async (day: CalendarDay) => {
   if (!day.isCurrentMonth) return
+  let content = day.content
+  const entry = diaryEntries.value.find((e) => e.date === day.date)
+  // 如果本地内容为空且有服务端ID，尝试拉取完整内容
+  if (entry && entry.synced && entry.serverId && (!content || content === '')) {
+    try {
+      const detail = await getDiaryEntry(entry.serverId)
+      content = detail.content
+    } catch (err) {
+      console.warn('获取日记详情失败', err)
+    }
+  }
   diaryModalRef.value?.open({
     date: day.date,
     moodTag: day.moodTag,
-    content: day.content,
+    content: content,
   })
 }
 
+// 外部刷新方法
 const refresh = () => {
   loadDiaries()
 }
 defineExpose({ refresh })
-
-onMounted(() => {
-  loadDiaries()
-  if (
-    currentYear.value > maxYear ||
-    (currentYear.value === maxYear && currentMonth.value > maxMonth)
-  ) {
-    currentYear.value = maxYear
-    currentMonth.value = maxMonth
-    selectedYearMonth.value = `${maxYear}-${String(maxMonth + 1).padStart(2, '0')}`
-  }
-})
 </script>

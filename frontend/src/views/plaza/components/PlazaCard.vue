@@ -23,9 +23,8 @@
       <p class="text-sm text-slate-700">{{ card.content || '暂无内容' }}</p>
     </div>
 
-    <!-- 卡片图片区域：当前使用文字占位图，后期可替换为真实的 snapshotUrl -->
+    <!-- 卡片图片区域 -->
     <div class="px-4 pb-3">
-      <!-- 方案一：纯文字占位图（当前使用） -->
       <div class="rounded-xl border border-slate-200 bg-slate-100 p-6 text-center">
         <div class="text-3xl mb-2">📇</div>
         <p class="text-sm font-medium text-slate-600">
@@ -33,25 +32,14 @@
         </p>
         <p class="text-xs text-slate-400 mt-1">快照预览 · 占位图</p>
       </div>
-
-      <!-- 方案二：真实图片（后期取消注释下面代码，并注释或删除上面的占位块） -->
-      <!--
-      <div class="rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
-        <img :src="card.snapshotUrl" alt="卡片预览" class="w-full h-auto object-cover" />
-      </div>
-      -->
     </div>
 
-    <!-- 底部按钮 -->
+    <!-- 底部按钮：只保留点赞和分享，移除评论 -->
     <div class="flex items-center justify-between px-4 pb-4 text-xs text-slate-500">
       <div class="flex items-center gap-4">
         <button @click="toggleLike" class="flex items-center gap-1 transition">
           <span class="text-base">{{ card.stats.isLiked ? '❤️' : '🤍' }}</span>
           <span>{{ card.stats.likes }}</span>
-        </button>
-        <button class="flex items-center gap-1">
-          <span class="text-base">💬</span>
-          <span>{{ card.commentCount || 0 }}</span>
         </button>
         <button class="flex items-center gap-1">
           <span class="text-base">🔗</span>
@@ -80,7 +68,6 @@ export interface PlazaCardData {
     likes: number
     isLiked: boolean
   }
-  commentCount?: number
   createdAt: string
 }
 
@@ -92,7 +79,6 @@ const emit = defineEmits<{
   (e: 'like', cardId: string, isLiked: boolean): void
 }>()
 
-// 时间格式：YYYY/MM/DD HH:MM
 const formatTime = (isoString: string) => {
   const date = new Date(isoString)
   const year = date.getFullYear()

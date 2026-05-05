@@ -1,4 +1,5 @@
 # backend/routes/user.py
+import re
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.user import User
@@ -138,4 +139,85 @@ def get_favorite_answers():
         "page": page,
         "limit": limit,
         "list": answer_list
+    }), 200
+
+
+# ==================== 6.9 修改头像 ====================
+
+@user_bp.route('/profile/avatar', methods=['PUT'])
+@jwt_required()
+def update_avatar():
+    """
+    修改用户头像
+    Request JSON: { "avatar": "头像URL" }
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify(code=404, message="用户不存在", data=None), 404
+
+    data = request.get_json(silent=True)
+    if not data or 'avatar' not in data:
+        return jsonify(code=400, message="缺少 avatar 参数", data=None), 400
+
+    avatar_url = data['avatar'].strip() if isinstance(data['avatar'], str) else ''
+
+    # 简单校验：非空时检查是否为合法 URL（支持 http/https/相对路径）
+    if avatar_url:
+        url_pattern = re.compile(
+            r'^(https?://)?'  # http:// 或 https:// (可选)
+            r'[\w\-]+(\.[\w\-]+)+'  # 域名
+            r'([\w\-.,@?^=%&:/~+#]*)?$'  # 路径、查询等
+        )
+        if not url_pattern.match(avatar_url):
+            return jsonify(code=400, message="头像 URL 格式不正确", data=None), 400
+
+    user.avatar = avatar_url
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"更新头像失败: {e}", exc_info=True)
+        return jsonify(code=500, message="更新失败，请稍后重试", data=None), 500
+
+    return jsonify(code=200, message="头像更新成功", data={
+        "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png"
+    }), 200
+
+
+# ==================== 6.10 修改昵称 ====================
+
+@user_bp.route('/profile/nickname', methods=['PUT'])
+@jwt_required()
+def update_nickname():
+    """
+    修改用户昵称
+    Request JSON: { "nickname": "新昵称" }
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify(code=404, message="用户不存在", data=None), 404
+
+    data = request.get_json(silent=True)
+    if not data or 'nickname' not in data:
+        return jsonify(code=400, message="缺少 nickname 参数", data=None), 400
+
+    new_nickname = data['nickname'].strip() if isinstance(data['nickname'], str) else ''
+
+    # 长度校验（1-20 字符）
+    if len(new_nickname) < 1 or len(new_nickname) > 20:
+        return jsonify(code=400, message="昵称长度必须在1-20个字符之间", data=None), 400
+
+    user.nickname = new_nickname
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify(code=409, message="该昵称已被使用，请更换", data=None), 409
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"更新昵称失败: {e}", exc_info=True)
+        return jsonify(code=500, message="更新失败，请稍后重试", data=None), 500
+
+    return jsonify(code=200, message="昵称更新成功", data={
+        "nickname": user.nickname
     }), 200

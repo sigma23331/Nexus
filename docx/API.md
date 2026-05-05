@@ -699,6 +699,54 @@
 - **接口**: `DELETE /diary/entry/{id}`
 - **返回 data**: `{ "success": true }`
 
+### 6.9 修改头像
+- **接口**: `PUT /user/profile/avatar`
+- **说明**: 更新当前用户的头像URL
+- **请求体 (JSON)**: 
+  ```json
+    {
+  "avatar": "https://example.com/avatars/user123.jpg"
+    }
+  ```
+- **返回data**：
+  ```json
+    {
+    "code": 200,
+    "message": "头像更新成功",
+    "data": {
+     "avatar": "https://example.com/avatars/user123.jpg"
+     }
+    }
+  ```
+- **错误响应**：
+  - 400 缺少参数或URL格式错误: {"code": 400, "message": "缺少 avatar 参数", "data": null}
+  - 404 用户不存在: {"code": 404, "message": "用户不存在", "data": null}
+
+
+### 6.10 修改昵称
+- **接口**: `PUT /user/profile/nickname`
+- **说明**: 更新当前用户的昵称，全局唯一且长度1-20字符
+- **请求体 (JSON)**: 
+  ```json
+    {
+        "nickname": "心韵旅人"
+    }
+  ```
+- **返回data**：
+  ```json
+    {
+  "code": 200,
+  "message": "昵称更新成功",
+  "data": {
+    "nickname": "心韵旅人"
+    }
+  }
+  ```
+- **错误响应**：
+  - 400 长度不符: {"code": 400, "message": "昵称长度必须在1-20个字符之间", "data": null}
+  - 409 昵称重复: {"code": 409, "message": "该昵称已被使用，请更换", "data": null}
+  - 404 用户不存在: {"code": 404, "message": "用户不存在", "data": null}
+
 ---
 
 ## 7. 错误码完整列表
@@ -799,7 +847,7 @@ src/mocks/
 - 至少 4GB 可用内存
 
 ### 11.2 启动步骤
-- 创建 .env 文件，直接修改.env.example，去除.example后缀
+- 创建 .env 文件，复制并修改.env.example，去除.example后缀
 - 可以使用如下命令构建并启动
    ```bash
     docker-compose up -d --build
@@ -818,6 +866,49 @@ src/mocks/
 - 验证服务是否正常
   - 健康检查：访问 http://localhost:5000/health 应返回 {"status":"healthy","database":"connected"}
 ### 11.3 常用命令
+以下是常用的命令，均需在项目根目录（docker-compose.yml 所在目录）执行。
+```bash
+# ---- 容器管理 ----
+
+# 查看所有容器状态（运行中/停止）
+docker-compose ps
+
+# 查看后端实时日志（可看到打印的短信验证码、SQL 语句）
+docker-compose logs -f backend
+
+# 重启后端服务（修改 Python 代码后生效，因为挂载了源码卷）
+docker-compose restart backend
+
+# 重新构建镜像并启动（当依赖包变更或 Dockerfile 修改时）
+docker-compose up -d --build
+
+# 停止并移除所有容器（保留数据库数据）
+docker-compose down
+
+# 停止并清除数据库数据卷（全部数据将丢失）
+docker-compose down -v
+
+# ---- 数据库操作 ----
+
+# 进入 PostgreSQL 命令行（手动查看/修改数据）
+docker-compose exec db psql -U nexus_user -d nexus_db
+
+# 执行数据库迁移（当拉取代码后模型有变更时）
+docker-compose exec backend flask db upgrade
+
+# 生成新的迁移文件（通常由后端开发执行，前端一般不需要）
+docker-compose exec backend flask db migrate -m "变更描述"
+
+# ---- 进入容器内部 ----
+
+# 进入后端容器 Shell
+docker-compose exec backend sh
+
+# 在容器内可执行任意命令，如：
+#   - flask routes              查看所有注册的接口
+#   - python -m pytest           运行测试（如果有）
+#   - pip list                   查看已安装的 Python 包
+```
 
 ### 11.4注意事项
 - 验证码为模拟输出：开发环境下，短信验证码会打印在 docker-compose logs backend 中，不会真实发送短信。

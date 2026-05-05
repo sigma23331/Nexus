@@ -33,14 +33,7 @@
     <main class="px-6 py-4 space-y-8">
       <!-- 快捷入口 -->
       <section>
-        <h2 class="text-lg font-semibold mb-3">快捷入口</h2>
         <ul class="space-y-2">
-          <li
-            class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
-          >
-            <span>⭐ 收藏的答案</span>
-            <span class="text-sm text-slate-500">{{ favoriteCount }}</span>
-          </li>
           <li
             class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
           >

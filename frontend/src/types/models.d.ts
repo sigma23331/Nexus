@@ -79,7 +79,6 @@ export interface PlazaCard {
     likes: number
     isLiked: boolean
   }
-  tags?: string[]
   createdAt: string
 }
 

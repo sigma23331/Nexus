@@ -59,6 +59,65 @@ def get_profile():
     }), 200
 
 
+# ==================== 6.1.1 修改个人信息 ====================
+
+@user_bp.route('/profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    user = get_current_user()
+    if not user:
+        return jsonify(code=404, message="用户不存在", data=None), 404
+
+    payload = request.get_json(silent=True)
+    if not payload or not isinstance(payload, dict):
+        return jsonify(code=400, message="请求体必须是有效的JSON对象", data=None), 400
+
+    allowed_fields = {'nickname', 'avatar'}
+    provided_fields = {k for k in payload.keys() if k in allowed_fields}
+    if not provided_fields:
+        return jsonify(code=400, message="仅支持更新 nickname 或 avatar", data=None), 400
+
+    # 昵称更新：非空、长度限制、唯一性
+    if 'nickname' in provided_fields:
+        nickname = payload.get('nickname')
+        if not isinstance(nickname, str) or not nickname.strip():
+            return jsonify(code=400, message="昵称不能为空", data=None), 400
+        nickname = nickname.strip()
+        if len(nickname) > 20:
+            return jsonify(code=400, message="昵称长度不能超过20个字符", data=None), 400
+        existing = User.query.filter(User.nickname == nickname, User.id != user.id).first()
+        if existing:
+            return jsonify(code=400, message="昵称已被占用", data=None), 400
+        user.nickname = nickname
+
+    # 头像更新：允许 URL 或 dataURL（前端上传图片时用 base64）
+    if 'avatar' in provided_fields:
+        avatar = payload.get('avatar')
+        if avatar is None:
+            avatar = ''
+        if not isinstance(avatar, str):
+            return jsonify(code=400, message="头像格式无效", data=None), 400
+        avatar = avatar.strip()
+        if len(avatar) > 2_000_000:
+            return jsonify(code=400, message="头像数据过大，请压缩后重试", data=None), 400
+        user.avatar = avatar
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("更新用户资料失败")
+        return jsonify(code=500, message="更新失败，请稍后重试", data=None), 500
+
+    return jsonify(code=200, message="更新成功", data={
+        "userInfo": {
+            "uid": user.id,
+            "nickname": user.nickname,
+            "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png"
+        }
+    }), 200
+
+
 # ==================== 6.2 历史运势记录 ====================
 
 @user_bp.route('/history/fortune', methods=['GET'])

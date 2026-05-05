@@ -1,6 +1,6 @@
 from extensions import db
 from .base import BaseModel
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Text
 from sqlalchemy.orm import validates, relationship
 import re
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -13,7 +13,7 @@ class User(BaseModel):
     # 核心字段
     phone = Column(String(11), unique=True, nullable=True, index=True, comment='手机号，唯一索引，可为空')
     nickname = Column(String(20), unique=True, nullable=False, comment='用户昵称，1-20字符，全局唯一')  # 修改：添加 unique=True，去掉 default
-    avatar = Column(String(255), default='', comment='头像URL')
+    avatar = Column(Text, default='', comment='头像URL或base64')
 
     # 密码字段（文档2.1节，账密登录备用）
     password_hash = Column(String(256), nullable=True, comment='密码哈希（bcrypt）')

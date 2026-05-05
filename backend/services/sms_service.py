@@ -59,12 +59,49 @@ def _get_dypns_client():
 
 
 def _get_body_attr(response, name: str, default=None):
+    def candidate_names(raw_name: str) -> list[str]:
+        parts = [part for part in raw_name.split('_') if part]
+        pascal = ''.join(part[:1].upper() + part[1:] for part in parts)
+        camel = pascal[:1].lower() + pascal[1:] if pascal else raw_name
+        return [raw_name, raw_name[:1].upper() + raw_name[1:], camel, pascal]
+
+    def get_from_container(container, raw_name: str):
+        if isinstance(container, dict):
+            for candidate in candidate_names(raw_name):
+                if candidate in container:
+                    return container[candidate]
+            return None
+        for candidate in candidate_names(raw_name):
+            value = getattr(container, candidate, None)
+            if value is not None:
+                return value
+        return None
+
     body = getattr(response, 'body', None)
     if body is None and isinstance(response, dict):
         body = response.get('body')
-    if isinstance(body, dict):
-        return body.get(name) or body.get(name[:1].upper() + name[1:]) or default
-    return getattr(body, name, None) or getattr(body, name[:1].upper() + name[1:], None) or default
+
+    value = get_from_container(body, name)
+    if value is not None:
+        return value
+
+    model = get_from_container(body, 'model')
+    if model is not None:
+        value = get_from_container(model, name)
+        if value is not None:
+            return value
+
+    if isinstance(response, dict):
+        for candidate in candidate_names(name):
+            if candidate in response:
+                return response[candidate]
+    return default
+
+
+def _mask_phone(phone: str) -> str:
+    if not phone or len(phone) < 7:
+        return phone or ''
+    return f"{phone[:3]}****{phone[-4:]}"
 
 
 def send_verify_code(phone: str, action: str, expires_in: int = 300) -> SmsSendResult:
@@ -101,6 +138,11 @@ def send_verify_code(phone: str, action: str, expires_in: int = 300) -> SmsSendR
             )
             code = _get_body_attr(response, 'code')
             success = bool(_get_body_attr(response, 'success', False))
+            request_id = _get_body_attr(response, 'request_id') or _get_body_attr(response, 'requestid')
+            current_app.logger.info(
+                '[Aliyun SMS] send result phone=%s action=%s success=%s code=%s request_id=%s',
+                _mask_phone(phone), action, success, code, request_id,
+            )
             if code == 'OK' and success:
                 return SmsSendResult(
                     success=True,
@@ -157,6 +199,12 @@ def verify_code(phone: str, code: str, allowed_actions: tuple[str, ...]) -> SmsV
                 util_models.RuntimeOptions(),
             )
             verify_result = _get_body_attr(response, 'verify_result')
+            code = _get_body_attr(response, 'code')
+            request_id = _get_body_attr(response, 'request_id') or _get_body_attr(response, 'requestid')
+            current_app.logger.info(
+                '[Aliyun SMS] verify result phone=%s verify_result=%s code=%s request_id=%s',
+                _mask_phone(phone), verify_result, code, request_id,
+            )
             if verify_result == 'PASS':
                 return SmsVerifyResult(True, 'aliyun', '验证通过')
             return SmsVerifyResult(False, 'aliyun', '验证码错误')

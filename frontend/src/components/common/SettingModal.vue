@@ -47,13 +47,7 @@
           <span class="text-slate-700 hover:text-purple-700">退出登录</span>
           <span class="text-purple-400">›</span>
         </div>
-        <div
-          class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
-          @click="handleSwitchAccount"
-        >
-          <span class="text-slate-700 hover:text-purple-700">切换账号</span>
-          <span class="text-purple-400">›</span>
-        </div>
+        <!-- 切换账号已移除 -->
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-rose-50/80 transition duration-150"
           @click="handleDeleteAccount"
@@ -208,19 +202,6 @@ const handleLogout = async () => {
   const confirmed = await confirmModalRef.value?.open({
     title: '退出登录',
     message: '确定要退出登录吗？',
-  })
-  if (confirmed) {
-    userStore.logout()
-    router.replace('/login')
-    close()
-  }
-}
-
-// 切换账号
-const handleSwitchAccount = async () => {
-  const confirmed = await confirmModalRef.value?.open({
-    title: '切换账号',
-    message: '切换账号将退出当前登录，确定吗？',
   })
   if (confirmed) {
     userStore.logout()

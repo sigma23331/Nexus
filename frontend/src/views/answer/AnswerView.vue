@@ -80,7 +80,8 @@
           <div
             v-for="item in recentAnswers"
             :key="item.id"
-            class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"
+            class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 cursor-pointer hover:bg-slate-50 transition"
+            @click="openDetail(item)"
           >
             <div
               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-pink-500/20"
@@ -140,6 +141,9 @@
         </div>
       </div>
     </Transition>
+
+    <!-- 答案详情弹窗 -->
+    <AnswerDetailModal ref="answerDetailModalRef" />
   </div>
 </template>
 
@@ -153,6 +157,7 @@ import {
   fetchAndSyncHistory,
   updateLocalFavoriteStatus,
 } from '@/utils/answerService'
+import AnswerDetailModal from './components/AnswerDetailModal.vue'
 
 const question = ref('')
 const modalVisible = ref(false)
@@ -164,6 +169,7 @@ const isShaking = ref(false)
 const isDrawing = ref(false)
 const recentAnswers = ref<AnswerHistoryItem[]>([])
 const loadingHistory = ref(false)
+const answerDetailModalRef = ref<InstanceType<typeof AnswerDetailModal> | null>(null)
 
 const canSubmit = computed(() => question.value.trim().length > 0 && !isDrawing.value)
 
@@ -252,6 +258,11 @@ async function toggleFavorite(answerId: string) {
 
 function hideAnswer() {
   modalVisible.value = false
+}
+
+// 打开详情弹窗
+function openDetail(item: AnswerHistoryItem) {
+  answerDetailModalRef.value?.open(item)
 }
 
 onMounted(() => {

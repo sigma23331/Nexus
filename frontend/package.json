@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@tailwindcss/line-clamp": "^0.4.4",
     "@types/node": "^18.19.130",
     "@vitejs/plugin-vue": "^5.0.0",
     "autoprefixer": "^10.5.0",

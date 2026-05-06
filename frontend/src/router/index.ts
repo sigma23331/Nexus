@@ -62,6 +62,18 @@ const router = createRouter({
       component: () => import('@/views/auth/RegisterView.vue'),
       meta: { title: '注册' },
     },
+    {
+      path: '/profile/history-fortune',
+      name: 'HistoryFortune',
+      component: () => import('@/views/profile/HistoryFortuneView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/profile/favorites',
+      name: 'Favorites',
+      component: () => import('@/views/profile/FavoritesView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 

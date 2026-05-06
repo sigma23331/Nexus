@@ -78,21 +78,30 @@
         </div>
         <div class="space-y-3">
           <div
-            v-for="item in history"
+            v-for="item in recentAnswers"
             :key="item.id"
             class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"
           >
             <div
               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-pink-500/20"
             >
-              {{ item.icon }}
+              ✨
             </div>
             <div class="min-w-0 flex-1">
               <p class="truncate text-xs font-medium">问：{{ item.question }}</p>
-              <p class="line-clamp-1 text-[10px] text-slate-500">「{{ item.answer }}」</p>
+              <p class="line-clamp-1 text-[10px] text-slate-500">「{{ item.answerText }}」</p>
             </div>
-            <span class="shrink-0 text-[10px] text-slate-500">{{ item.date }}</span>
+            <span class="shrink-0 text-[10px] text-slate-500">{{
+              formatDate(item.createdAt)
+            }}</span>
           </div>
+          <div
+            v-if="recentAnswers.length === 0 && !loadingHistory"
+            class="text-center text-xs text-slate-400 py-4"
+          >
+            暂无历史记录，去提问吧
+          </div>
+          <div v-if="loadingHistory" class="text-center text-xs text-slate-400 py-2">加载中...</div>
         </div>
       </section>
     </main>
@@ -120,8 +129,12 @@
             <button type="button" class="flex items-center gap-1 text-xs text-slate-500">
               📤 分享卡片
             </button>
-            <button type="button" class="flex items-center gap-1 text-xs text-slate-500">
-              🔖 存入收藏
+            <button
+              type="button"
+              class="flex items-center gap-1 text-xs text-slate-500"
+              @click="toggleFavorite(currentAnswerId)"
+            >
+              🔖 {{ currentIsFavorited ? '取消收藏' : '存入收藏' }}
             </button>
           </div>
         </div>
@@ -131,66 +144,118 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import dayjs from 'dayjs'
+import { askQuestion, favoriteAnswer, type AnswerHistoryItem } from '@/api/answer'
+import { getLocalAnswerList, addLocalAnswer, fetchAndSyncHistory } from '@/utils/answerService'
 
 const question = ref('')
 const modalVisible = ref(false)
 const currentAnswer = ref('')
 const currentQuestion = ref('')
+const currentAnswerId = ref('')
+const currentIsFavorited = ref(false)
 const isShaking = ref(false)
 const isDrawing = ref(false)
-
-const answerPool = [
-  '答案就在你最初的想法里。',
-  '现在不是犹豫的时候，全速前进。',
-  '你需要寻求他人的建议再做决定。',
-  '放下执着，你会看到更好的选择。',
-  '答案比你想象的要简单得多。',
-  '有些事情值得你再等一等。',
-  '当你开始爱自己，答案就会浮现。',
-]
-
-const history = ref([
-  { id: 1, icon: '✓', question: '要不要去旅行？', answer: '最好的风景就在脚下', date: '4月10日' },
-  {
-    id: 2,
-    icon: '⏳',
-    question: '这次面试能过吗？',
-    answer: '耐心等待，时机未到',
-    date: '4月08日',
-  },
-])
+const recentAnswers = ref<AnswerHistoryItem[]>([])
+const loadingHistory = ref(false)
 
 const canSubmit = computed(() => question.value.trim().length > 0 && !isDrawing.value)
 
-function drawAnswer() {
+function formatDate(iso: string) {
+  return dayjs(iso).format('MM月DD日')
+}
+
+// 加载最近5条历史记录（本地优先，异步拉取远程）
+async function loadRecentHistory() {
+  loadingHistory.value = true
+  try {
+    // 先从本地读取
+    const local = getLocalAnswerList()
+    recentAnswers.value = local.slice(0, 5)
+    // 异步拉取远程最新数据并更新本地
+    await fetchAndSyncHistory(1, 5)
+    const updated = getLocalAnswerList()
+    recentAnswers.value = updated.slice(0, 5)
+  } catch (err) {
+    console.error('加载历史记录失败', err)
+  } finally {
+    loadingHistory.value = false
+  }
+}
+
+// 提交问题并获取答案
+async function drawAnswer() {
   if (!canSubmit.value) return
+  if (!navigator.onLine) {
+    alert('当前网络不可用，请检查网络后重试')
+    return
+  }
   isDrawing.value = true
   isShaking.value = true
 
-  window.setTimeout(() => {
-    const random = answerPool[Math.floor(Math.random() * answerPool.length)]
-    const q = question.value.trim()
-    currentQuestion.value = q
-    currentAnswer.value = `宇宙说：${random}`
+  try {
+    const res = await askQuestion(question.value.trim())
+    currentQuestion.value = res.question
+    currentAnswer.value = `宇宙说：${res.answerText}`
+    currentAnswerId.value = res.id
+    currentIsFavorited.value = false
     modalVisible.value = true
 
-    history.value.unshift({
-      id: Date.now(),
-      icon: '✨',
-      question: q,
-      answer: random,
-      date: new Date().toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }),
-    })
+    // 添加到本地历史记录
+    const newItem: AnswerHistoryItem = {
+      id: res.id,
+      question: res.question,
+      answerText: res.answerText,
+      createdAt: res.createdAt,
+      isFavorited: false,
+    }
+    addLocalAnswer(newItem)
+    // 更新最近显示
+    recentAnswers.value = [newItem, ...recentAnswers.value.slice(0, 4)]
     question.value = ''
+  } catch (err) {
+    console.error('提问失败', err)
+    alert('提问失败，请重试')
+  } finally {
     isShaking.value = false
     isDrawing.value = false
-  }, 900)
+  }
+}
+
+// 收藏/取消收藏
+async function toggleFavorite(answerId: string) {
+  if (!navigator.onLine) {
+    alert('网络不可用')
+    return
+  }
+  const action = currentIsFavorited.value ? 'unfavorite' : 'favorite'
+  try {
+    await favoriteAnswer(answerId, action)
+    currentIsFavorited.value = !currentIsFavorited.value
+    // 更新本地缓存中的收藏状态
+    const local = getLocalAnswerList()
+    const target = local.find((a) => a.id === answerId)
+    if (target) {
+      target.isFavorited = currentIsFavorited.value
+      localStorage.setItem('xyd_answers', JSON.stringify(local))
+    }
+    // 同时更新最近显示列表中的状态
+    const recentItem = recentAnswers.value.find((a) => a.id === answerId)
+    if (recentItem) recentItem.isFavorited = currentIsFavorited.value
+  } catch (err) {
+    console.error('操作失败', err)
+    alert('操作失败')
+  }
 }
 
 function hideAnswer() {
   modalVisible.value = false
 }
+
+onMounted(() => {
+  loadRecentHistory()
+})
 </script>
 
 <style scoped>

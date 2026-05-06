@@ -90,6 +90,7 @@ frontend/
     │   ├── answer.ts               # 答案之书接口
     │   ├── plaza.ts                # 广场卡片接口
     │   ├── user.ts                 # 用户信息、日记、收藏等
+    │   ├── diary.ts                # 日记模块接口
     │   └── types.ts                # API 相关的 TypeScript 类型（从契约生成）
     │
     ├── assets/                     # 静态资源（图片、字体、全局样式）
@@ -116,9 +117,7 @@ frontend/
     │   ├── useFortune.ts           # 获取运势、轨迹等
     │   ├── useAnswer.ts            # 提问、历史、收藏
     │   ├── usePlaza.ts             # 广场卡片加载、点赞
-    │   ├── useCardGenerator.ts     # 卡片生成
-    │   ├── diaryService.ts         # 日记服务：本地存储 + 后台同步队列（离线优先）
-    │   └── networkSync.ts          # 网络监听与自动同步未上传日记
+    │   └── useCardGenerator.ts     # 卡片生成
     │
     ├── config/
     │   └── typography.ts           # 字体样式配置文件
@@ -146,7 +145,10 @@ frontend/
     │   ├── storage.ts              # 本地存储封装（token、用户偏好）
     │   ├── format.ts               # 日期格式化、运势分数映射等
     │   ├── validator.ts            # 表单校验（手机号、密码等）
-    │   └── cardGenerator.ts        # 卡片生成核心逻辑
+    │   ├── cardGenerator.ts        # 卡片生成核心逻辑
+    │   ├── diaryService.ts         # 日记服务：本地存储 + 后台同步队列（离线优先）
+    │   ├── networkSync.ts          # 网络监听与自动同步未上传日记
+    │   └── answerService.ts         # 答案历史缓存服务（新增）
     │
     ├── views/                      # 页面级组件（按路由划分）
     │   ├── fortune/                # 运势看板模块
@@ -161,6 +163,8 @@ frontend/
     │   │       └── PlazaCard.vue   # 卡片组件（支持点赞、时间格式化等）
     │   ├── profile/                # 我的页面模块
     │   │   ├── ProfileView.vue
+    │   │   ├── HistoryFortuneView.vue # 历史运势记录页
+    │   │   ├── FavoritesView.vue      # 收藏答案页
     │   │   └── components/
     │   └── auth/                   # 认证相关页面
     │       ├── LoginView.vue       # 登录

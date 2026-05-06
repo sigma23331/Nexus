@@ -20,7 +20,7 @@
       <section>
         <div class="mb-3 flex items-center justify-between">
           <h2 class="text-sm font-semibold text-slate-800">历史列表</h2>
-          <span class="text-xs text-slate-500">共 {{ answerStore.historyTotal }} 条</span>
+          <span class="text-xs text-slate-500">共 {{ total }} 条</span>
         </div>
 
         <div
@@ -29,8 +29,7 @@
         >
           <p>{{ loadError }}</p>
           <p class="mt-2 text-[11px] text-rose-600/90">
-            这是接口未成功返回时的提示，与「真的没有记录」不同。常见原因：本地后端未启动、路由未实现、数据库异常等（HTTP
-            500 表示服务端出错）。
+            这是接口未成功返回时的提示，与「真的没有记录」不同。常见原因：本地后端未启动、路由未实现、数据库异常等。
           </p>
           <button
             type="button"
@@ -43,12 +42,12 @@
         </div>
 
         <template v-else>
-          <div v-if="loading && !answerStore.historyList.length" class="space-y-3">
+          <div v-if="loading && !list.length" class="space-y-3">
             <div v-for="n in 4" :key="n" class="h-20 animate-pulse rounded-xl bg-slate-200/80" />
           </div>
 
           <div
-            v-else-if="!answerStore.historyList.length"
+            v-else-if="!list.length"
             class="rounded-2xl border border-dashed border-slate-200 bg-white py-12 text-center text-sm text-slate-400"
           >
             暂无历史记录
@@ -56,7 +55,7 @@
 
           <ul v-else class="space-y-3">
             <li
-              v-for="item in answerStore.historyList"
+              v-for="item in list"
               :key="item.id"
               class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
             >
@@ -78,7 +77,7 @@
         </template>
 
         <button
-          v-if="answerStore.historyList.length > 0 && hasMore"
+          v-if="list.length > 0 && hasMore"
           type="button"
           class="mt-4 w-full rounded-xl border border-slate-200 bg-white py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
           :disabled="loadingMore"
@@ -92,22 +91,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { useAnswerStore } from '@/stores/answer'
-import { getAnswerHistory } from '@/api/answer'
+import { fetchAndSyncHistory } from '@/utils/answerService'
+import type { AnswerHistoryItem } from '@/api/answer'
 
 const router = useRouter()
-const answerStore = useAnswerStore()
-
+const list = ref<AnswerHistoryItem[]>([])
+const total = ref(0)
+const page = ref(1)
+const limit = 10
 const loading = ref(false)
 const loadingMore = ref(false)
 const loadError = ref('')
-const page = ref(1)
-const limit = 10
 
-const hasMore = computed(() => answerStore.historyList.length < answerStore.historyTotal)
+const hasMore = computed(() => list.value.length < total.value)
 
 function formatTime(iso: string) {
   return dayjs(iso).format('YYYY-MM-DD HH:mm')
@@ -119,11 +118,12 @@ function goBack() {
 }
 
 async function fetchPage(nextPage: number, append: boolean) {
-  const res = await getAnswerHistory(nextPage, limit)
+  const res = await fetchAndSyncHistory(nextPage, limit)
   if (append) {
-    answerStore.appendHistoryItems(res.list)
+    list.value.push(...res.list)
   } else {
-    answerStore.setHistoryList(res.list, res.total)
+    list.value = res.list
+    total.value = res.total
   }
   page.value = nextPage
 }

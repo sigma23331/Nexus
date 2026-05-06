@@ -165,7 +165,11 @@ const handleLogin = async () => {
     } else {
       response = await loginByPassword(phone.value, password.value)
     }
-    userStore.setToken(response.token)
+
+    // 兼容两种可能的返回值结构
+    const loginData = 'data' in response ? response.data : response
+
+    userStore.setToken(loginData.token)
     const profile = await getUserProfile()
     userStore.setUserInfo(profile.userInfo)
 

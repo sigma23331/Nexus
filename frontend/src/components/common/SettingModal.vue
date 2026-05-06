@@ -3,7 +3,7 @@
     <!-- 遮罩层：半透明 + 毛玻璃 -->
     <div class="fixed inset-0 bg-black/30 backdrop-blur-sm" @click="close"></div>
 
-    <!-- 右侧面板：柔和渐变边框 + 半透明白色背景 -->
+    <!-- 右侧面板 -->
     <div
       class="relative w-80 h-full bg-white/95 shadow-2xl shadow-purple-500/10 flex flex-col rounded-l-2xl animate-slide-in-right"
     >
@@ -30,6 +30,14 @@
           @click="changeNickname"
         >
           <span class="text-slate-700 hover:text-purple-700">修改昵称</span>
+          <span class="text-purple-400">›</span>
+        </div>
+        <!-- 修改密码 -->
+        <div
+          class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
+          @click="changePassword"
+        >
+          <span class="text-slate-700 hover:text-purple-700">修改密码</span>
           <span class="text-purple-400">›</span>
         </div>
         <div
@@ -91,7 +99,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { updateUserProfile } from '@/api/user'
+import { updateUserProfile, updatePassword } from '@/api/user'
 import UserAgreementModal from './UserAgreementModal.vue'
 import PrivacyPolicyModal from './PrivacyPolicyModal.vue'
 import PromptModal from './PromptModal.vue'
@@ -129,14 +137,15 @@ const onFileChange = async (event: Event) => {
         userStore.setUserInfo({ ...current, avatar: avatarBase64 })
       }
       close()
-    } catch {
-      alert('头像更新失败，请重试')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '头像更新失败，请重试'
+      alert(message)
     }
   }
   reader.readAsDataURL(file)
 }
 
-// 修改昵称（使用自定义输入弹窗）
+// 修改昵称
 const changeNickname = async () => {
   const newNick = await promptModalRef.value?.open({
     title: '修改昵称',
@@ -152,13 +161,49 @@ const changeNickname = async () => {
         userStore.setUserInfo({ ...current, nickname: newNick.trim() })
       }
       close()
-    } catch {
-      alert('昵称更新失败，请重试')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '昵称更新失败，请重试'
+      alert(message)
     }
   }
 }
 
-// 退出登录（使用自定义确认弹窗）
+// 修改密码
+const changePassword = async () => {
+  // 第一步：输入新密码
+  const newPwd = await promptModalRef.value?.open({
+    title: '修改密码',
+    message: '请输入新密码（6-20位）',
+    placeholder: '新密码',
+    inputType: 'password',
+  })
+  if (!newPwd || newPwd.length < 6 || newPwd.length > 20) {
+    if (newPwd) alert('密码长度必须为6-20位')
+    return
+  }
+
+  // 第二步：确认新密码
+  const confirmPwd = await promptModalRef.value?.open({
+    title: '确认密码',
+    message: '请再次输入新密码',
+    placeholder: '确认新密码',
+    inputType: 'password',
+  })
+  if (confirmPwd !== newPwd) {
+    alert('两次输入的密码不一致')
+    return
+  }
+
+  try {
+    await updatePassword(newPwd)
+    alert('密码修改成功，下次登录请使用新密码')
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '密码修改失败，请重试'
+    alert(message)
+  }
+}
+
+// 退出登录
 const handleLogout = async () => {
   const confirmed = await confirmModalRef.value?.open({
     title: '退出登录',
@@ -184,7 +229,7 @@ const handleSwitchAccount = async () => {
   }
 }
 
-// 注销账号（危险操作）
+// 注销账号
 const handleDeleteAccount = async () => {
   const confirmed = await confirmModalRef.value?.open({
     title: '注销账号',
@@ -205,20 +250,6 @@ const openPrivacy = () => privacyPolicyModalRef.value?.open()
 
 defineExpose({ open, close })
 </script>
-
-<style scoped>
-.animate-slide-in-right {
-  animation: slideInRight 0.3s ease-out;
-}
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-</style>
 
 <style scoped>
 .animate-slide-in-right {

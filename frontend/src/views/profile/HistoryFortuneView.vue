@@ -27,7 +27,7 @@
       <div class="text-purple-600">加载中...</div>
     </div>
 
-    <!-- 数据列表（样式完全复制自原 FortuneView 中的历史运势记录） -->
+    <!-- 数据列表 -->
     <div v-else-if="list.length > 0" class="space-y-3 p-4">
       <article
         v-for="item in list"
@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { getHistoryFortune, type HistoryFortuneItem } from '@/api/fortune'
 
@@ -85,14 +85,12 @@ const limit = 10
 const total = ref(0)
 const hasMore = ref(true)
 
-// 日期格式化为 MM-DD（与原 FortuneView 一致）
 const formatDate = (isoDate: string) => {
   const parts = isoDate.split('-')
   if (parts.length === 3) return `${parts[1]}-${parts[2]}`
   return isoDate
 }
 
-// 分数等级样式（与原 FortuneView 一致）
 const scoreLevelClass = (score: number) => {
   if (score >= 85) return 'bg-emerald-50 text-emerald-700'
   if (score >= 75) return 'bg-blue-50 text-blue-700'
@@ -134,7 +132,17 @@ const loadMore = () => {
   loadHistory(false)
 }
 
+// 刷新列表（重置到第一页）
+const refresh = () => {
+  loadHistory(true)
+}
+
 onMounted(() => {
-  loadHistory()
+  refresh()
+})
+
+// 从缓存激活时重新加载数据
+onActivated(() => {
+  refresh()
 })
 </script>

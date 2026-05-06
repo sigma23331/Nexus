@@ -91,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { fetchAndSyncHistory } from '@/utils/answerService'
@@ -128,7 +128,8 @@ async function fetchPage(nextPage: number, append: boolean) {
   page.value = nextPage
 }
 
-onMounted(async () => {
+// 加载第一页数据的函数（抽离出来）
+async function loadFirstPage() {
   loading.value = true
   loadError.value = ''
   try {
@@ -138,6 +139,28 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 监听全局数据更新事件
+function handleAnswersUpdated() {
+  // 如果当前列表不为空，静默刷新第一页
+  if (list.value.length > 0) {
+    loadFirstPage()
+  }
+}
+
+onMounted(() => {
+  loadFirstPage()
+  window.addEventListener('answers-updated', handleAnswersUpdated)
+})
+
+// 关键：组件被激活时（从 keep-alive 缓存恢复）重新加载最新数据
+onActivated(() => {
+  loadFirstPage()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('answers-updated', handleAnswersUpdated)
 })
 
 async function loadMore() {
@@ -154,14 +177,6 @@ async function loadMore() {
 }
 
 async function retryFirstPage() {
-  loading.value = true
-  loadError.value = ''
-  try {
-    await fetchPage(1, false)
-  } catch (e) {
-    loadError.value = e instanceof Error ? e.message : '加载失败，请稍后重试'
-  } finally {
-    loading.value = false
-  }
+  await loadFirstPage()
 }
 </script>

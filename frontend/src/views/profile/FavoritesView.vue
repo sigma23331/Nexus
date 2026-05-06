@@ -84,6 +84,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { getFavoriteAnswers, favoriteAnswer, type AnswerHistoryItem } from '@/api/answer'
+import { updateLocalFavoriteStatus } from '@/utils/answerService'
 
 const router = useRouter()
 const list = ref<AnswerHistoryItem[]>([])
@@ -137,10 +138,12 @@ const handleUnfavorite = async (answerId: string) => {
   errorMsg.value = ''
   try {
     await favoriteAnswer(answerId, 'unfavorite')
-    // 从本地列表中移除
+    // 更新本地缓存（触发全局事件，让 ProfileView 刷新收藏数量）
+    updateLocalFavoriteStatus(answerId, false)
+    // 从当前列表中移除
     list.value = list.value.filter((item) => item.id !== answerId)
     total.value--
-    // 可选：如果当前页空了且还有更多，自动加载下一页
+    // 如果当前页空了且还有更多，自动加载下一页
     if (list.value.length === 0 && hasMore.value) {
       page.value++
       await fetchList(false)

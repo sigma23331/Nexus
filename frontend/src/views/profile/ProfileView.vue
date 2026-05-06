@@ -79,11 +79,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onActivated, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getUserProfile } from '@/api/user'
 import { getHistoryFortune } from '@/api/fortune'
+import { getFavoriteAnswers } from '@/api/answer'
 import MonthlyMoodOverview from '@/components/business/MonthlyMoodOverview.vue'
 import MoodDiaryModal from '@/components/business/MoodDiaryModal.vue'
 import SettingModal from '@/components/common/SettingModal.vue'
@@ -98,8 +99,8 @@ interface DiaryData {
 
 const router = useRouter()
 const userStore = useUserStore()
-const favoriteCount = ref(15)
-const historyCount = ref(0) // 初始为0，后续从API获取
+const favoriteCount = ref(0)
+const historyCount = ref(0)
 
 const moodModalRef = ref<InstanceType<typeof MoodDiaryModal> | null>(null)
 const monthlyOverviewRef = ref<InstanceType<typeof MonthlyMoodOverview> | null>(null)
@@ -114,8 +115,37 @@ const onDiarySubmitted = async (data: DiaryData) => {
     moodTag: data.moodTag,
     content: data.content,
   })
-  // 刷新月度概览
   monthlyOverviewRef.value?.refresh()
+}
+
+// 获取收藏总数
+const fetchFavoriteCount = async () => {
+  try {
+    const res = await getFavoriteAnswers(1, 1)
+    favoriteCount.value = res.total
+  } catch (err) {
+    console.error('获取收藏数量失败', err)
+  }
+}
+
+// 获取历史运势总数
+const fetchHistoryCount = async () => {
+  try {
+    const res = await getHistoryFortune(1, 1)
+    historyCount.value = res.total
+  } catch (err) {
+    console.error('获取历史运势总数失败', err)
+  }
+}
+
+// 刷新所有数量
+const refreshCounts = async () => {
+  await Promise.all([fetchFavoriteCount(), fetchHistoryCount()])
+}
+
+// 监听答案变化事件
+const handleAnswersUpdated = () => {
+  fetchFavoriteCount()
 }
 
 onMounted(async () => {
@@ -124,22 +154,20 @@ onMounted(async () => {
     try {
       const profile = await getUserProfile()
       userStore.setUserInfo(profile.userInfo)
-      if (profile.stats) {
-        favoriteCount.value = profile.stats.answerCollected || 15
-        // 注意：profile.stats.diaryCount 是日记数，不是运势记录数，所以不在这里设置 historyCount
-      }
     } catch {
       // 静默失败
     }
   }
+  await refreshCounts()
+  window.addEventListener('answers-updated', handleAnswersUpdated)
+})
 
-  // 单独获取历史运势总数
-  try {
-    const res = await getHistoryFortune(1, 1) // 只请求第一页，limit=1，仅获取total
-    historyCount.value = res.total
-  } catch (error) {
-    console.error('获取历史运势总数失败', error)
-    historyCount.value = 0
-  }
+onActivated(() => {
+  // 从 keep-alive 缓存激活时重新获取数据
+  refreshCounts()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('answers-updated', handleAnswersUpdated)
 })
 </script>

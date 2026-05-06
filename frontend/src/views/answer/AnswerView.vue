@@ -147,7 +147,12 @@
 import { ref, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import { askQuestion, favoriteAnswer, type AnswerHistoryItem } from '@/api/answer'
-import { getLocalAnswerList, addLocalAnswer, fetchAndSyncHistory } from '@/utils/answerService'
+import {
+  getLocalAnswerList,
+  addLocalAnswer,
+  fetchAndSyncHistory,
+  updateLocalFavoriteStatus,
+} from '@/utils/answerService'
 
 const question = ref('')
 const modalVisible = ref(false)
@@ -232,17 +237,13 @@ async function toggleFavorite(answerId: string) {
   const action = currentIsFavorited.value ? 'unfavorite' : 'favorite'
   try {
     await favoriteAnswer(answerId, action)
-    currentIsFavorited.value = !currentIsFavorited.value
-    // 更新本地缓存中的收藏状态
-    const local = getLocalAnswerList()
-    const target = local.find((a) => a.id === answerId)
-    if (target) {
-      target.isFavorited = currentIsFavorited.value
-      localStorage.setItem('xyd_answers', JSON.stringify(local))
-    }
+    const newStatus = !currentIsFavorited.value
+    currentIsFavorited.value = newStatus
+    // 更新本地缓存中的收藏状态，并触发全局事件
+    updateLocalFavoriteStatus(answerId, newStatus)
     // 同时更新最近显示列表中的状态
     const recentItem = recentAnswers.value.find((a) => a.id === answerId)
-    if (recentItem) recentItem.isFavorited = currentIsFavorited.value
+    if (recentItem) recentItem.isFavorited = newStatus
   } catch (err) {
     console.error('操作失败', err)
     alert('操作失败')
@@ -259,6 +260,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 保持原有样式不变 */
 .book-wrap {
   width: 192px;
   height: 256px;

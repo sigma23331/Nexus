@@ -31,6 +31,11 @@ function toLocalAnswer(item: AnswerHistoryItem): LocalAnswer {
   }
 }
 
+/** 触发全局数据更新事件 */
+function emitAnswersUpdated() {
+  window.dispatchEvent(new CustomEvent('answers-updated'))
+}
+
 // 合并远程答案到本地（去重，按 id）
 function mergeRemoteAnswers(remoteList: AnswerHistoryItem[]) {
   const local = getLocalAnswers()
@@ -40,16 +45,17 @@ function mergeRemoteAnswers(remoteList: AnswerHistoryItem[]) {
   const merged = [...newItems, ...local]
   merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   saveLocalAnswers(merged)
+  emitAnswersUpdated()
 }
 
 // 添加单条答案到本地（用于新提问成功后）
 export function addLocalAnswer(answer: AnswerHistoryItem) {
   const local = getLocalAnswers()
   const localAnswer = toLocalAnswer(answer)
-  // 避免重复
   if (local.some((a) => a.id === localAnswer.id)) return
   local.unshift(localAnswer) // 最新放在前面
   saveLocalAnswers(local)
+  emitAnswersUpdated()
 }
 
 // 获取本地答案列表（按时间倒序）
@@ -57,7 +63,18 @@ export function getLocalAnswerList(): LocalAnswer[] {
   return getLocalAnswers()
 }
 
-// 分页从远程拉取并合并到本地，同时返回当前页的数据
+/** 更新本地答案的收藏状态（用于同步） */
+export function updateLocalFavoriteStatus(answerId: string, isFavorited: boolean) {
+  const local = getLocalAnswers()
+  const target = local.find((a) => a.id === answerId)
+  if (target && target.isFavorited !== isFavorited) {
+    target.isFavorited = isFavorited
+    saveLocalAnswers(local)
+    emitAnswersUpdated()
+  }
+}
+
+// 核心：拉取远程并合并，然后返回本地缓存的分页数据
 export async function fetchAndSyncHistory(
   page: number,
   limit: number,
@@ -67,7 +84,20 @@ export async function fetchAndSyncHistory(
   page: number
   limit: number
 }> {
+  // 1. 拉取远程数据并合并到本地缓存
   const res = await getAnswerHistory(page, limit)
   mergeRemoteAnswers(res.list)
-  return res
+  // 2. 从本地缓存中获取全部（已按时间倒序排序）
+  const allLocal = getLocalAnswers()
+  // 3. 计算分页切片
+  const start = (page - 1) * limit
+  const end = start + limit
+  const pageList = allLocal.slice(start, end)
+  // 4. 返回基于本地缓存的分页结果
+  return {
+    list: pageList,
+    total: allLocal.length,
+    page,
+    limit,
+  }
 }

@@ -7,7 +7,10 @@
     </header>
 
     <main class="px-6 py-4 space-y-8">
-      <section v-if="loading" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+      <section
+        v-if="loading"
+        class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600"
+      >
         正在加载运势数据...
       </section>
       <section
@@ -319,18 +322,14 @@ const chartScores = computed<(number | null)[]>(() => {
   return trendScores.value.slice(-7)
 })
 
-const currentScore = computed(
-  () => {
-    const values = chartScores.value.filter((item): item is number => typeof item === 'number')
-    return values[values.length - 1] ?? fortuneData.value.score ?? 0
-  },
-)
-const previousScore = computed(
-  () => {
-    const values = chartScores.value.filter((item): item is number => typeof item === 'number')
-    return values[values.length - 2] ?? currentScore.value
-  },
-)
+const currentScore = computed(() => {
+  const values = chartScores.value.filter((item): item is number => typeof item === 'number')
+  return values[values.length - 1] ?? fortuneData.value.score ?? 0
+})
+const previousScore = computed(() => {
+  const values = chartScores.value.filter((item): item is number => typeof item === 'number')
+  return values[values.length - 2] ?? currentScore.value
+})
 const delta = computed(() => currentScore.value - previousScore.value)
 const trendText = computed(() => {
   if (delta.value >= 3) return '气运上扬'
@@ -376,7 +375,9 @@ const scoreLevelClass = (score: number) => {
   return 'bg-rose-50 text-rose-700'
 }
 
-const normalizeFortuneToday = (raw: Awaited<ReturnType<typeof getFortuneToday>>): FortuneViewData => {
+const normalizeFortuneToday = (
+  raw: Awaited<ReturnType<typeof getFortuneToday>>,
+): FortuneViewData => {
   return {
     id: raw.id ?? '',
     date: raw.date ?? '',
@@ -451,9 +452,10 @@ const initChart = () => {
       backgroundColor: 'rgba(17,24,39,0.92)',
       borderWidth: 0,
       textStyle: { color: '#f8fafc' },
-      formatter: (params: any) => {
-        const point = Array.isArray(params) ? params[0] : params
-        return `第${point.axisValue}日 · ${scoreToSign(point.value)}`
+      formatter: (params: unknown) => {
+        const rawPoint = Array.isArray(params) ? params[0] : params
+        const point = (rawPoint || {}) as { axisValue?: string | number; value?: number }
+        return `第${point.axisValue ?? '--'}日 · ${scoreToSign(Number(point.value ?? 0))}`
       },
     },
     xAxis: {

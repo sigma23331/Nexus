@@ -273,10 +273,12 @@ def register_nickname():
 @auth_bp.route('/password/login', methods=['POST'])
 def password_login():
     """
-    手机号/昵称 + 密码登录
-    支持字段：
-      - account: 手机号或昵称（推荐）
-      - phone: 仅手机号（向后兼容，优先于 account 中的手机号）
+    手机号 + 密码 或 昵称 + 密码 登录
+    请求字段：
+      - phone: 手机号（11位，1[3-9]开头）
+      - nickname: 用户昵称（1-20字符）
+      - password: 密码（必填）
+    注：phone 和 nickname 至少提供一个，同时提供时优先使用 phone
     """
     data = request.get_json(silent=True)
     if not data:
@@ -286,28 +288,31 @@ def password_login():
     if not password:
         return jsonify(code=400, message="password 不能为空", data=None), 400
 
-    # 优先使用 account 字段，若没有则回退到 phone 字段
-    account = data.get('account')
     phone = data.get('phone')
+    nickname = data.get('nickname')
+
+    if not phone and not nickname:
+        return jsonify(code=400, message="请提供 phone 或 nickname", data=None), 400
 
     user = None
-    if account:
-        # 判断输入是否手机号格式
-        if re.match(r'^1[3-9]\d{9}$', account):
-            user = User.query.filter_by(phone=account).first()
-        else:
-            user = User.query.filter_by(nickname=account).first()
-    elif phone:
+
+    # 优先使用手机号登录
+    if phone:
         if not isinstance(phone, str) or not re.match(r'^1[3-9]\d{9}$', phone):
             return jsonify(code=400, message="无效的手机号格式", data=None), 400
         user = User.query.filter_by(phone=phone).first()
     else:
-        return jsonify(code=400, message="请提供 account（手机号/昵称）或 phone", data=None), 400
+        # 使用昵称登录
+        if not isinstance(nickname, str) or not (1 <= len(nickname.strip()) <= 20):
+            return jsonify(code=400, message="昵称长度为1-20个字符", data=None), 400
+        user = User.query.filter_by(nickname=nickname.strip()).first()
 
     if not user:
         return jsonify(code=400, message="账号或密码错误", data=None), 400
+
     if not user.password_hash:
         return jsonify(code=400, message="该账号未设置密码，请使用验证码登录", data=None), 400
+
     if not user.check_password(password):
         return jsonify(code=400, message="账号或密码错误", data=None), 400
 

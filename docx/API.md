@@ -138,15 +138,13 @@
 - **说明**: 同时支持手机号或昵称作为登录凭据。传入 `account` 字段时，系统自动识别；也可继续使用旧版 `phone` 字段。
 - **入参**:
   ```json
-  // 推荐方式（account 自动识别）
   {
-    "account": "苏木",          // 手机号或昵称，required（与 phone 二选一）
+    "nickname": "苏木",          
     "password": "password123"
   }
   ```
   或
   ```json
-  // 向后兼容（仅手机号）
   {
     "phone": "13800138000",
     "password": "password123"
@@ -191,7 +189,7 @@
 - **入参**:
   ```json
   {
-    "phone": "13800138000",   // required
+    "phone": "13800138000",   // required 
     "code": "123456"          // required, 6位数字验证码
   }
   ```

@@ -79,7 +79,12 @@
                           <stop offset="78%" stop-color="#b8925a" />
                           <stop offset="100%" stop-color="#4a3528" />
                         </linearGradient>
-                        <pattern id="board-tube-ribs" width="10" height="168" patternUnits="userSpaceOnUse">
+                        <pattern
+                          id="board-tube-ribs"
+                          width="10"
+                          height="168"
+                          patternUnits="userSpaceOnUse"
+                        >
                           <rect width="10" height="168" fill="url(#board-tube-bamboo)" />
                           <line
                             x1="9"
@@ -104,11 +109,56 @@
                       <ellipse cx="60" cy="48" rx="48" ry="14" fill="url(#board-tube-rim)" />
                       <ellipse cx="60" cy="50" rx="36" ry="9" fill="#1a0f0a" />
                       <g>
-                        <rect x="44" y="18" width="4.5" height="38" rx="1" fill="#f7ecd8" stroke="#c4a574" stroke-width="0.4" />
-                        <rect x="51" y="14" width="4" height="42" rx="1" fill="#faf4e6" stroke="#c4a574" stroke-width="0.4" />
-                        <rect x="57" y="16" width="4.5" height="40" rx="1" fill="#f2e6cc" stroke="#c4a574" stroke-width="0.4" />
-                        <rect x="64" y="12" width="4" height="44" rx="1" fill="#fff9ed" stroke="#c4a574" stroke-width="0.4" />
-                        <rect x="71" y="17" width="4" height="39" rx="1" fill="#f5ebd8" stroke="#c4a574" stroke-width="0.4" />
+                        <rect
+                          x="44"
+                          y="18"
+                          width="4.5"
+                          height="38"
+                          rx="1"
+                          fill="#f7ecd8"
+                          stroke="#c4a574"
+                          stroke-width="0.4"
+                        />
+                        <rect
+                          x="51"
+                          y="14"
+                          width="4"
+                          height="42"
+                          rx="1"
+                          fill="#faf4e6"
+                          stroke="#c4a574"
+                          stroke-width="0.4"
+                        />
+                        <rect
+                          x="57"
+                          y="16"
+                          width="4.5"
+                          height="40"
+                          rx="1"
+                          fill="#f2e6cc"
+                          stroke="#c4a574"
+                          stroke-width="0.4"
+                        />
+                        <rect
+                          x="64"
+                          y="12"
+                          width="4"
+                          height="44"
+                          rx="1"
+                          fill="#fff9ed"
+                          stroke="#c4a574"
+                          stroke-width="0.4"
+                        />
+                        <rect
+                          x="71"
+                          y="17"
+                          width="4"
+                          height="39"
+                          rx="1"
+                          fill="#f5ebd8"
+                          stroke="#c4a574"
+                          stroke-width="0.4"
+                        />
                       </g>
                       <ellipse
                         cx="60"
@@ -125,7 +175,13 @@
                 </div>
               </div>
               <p class="text-xs text-amber-700">
-                {{ boardDrawPhase === 'shaking' ? '轻晃签筒，求一支吉签' : boardDrawPhase === 'stick' ? '签文已显，正在解锁看板...' : '今日首次进入，请先抽签' }}
+                {{
+                  boardDrawPhase === 'shaking'
+                    ? '轻晃签筒，求一支吉签'
+                    : boardDrawPhase === 'stick'
+                      ? '签文已显，正在解锁看板...'
+                      : '今日首次进入，请先抽签'
+                }}
               </p>
               <button
                 v-if="boardDrawPhase === 'idle'"
@@ -226,7 +282,9 @@
       <section v-if="isBoardUnlocked">
         <div class="mb-3 flex items-center justify-between">
           <h2 class="text-lg font-semibold">历史运势记录</h2>
-          <span class="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs text-violet-700">
+          <span
+            class="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs text-violet-700"
+          >
             {{ streakLabel }}
           </span>
         </div>
@@ -239,7 +297,9 @@
           >
             <div class="mb-3 flex items-center justify-between">
               <div>
-                <p class="text-sm font-semibold text-slate-900">{{ record.date }} · {{ record.title }}</p>
+                <p class="text-sm font-semibold text-slate-900">
+                  {{ record.date }} · {{ record.title }}
+                </p>
                 <p class="text-xs text-slate-500">{{ record.summary }}</p>
               </div>
               <span
@@ -318,16 +378,22 @@
             <div class="space-y-3 text-sm">
               <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
                 <p class="text-xs text-slate-500">{{ selectedHistory.date }}</p>
-                <p class="mt-1 text-base font-semibold text-slate-900">{{ selectedHistory.title }}</p>
+                <p class="mt-1 text-base font-semibold text-slate-900">
+                  {{ selectedHistory.title }}
+                </p>
                 <p class="mt-1 text-slate-700">{{ selectedHistory.summary }}</p>
                 <p class="mt-2 text-xs text-violet-700">{{ selectedHistory.story }}</p>
               </div>
-              <div class="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+              <div
+                class="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2"
+              >
                 <span class="text-slate-600">综合评分</span>
                 <span class="font-semibold text-amber-700">{{ selectedHistory.score }} 分</span>
               </div>
               <div class="grid grid-cols-2 gap-3 text-xs">
-                <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-700">
+                <div
+                  class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-700"
+                >
                   <p class="font-semibold">宜</p>
                   <p class="mt-1">{{ selectedHistory.yi.join('、') }}</p>
                 </div>
@@ -371,7 +437,6 @@
 import * as echarts from 'echarts'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getFortuneToday, getFortuneTrend, getHistoryFortune } from '@/api/fortune'
-import FortuneCardPreview from './components/FortuneCardPreview.vue'
 import FortuneShareReveal from './components/FortuneShareReveal.vue'
 import TodayFortuneContent from './components/TodayFortuneContent.vue'
 // import { useFortuneStore } from '@/stores/fortune'

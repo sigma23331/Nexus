@@ -80,7 +80,8 @@
           <div
             v-for="item in recentAnswers"
             :key="item.id"
-            class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"
+            class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 cursor-pointer hover:bg-slate-50 transition"
+            @click="openDetail(item)"
           >
             <div
               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-pink-500/20"
@@ -140,6 +141,9 @@
         </div>
       </div>
     </Transition>
+
+    <!-- 答案详情弹窗 -->
+    <AnswerDetailModal ref="answerDetailModalRef" />
   </div>
 </template>
 
@@ -147,7 +151,13 @@
 import { ref, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import { askQuestion, favoriteAnswer, type AnswerHistoryItem } from '@/api/answer'
-import { getLocalAnswerList, addLocalAnswer, fetchAndSyncHistory } from '@/utils/answerService'
+import {
+  getLocalAnswerList,
+  addLocalAnswer,
+  fetchAndSyncHistory,
+  updateLocalFavoriteStatus,
+} from '@/utils/answerService'
+import AnswerDetailModal from './components/AnswerDetailModal.vue'
 
 const question = ref('')
 const modalVisible = ref(false)
@@ -159,6 +169,7 @@ const isShaking = ref(false)
 const isDrawing = ref(false)
 const recentAnswers = ref<AnswerHistoryItem[]>([])
 const loadingHistory = ref(false)
+const answerDetailModalRef = ref<InstanceType<typeof AnswerDetailModal> | null>(null)
 
 const canSubmit = computed(() => question.value.trim().length > 0 && !isDrawing.value)
 
@@ -232,17 +243,13 @@ async function toggleFavorite(answerId: string) {
   const action = currentIsFavorited.value ? 'unfavorite' : 'favorite'
   try {
     await favoriteAnswer(answerId, action)
-    currentIsFavorited.value = !currentIsFavorited.value
-    // 更新本地缓存中的收藏状态
-    const local = getLocalAnswerList()
-    const target = local.find((a) => a.id === answerId)
-    if (target) {
-      target.isFavorited = currentIsFavorited.value
-      localStorage.setItem('xyd_answers', JSON.stringify(local))
-    }
+    const newStatus = !currentIsFavorited.value
+    currentIsFavorited.value = newStatus
+    // 更新本地缓存中的收藏状态，并触发全局事件
+    updateLocalFavoriteStatus(answerId, newStatus)
     // 同时更新最近显示列表中的状态
     const recentItem = recentAnswers.value.find((a) => a.id === answerId)
-    if (recentItem) recentItem.isFavorited = currentIsFavorited.value
+    if (recentItem) recentItem.isFavorited = newStatus
   } catch (err) {
     console.error('操作失败', err)
     alert('操作失败')
@@ -253,12 +260,18 @@ function hideAnswer() {
   modalVisible.value = false
 }
 
+// 打开详情弹窗
+function openDetail(item: AnswerHistoryItem) {
+  answerDetailModalRef.value?.open(item)
+}
+
 onMounted(() => {
   loadRecentHistory()
 })
 </script>
 
 <style scoped>
+/* 保持原有样式不变 */
 .book-wrap {
   width: 192px;
   height: 256px;

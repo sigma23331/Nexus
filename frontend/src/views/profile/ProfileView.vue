@@ -36,12 +36,14 @@
         <ul class="space-y-2">
           <li
             class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
+            @click="router.push('/profile/favorites')"
           >
             <span>⭐ 收藏的答案</span>
             <span class="text-sm text-slate-500">{{ favoriteCount }}</span>
           </li>
           <li
             class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
+            @click="router.push('/profile/history-fortune')"
           >
             <span>📅 历史运势记录</span>
             <span class="text-sm text-slate-500">{{ historyCount }}</span>
@@ -69,16 +71,6 @@
           </button>
         </div>
       </section>
-
-      <!-- 个人运势图谱 -->
-      <!-- <section>
-        <h2 class="text-lg font-semibold mb-3">个人运势图谱</h2>
-        <div
-          class="bg-white border border-slate-200 rounded-xl p-6 text-center text-slate-400 shadow-sm"
-        >
-          📊 图表占位（后续接入 ECharts）
-        </div>
-      </section> -->
     </main>
 
     <MoodDiaryModal ref="moodModalRef" @submitted="onDiarySubmitted" />
@@ -88,8 +80,10 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getUserProfile } from '@/api/user'
+import { getHistoryFortune } from '@/api/fortune'
 import MonthlyMoodOverview from '@/components/business/MonthlyMoodOverview.vue'
 import MoodDiaryModal from '@/components/business/MoodDiaryModal.vue'
 import SettingModal from '@/components/common/SettingModal.vue'
@@ -102,9 +96,10 @@ interface DiaryData {
   content: string
 }
 
+const router = useRouter()
 const userStore = useUserStore()
 const favoriteCount = ref(15)
-const historyCount = ref(28)
+const historyCount = ref(0) // 初始为0，后续从API获取
 
 const moodModalRef = ref<InstanceType<typeof MoodDiaryModal> | null>(null)
 const monthlyOverviewRef = ref<InstanceType<typeof MonthlyMoodOverview> | null>(null)
@@ -124,17 +119,27 @@ const onDiarySubmitted = async (data: DiaryData) => {
 }
 
 onMounted(async () => {
+  // 获取用户信息（如果已登录但store中没有）
   if (localStorage.getItem('token') && !userStore.userInfo) {
     try {
       const profile = await getUserProfile()
       userStore.setUserInfo(profile.userInfo)
       if (profile.stats) {
         favoriteCount.value = profile.stats.answerCollected || 15
-        historyCount.value = profile.stats.diaryCount || 28
+        // 注意：profile.stats.diaryCount 是日记数，不是运势记录数，所以不在这里设置 historyCount
       }
     } catch {
       // 静默失败
     }
+  }
+
+  // 单独获取历史运势总数
+  try {
+    const res = await getHistoryFortune(1, 1) // 只请求第一页，limit=1，仅获取total
+    historyCount.value = res.total
+  } catch (error) {
+    console.error('获取历史运势总数失败', error)
+    historyCount.value = 0
   }
 })
 </script>

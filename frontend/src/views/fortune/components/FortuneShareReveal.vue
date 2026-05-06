@@ -1,6 +1,6 @@
 <template>
-  <div class="reveal">
-    <div class="reveal__stage">
+  <div class="reveal" :class="{ 'reveal--card': phase === 'card' }">
+    <div class="reveal__stage" :class="{ 'reveal__stage--card': phase === 'card' }">
       <!-- 与看板「运势卡片」区块一致的预览卡 -->
       <div class="reveal__card" :class="{ 'reveal__card--visible': phase === 'card' }">
         <FortuneCardPreview
@@ -196,12 +196,22 @@ onBeforeUnmount(() => {
   padding: 4px 0 12px;
 }
 
+.reveal--card {
+  min-height: auto;
+  padding: 0;
+}
+
 .reveal__stage {
   position: relative;
   width: 100%;
   max-width: 360px;
   min-height: 360px;
   margin: 0 auto;
+}
+
+.reveal__stage--card {
+  max-width: 340px;
+  min-height: auto;
 }
 
 /* ----- 看板同款运势卡 ----- */

@@ -23,6 +23,9 @@ export interface FortuneToday {
   career?: string
   health?: string
   wealth?: string
+  gua_meaning_lines?: string[]
+  lucky_hour_name?: string
+  lucky_hour_range?: string
 }
 
 // 运势轨迹

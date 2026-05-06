@@ -6,6 +6,46 @@ from extensions import db
 from services import content_generation_service
 
 
+def _resolve_gua_meaning(score, delta=0):
+    # 后端统一控制卦意文案，按“趋势 + 分数段”组合判断
+    if delta >= 8:
+        return ["雷火丰", "势能大开，宜果断推进"]
+    if delta >= 3:
+        if score >= 85:
+            return ["火土相生", "顺势加速，宜主动求进"]
+        return ["风雷益", "稳步加码，宜持续发力"]
+
+    if delta <= -8:
+        return ["坎水偏盛", "外扰较多，宜收敛守正"]
+    if delta <= -3:
+        if score >= 75:
+            return ["山泽损", "减法增效，宜聚焦主线"]
+        return ["水势偏重", "宜静守内观，先稳节奏"]
+
+    if score >= 90:
+        return ["乾元得势", "天行健，宜乘势突破"]
+    if score >= 80:
+        return ["木火通明", "思路清朗，宜扩展布局"]
+    if score >= 70:
+        return ["阴阳守中", "守正出新，宜稳步前行"]
+    if score >= 60:
+        return ["地山谦", "以退为进，宜夯实基础"]
+    return ["坎离未济", "先养精蓄锐，再谋后动"]
+
+
+def _resolve_lucky_hour(score):
+    # 后端统一控制开运时辰文案，细化分档，避免前后端规则不一致
+    if score >= 90:
+        return {"name": "辰时", "range": "07:00-09:00"}
+    if score >= 82:
+        return {"name": "巳时", "range": "09:00-11:00"}
+    if score >= 74:
+        return {"name": "午时", "range": "11:00-13:00"}
+    if score >= 66:
+        return {"name": "未时", "range": "13:00-15:00"}
+    return {"name": "酉时", "range": "17:00-19:00"}
+
+
 def _serialize_content_pair(content_main, content_sub):
     main = str(content_main or "").strip()[:80]
     sub = str(content_sub or "").strip()[:80]
@@ -39,8 +79,10 @@ def _deserialize_content_pair(raw_content):
     return text[:80], fallback_sub
 
 
-def _format_today_payload(record):
+def _format_today_payload(record, delta=0):
     content_main, content_sub = _deserialize_content_pair(record.content)
+    lucky_hour = _resolve_lucky_hour(record.score or 0)
+    gua_lines = _resolve_gua_meaning(record.score or 0, delta)
 
     return {
         "id": record.id,
@@ -55,6 +97,9 @@ def _format_today_payload(record):
         "wealth": "平稳",
         "yi": record.yi or [],
         "ji": record.ji or [],
+        "gua_meaning_lines": gua_lines,
+        "lucky_hour_name": lucky_hour["name"],
+        "lucky_hour_range": lucky_hour["range"],
     }
 
 
@@ -77,7 +122,14 @@ def get_today_fortune(user_id):
         db.session.commit()
         db.session.refresh(record)
 
-    return _format_today_payload(record)
+    previous_record = FortuneRecord.query.filter(
+        FortuneRecord.user_id == user_id,
+        FortuneRecord.date < today,
+    ).order_by(FortuneRecord.date.desc()).first()
+    previous_score = previous_record.score if previous_record else record.score
+    delta = (record.score or 0) - (previous_score or 0)
+
+    return _format_today_payload(record, delta=delta)
 
 
 def get_trend(user_id, days=7):

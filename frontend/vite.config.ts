@@ -12,12 +12,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'icons/*.png'],
-      manifest: false, // 使用 public/manifest.json
+      manifest: false,
       workbox: {
-        // 预缓存静态资源（包括 index.html）
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        // 关键：删除 navigateFallback 和 navigateFallbackDenylist
-        // 避免无条件回退到 offline.html
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.xinyundao\.com\/.*/i,
@@ -33,9 +30,8 @@ export default defineConfig({
         ],
       },
       devOptions: {
-        enabled: true,
+        enabled: false,
         type: 'module',
-        // 开发环境也移除 navigateFallback
       },
     }),
   ],
@@ -46,10 +42,20 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      '/api/v1': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/v1/, ''),
+      },
       '/api': {
         target: 'http://127.0.0.1:5000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+      '/v1': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/v1/, ''),
       },
     },
   },

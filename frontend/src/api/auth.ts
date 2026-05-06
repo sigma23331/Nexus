@@ -10,7 +10,7 @@ export const loginBySms = (phone: string, code: string): Promise<LoginResponse> 
 }
 
 export const loginByPassword = (username: string, password: string) => {
-  return request.post('/v1/auth/password/login', { account: username, password })
+  return request.post('/v1/auth/password/login', { phone: username, password })
 }
 
 export const register = (phone: string, code: string, password: string): Promise<void> => {

@@ -280,3 +280,41 @@ def update_nickname():
     return jsonify(code=200, message="昵称更新成功", data={
         "nickname": user.nickname
     }), 200
+
+
+# ==================== 6.11 修改密码 ====================
+
+@user_bp.route('/profile/password', methods=['PUT'])
+@jwt_required()
+def update_password():
+    """
+    修改用户密码（不验证旧密码，适用于验证码登录后首次设密或已登录重置密码）
+    Request JSON: { "new_password": "新密码" }
+    密码要求：长度 6-20 位
+    """
+    user = get_current_user()
+    if not user:
+        return jsonify(code=404, message="用户不存在", data=None), 404
+
+    data = request.get_json(silent=True)
+    if not data or 'new_password' not in data:
+        return jsonify(code=400, message="缺少 new_password 参数", data=None), 400
+
+    new_password = data['new_password']
+    if not isinstance(new_password, str):
+        return jsonify(code=400, message="密码必须是字符串", data=None), 400
+
+    if len(new_password) < 6 or len(new_password) > 20:
+        return jsonify(code=400, message="密码长度需为6-20位", data=None), 400
+
+    # 设置新密码（自动计算哈希）
+    user.set_password(new_password)
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"修改密码失败: {e}", exc_info=True)
+        return jsonify(code=500, message="修改失败，请稍后重试", data=None), 500
+
+    return jsonify(code=200, message="密码修改成功", data={"success": True}), 200

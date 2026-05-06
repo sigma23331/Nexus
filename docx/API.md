@@ -745,6 +745,32 @@
   - 409 昵称重复: {"code": 409, "message": "该昵称已被使用，请更换", "data": null}
   - 404 用户不存在: {"code": 404, "message": "用户不存在", "data": null}
 
+
+### 6.11 修改密码（无需旧密码）
+- **接口**: `PUT /user/profile/password`
+- **说明**: 已登录用户直接设置新密码，不验证旧密码。适用于通过验证码登录后首次设定密码，或已登录用户重置密码。密码长度需为6-20位。
+- **请求体 (JSON)**: 
+  ```json
+    {
+      "new_password": "newPass123"
+    }
+  ```
+- **返回data**：
+  ```json
+    {
+  "code": 200,
+  "message": "密码修改成功",
+  "data": {
+    "success": true
+  }
+  }
+  ```
+- **错误响应**： 
+  - 400 缺少参数: {"code": 400, "message": "缺少 new_password 参数", "data": null}
+  - 400 密码格式错误: {"code": 400, "message": "密码必须是字符串", "data": null} 
+  - 400 密码长度不符: {"code": 400, "message": "密码长度需为6-20位", "data": null} 
+  - 404 用户不存在: {"code": 404, "message": "用户不存在", "data": null}
+  - 500 修改失败: {"code": 500, "message": "修改失败，请稍后重试", "data": null}
 ---
 
 ## 7. 错误码完整列表
@@ -913,3 +939,18 @@ docker-compose exec backend sh
 - 默认后端地址：前端应配置 API Base URL 为 http://localhost:5000。
 - 数据库持久化：PostgreSQL 数据保存在 Docker 卷 postgres_data 中，删除卷会丢失所有数据。
 - 端口冲突：若本地 5000 或 5432 端口被占用，请修改 docker-compose.yml 中的映射端口。
+- 如果出现镜像拉取问题，修改Docker设置中的Docker Engine为如下内容：
+```json
+{
+  "builder": {
+    "gc": {
+      "defaultKeepStorage": "20GB",
+      "enabled": true
+    }
+  },
+  "experimental": false,
+  "registry-mirrors": [
+    "https://docker.1ms.run"
+  ]
+}
+```

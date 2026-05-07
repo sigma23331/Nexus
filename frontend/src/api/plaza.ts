@@ -14,7 +14,6 @@ export interface GetPlazaCardsParams {
   limit?: number
 }
 
-// 发布卡片请求参数
 export interface CreatePlazaCardParams {
   type: 'fortune' | 'answer'
   sourceId: string // 运势日期(yyyy-mm-dd) 或 答案ID
@@ -41,7 +40,10 @@ export const likePlazaCard = (
   return request.post('/v1/plaza/like', { cardId, action })
 }
 
-// 发布一张分享卡片
 export const createPlazaCard = (params: CreatePlazaCardParams): Promise<PlazaCard> => {
   return request.post('/v1/plaza/card', params)
+}
+
+export const deletePlazaCard = (cardId: string): Promise<{ success: boolean }> => {
+  return request.delete(`/v1/plaza/card/${encodeURIComponent(cardId)}`)
 }

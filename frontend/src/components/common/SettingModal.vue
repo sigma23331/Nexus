@@ -32,7 +32,7 @@
           <span class="text-slate-700 hover:text-purple-700">修改昵称</span>
           <span class="text-purple-400">›</span>
         </div>
-        <!-- 修改密码 -->
+        <!-- 修改密码（使用新弹窗） -->
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
           @click="changePassword"
@@ -47,7 +47,7 @@
           <span class="text-slate-700 hover:text-purple-700">退出登录</span>
           <span class="text-purple-400">›</span>
         </div>
-        <!-- 切换账号已移除 -->
+        <!-- 注销账号 -->
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-rose-50/80 transition duration-150"
           @click="handleDeleteAccount"
@@ -86,6 +86,8 @@
     <PrivacyPolicyModal ref="privacyPolicyModalRef" />
     <PromptModal ref="promptModalRef" />
     <ConfirmModal ref="confirmModalRef" />
+    <!-- 修改密码专用弹窗 -->
+    <ChangePasswordModal ref="changePasswordModalRef" />
   </div>
 </template>
 
@@ -93,11 +95,12 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { updateUserProfile, updatePassword } from '@/api/user'
+import { updateUserProfile } from '@/api/user'
 import UserAgreementModal from './UserAgreementModal.vue'
 import PrivacyPolicyModal from './PrivacyPolicyModal.vue'
 import PromptModal from './PromptModal.vue'
 import ConfirmModal from './ConfirmModal.vue'
+import ChangePasswordModal from './ChangePasswordModal.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -107,6 +110,7 @@ const userAgreementModalRef = ref<InstanceType<typeof UserAgreementModal> | null
 const privacyPolicyModalRef = ref<InstanceType<typeof PrivacyPolicyModal> | null>(null)
 const promptModalRef = ref<InstanceType<typeof PromptModal> | null>(null)
 const confirmModalRef = ref<InstanceType<typeof ConfirmModal> | null>(null)
+const changePasswordModalRef = ref<InstanceType<typeof ChangePasswordModal> | null>(null)
 
 const open = () => {
   visible.value = true
@@ -162,38 +166,11 @@ const changeNickname = async () => {
   }
 }
 
-// 修改密码
+// 修改密码（使用新弹窗）
 const changePassword = async () => {
-  // 第一步：输入新密码
-  const newPwd = await promptModalRef.value?.open({
-    title: '修改密码',
-    message: '请输入新密码（6-20位）',
-    placeholder: '新密码',
-    inputType: 'password',
-  })
-  if (!newPwd || newPwd.length < 6 || newPwd.length > 20) {
-    if (newPwd) alert('密码长度必须为6-20位')
-    return
-  }
-
-  // 第二步：确认新密码
-  const confirmPwd = await promptModalRef.value?.open({
-    title: '确认密码',
-    message: '请再次输入新密码',
-    placeholder: '确认新密码',
-    inputType: 'password',
-  })
-  if (confirmPwd !== newPwd) {
-    alert('两次输入的密码不一致')
-    return
-  }
-
-  try {
-    await updatePassword(newPwd)
-    alert('密码修改成功，下次登录请使用新密码')
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : '密码修改失败，请重试'
-    alert(message)
+  const success = await changePasswordModalRef.value?.open()
+  if (success) {
+    // 密码修改成功，可做额外操作（如提示退出登录等，弹窗内已 alert，此处留空）
   }
 }
 

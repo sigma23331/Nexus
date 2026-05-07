@@ -21,7 +21,29 @@
           <p class="text-xs text-slate-400">{{ formatTime(card.createdAt) }}</p>
         </div>
       </div>
-      <button class="text-slate-400 hover:text-slate-600">···</button>
+      <!-- 菜单按钮（仅作者可见） -->
+      <div class="relative" v-if="isOwner">
+        <button
+          @click="showMenu = !showMenu"
+          class="text-slate-400 hover:text-slate-600"
+          aria-label="菜单"
+        >
+          ···
+        </button>
+        <div
+          v-if="showMenu"
+          class="absolute right-0 mt-1 w-28 bg-white border border-slate-200 rounded-lg shadow-lg z-10"
+        >
+          <button
+            @click="confirmDelete"
+            class="block w-full text-left px-4 py-2 text-sm text-rose-600 hover:bg-slate-50"
+          >
+            删除卡片
+          </button>
+        </div>
+      </div>
+      <!-- 非作者占位保持对齐 -->
+      <div v-else class="w-8"></div>
     </div>
 
     <!-- 分享文案（独立于卡片外部） -->
@@ -35,7 +57,7 @@
 
     <!-- 卡片主要内容 -->
     <div class="px-4 pb-2">
-      <!-- 图片卡片（保留） -->
+      <!-- 图片卡片 -->
       <div v-if="hasValidImage" class="mb-2">
         <img :src="card.snapshotUrl" class="w-full rounded-xl border border-slate-200" />
       </div>
@@ -62,7 +84,6 @@
         </div>
         <div class="mt-2 text-right text-[10px] text-amber-600/60">{{ dateText }}</div>
       </div>
-
       <!-- 答案卡片（牛皮卷样式） -->
       <div v-else class="text-card rounded-xl border border-amber-200 bg-amber-50 p-4">
         <div class="text-center mb-3">
@@ -94,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 
 export interface PlazaCardData {
   cardId: string
@@ -115,12 +136,17 @@ export interface PlazaCardData {
 
 const props = defineProps<{
   card: PlazaCardData
+  isOwner: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'like', cardId: string, isLiked: boolean): void
+  (e: 'delete', cardId: string): void
 }>()
 
+const showMenu = ref(false)
+
+// 格式化时间
 const formatTime = (isoString: string) => {
   const date = new Date(isoString)
   const year = date.getFullYear()
@@ -135,6 +161,15 @@ const toggleLike = () => {
   emit('like', props.card.cardId, !props.card.stats.isLiked)
 }
 
+// 确认删除
+const confirmDelete = () => {
+  if (confirm('确定要删除这张卡片吗？删除后不可恢复。')) {
+    emit('delete', props.card.cardId)
+    showMenu.value = false
+  }
+}
+
+// 头像相关
 const isValidAvatarUrl = computed(() => {
   const avatar = props.card.owner.avatar
   return avatar && (avatar.startsWith('http') || avatar.startsWith('data:image'))
@@ -148,6 +183,7 @@ const defaultAvatar = computed(() => {
   return '👤'
 })
 
+// 图片有效性
 const hasValidImage = computed(() => {
   const url = props.card.snapshotUrl
   if (!url || !url.startsWith('http')) return false
@@ -155,7 +191,7 @@ const hasValidImage = computed(() => {
   return true
 })
 
-// 通用：提取分享文案（✨开头，直到两个换行）
+// 分享文案提取
 const shareMessage = computed(() => {
   const content = props.card.content
   if (!content) return ''
@@ -166,7 +202,7 @@ const shareMessage = computed(() => {
   return ''
 })
 
-// 答案卡片内部内容（移除文案部分）
+// 答案卡片内部内容（移除分享文案后）
 const cardInnerContent = computed(() => {
   let content = props.card.content || ''
   const match = content.match(/^✨\s*.+?\n\n/s)
@@ -180,17 +216,11 @@ const dateText = computed(() => {
   return formatTime(props.card.createdAt).slice(0, 10)
 })
 
-// 运势专用的解析属性（基于 card.content，已经移除了文案部分，但这里我们重新解析整个内容更稳妥）
+// 运势卡片解析（基于完整 content，绕过前置分享文案）
 const fullContent = computed(() => props.card.content || '')
-// const lines = computed(() => fullContent.value.split('\n'))
-
 const fortuneTitle = computed(() => {
-  // 第一行可能是用户文案，所以需要找第一个非空且不是✨开头的行？但为了简化，我们假定文案已经被移除，但实际未移除。
-  // 使用 shareMessage 后，剩余内容可能包含多行。更好方式：直接解析 finalContent 中的运势部分。
-  // 这里我们简单取第一个非空行（跳过可能存在的文案），但文案已在外部显示，所以直接取第二段开始。
   let start = 0
   if (shareMessage.value) {
-    // 文案占据了开头，所以内容从两个换行后开始
     const idx = fullContent.value.indexOf('\n\n')
     if (idx !== -1) start = idx + 2
   }
@@ -198,7 +228,6 @@ const fortuneTitle = computed(() => {
   const firstLine = rest.split('\n')[0] || ''
   return firstLine.replace(/✨/, '').trim()
 })
-
 const fortuneMainContent = computed(() => {
   let start = 0
   if (shareMessage.value) {
@@ -209,7 +238,6 @@ const fortuneMainContent = computed(() => {
   const linesArr = rest.split('\n')
   return linesArr[1] || ''
 })
-
 const fortuneSubContent = computed(() => {
   let start = 0
   if (shareMessage.value) {
@@ -220,7 +248,6 @@ const fortuneSubContent = computed(() => {
   const linesArr = rest.split('\n')
   return linesArr[2] || ''
 })
-
 const fortuneYi = computed(() => {
   let start = 0
   if (shareMessage.value) {
@@ -231,7 +258,6 @@ const fortuneYi = computed(() => {
   const yiLine = rest.split('\n').find((l) => l.startsWith('宜：')) || ''
   return yiLine.replace('宜：', '')
 })
-
 const fortuneJi = computed(() => {
   let start = 0
   if (shareMessage.value) {
@@ -255,7 +281,6 @@ const fortuneJi = computed(() => {
     35px 35px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
-
 .fortune-card {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }

@@ -9,6 +9,7 @@ from models.diary import DiaryEntry
 from extensions import db
 from services.profile_analysis_service import ProfileAnalysisService
 from services.user_profile_service import UserProfileService
+from services.fortune_service import _deserialize_content_pair
 
 user_bp = Blueprint('user', __name__)
 
@@ -142,11 +143,18 @@ def get_fortune_history():
         .order_by(FortuneRecord.date.desc())\
         .paginate(page=page, per_page=limit, error_out=False)
 
-    fortune_list = [{
-        "date": rec.date.isoformat() if rec.date else None,
-        "score": rec.score,
-        "title": rec.title,
-    } for rec in pagination.items]
+    fortune_list = []
+    for rec in pagination.items:
+        content_main, content_sub = _deserialize_content_pair(rec.content)
+        fortune_list.append({
+            "date": rec.date.isoformat() if rec.date else None,
+            "score": rec.score,
+            "title": rec.title,
+            "content_main": content_main,
+            "content_sub": content_sub,
+            "yi": rec.yi or [],
+            "ji": rec.ji or []
+        })
 
     return jsonify(code=200, message="success", data={
         "total": pagination.total,

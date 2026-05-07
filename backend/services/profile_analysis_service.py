@@ -11,7 +11,7 @@ from services import content_generation_service
 
 
 class ProfileAnalysisService:
-    ANALYSIS_COOLDOWN_HOURS = 1
+    ANALYSIS_COOLDOWN_HOURS = 24
 
     @staticmethod
     def _build_request_id(user_id: str, trigger_event: str, event_time: datetime):

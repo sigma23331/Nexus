@@ -33,19 +33,43 @@
       </div>
     </div>
 
-    <!-- 卡片内容：图片或牛皮卷文本卡片 -->
+    <!-- 卡片主要内容 -->
     <div class="px-4 pb-2">
+      <!-- 图片卡片（保留） -->
       <div v-if="hasValidImage" class="mb-2">
         <img :src="card.snapshotUrl" class="w-full rounded-xl border border-slate-200" />
       </div>
+      <!-- 运势卡片（文本样式） -->
+      <div
+        v-else-if="card.type === 'fortune'"
+        class="fortune-card rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-rose-50 p-4"
+      >
+        <div class="text-center">
+          <p class="text-xs font-semibold text-amber-700">今日签文</p>
+          <p class="mt-1 text-lg font-bold text-slate-900">{{ fortuneTitle }}</p>
+        </div>
+        <div class="mt-3 text-sm text-slate-700 whitespace-pre-wrap">
+          {{ fortuneMainContent }}
+        </div>
+        <div class="mt-2 text-xs text-slate-500">{{ fortuneSubContent }}</div>
+        <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+          <div class="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+            <span class="font-medium">宜</span> {{ fortuneYi }}
+          </div>
+          <div class="rounded-lg bg-rose-50 p-2 text-rose-700">
+            <span class="font-medium">忌</span> {{ fortuneJi }}
+          </div>
+        </div>
+        <div class="mt-2 text-right text-[10px] text-amber-600/60">{{ dateText }}</div>
+      </div>
+
+      <!-- 答案卡片（牛皮卷样式） -->
       <div v-else class="text-card rounded-xl border border-amber-200 bg-amber-50 p-4">
         <div class="text-center mb-3">
           <span class="text-2xl">📖</span>
           <p class="text-xs text-amber-700/80">心运岛 · 答案之书</p>
         </div>
-        <div class="whitespace-pre-wrap text-sm text-slate-700">
-          {{ cardInnerContent }}
-        </div>
+        <div class="whitespace-pre-wrap text-sm text-slate-700">{{ cardInnerContent }}</div>
         <div
           class="text-right text-[10px] text-amber-600/60 border-t border-amber-200/60 pt-2 mt-2"
         >
@@ -54,7 +78,7 @@
       </div>
     </div>
 
-    <!-- 底部按钮：只保留点赞和卡片类型标识，移除分享按钮 -->
+    <!-- 底部按钮 -->
     <div class="flex items-center justify-between px-4 pb-4 text-xs text-slate-500">
       <div class="flex items-center gap-4">
         <button @click="toggleLike" class="flex items-center gap-1 transition">
@@ -131,6 +155,7 @@ const hasValidImage = computed(() => {
   return true
 })
 
+// 通用：提取分享文案（✨开头，直到两个换行）
 const shareMessage = computed(() => {
   const content = props.card.content
   if (!content) return ''
@@ -141,6 +166,7 @@ const shareMessage = computed(() => {
   return ''
 })
 
+// 答案卡片内部内容（移除文案部分）
 const cardInnerContent = computed(() => {
   let content = props.card.content || ''
   const match = content.match(/^✨\s*.+?\n\n/s)
@@ -153,6 +179,69 @@ const cardInnerContent = computed(() => {
 const dateText = computed(() => {
   return formatTime(props.card.createdAt).slice(0, 10)
 })
+
+// 运势专用的解析属性（基于 card.content，已经移除了文案部分，但这里我们重新解析整个内容更稳妥）
+const fullContent = computed(() => props.card.content || '')
+// const lines = computed(() => fullContent.value.split('\n'))
+
+const fortuneTitle = computed(() => {
+  // 第一行可能是用户文案，所以需要找第一个非空且不是✨开头的行？但为了简化，我们假定文案已经被移除，但实际未移除。
+  // 使用 shareMessage 后，剩余内容可能包含多行。更好方式：直接解析 finalContent 中的运势部分。
+  // 这里我们简单取第一个非空行（跳过可能存在的文案），但文案已在外部显示，所以直接取第二段开始。
+  let start = 0
+  if (shareMessage.value) {
+    // 文案占据了开头，所以内容从两个换行后开始
+    const idx = fullContent.value.indexOf('\n\n')
+    if (idx !== -1) start = idx + 2
+  }
+  const rest = fullContent.value.slice(start).trim()
+  const firstLine = rest.split('\n')[0] || ''
+  return firstLine.replace(/✨/, '').trim()
+})
+
+const fortuneMainContent = computed(() => {
+  let start = 0
+  if (shareMessage.value) {
+    const idx = fullContent.value.indexOf('\n\n')
+    if (idx !== -1) start = idx + 2
+  }
+  const rest = fullContent.value.slice(start).trim()
+  const linesArr = rest.split('\n')
+  return linesArr[1] || ''
+})
+
+const fortuneSubContent = computed(() => {
+  let start = 0
+  if (shareMessage.value) {
+    const idx = fullContent.value.indexOf('\n\n')
+    if (idx !== -1) start = idx + 2
+  }
+  const rest = fullContent.value.slice(start).trim()
+  const linesArr = rest.split('\n')
+  return linesArr[2] || ''
+})
+
+const fortuneYi = computed(() => {
+  let start = 0
+  if (shareMessage.value) {
+    const idx = fullContent.value.indexOf('\n\n')
+    if (idx !== -1) start = idx + 2
+  }
+  const rest = fullContent.value.slice(start).trim()
+  const yiLine = rest.split('\n').find((l) => l.startsWith('宜：')) || ''
+  return yiLine.replace('宜：', '')
+})
+
+const fortuneJi = computed(() => {
+  let start = 0
+  if (shareMessage.value) {
+    const idx = fullContent.value.indexOf('\n\n')
+    if (idx !== -1) start = idx + 2
+  }
+  const rest = fullContent.value.slice(start).trim()
+  const jiLine = rest.split('\n').find((l) => l.startsWith('忌：')) || ''
+  return jiLine.replace('忌：', '')
+})
 </script>
 
 <style scoped>
@@ -164,6 +253,10 @@ const dateText = computed(() => {
   background-size:
     40px 40px,
     35px 35px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.fortune-card {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 </style>

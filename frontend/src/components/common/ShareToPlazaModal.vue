@@ -18,9 +18,9 @@
         </button>
       </div>
 
-      <!-- 内容区域：调整顺序，分享文案在上，原始内容在下 -->
+      <!-- 内容区域 -->
       <div class="px-6 py-4 space-y-5 max-h-[70vh] overflow-y-auto">
-        <!-- 分享文案（可编辑，放在最上面） -->
+        <!-- 分享文案（可编辑） -->
         <div>
           <div class="text-xs text-slate-500 mb-1">分享文案（可选）</div>
           <textarea
@@ -95,7 +95,7 @@ let toastTimer: ReturnType<typeof setTimeout> | null = null
 
 const isFortune = computed(() => cardType.value === 'fortune')
 
-// 最终内容：分享文案（如果有）放在最上面，然后是原始内容
+// 最终内容：用户文案 + 原始内容
 const finalContent = computed(() => {
   if (extraContent.value.trim()) {
     return `✨ ${extraContent.value.trim()}\n\n${originalContent.value}`
@@ -112,10 +112,42 @@ const showToast = (msg: string) => {
   }, 2000)
 }
 
-const open = (params: { type: 'fortune' | 'answer'; sourceId: string; content: string }) => {
+// 开放方法，支持答案和运势
+const open = (params: {
+  type: 'fortune' | 'answer'
+  sourceId: string
+  content?: string // 答案卡片使用
+  fortuneData?: {
+    // 运势卡片使用
+    title: string
+    score: number
+    content_main: string
+    content_sub: string
+    yi: string[]
+    ji: string[]
+    love?: string
+    career?: string
+    health?: string
+    wealth?: string
+  }
+}) => {
   cardType.value = params.type
   sourceId.value = params.sourceId
-  originalContent.value = params.content
+  if (params.type === 'fortune' && params.fortuneData) {
+    const f = params.fortuneData
+    // 格式化运势原始内容，用于预览和分享内容（一行一个元素）
+    originalContent.value = [
+      `${f.title}（${f.score}分）`,
+      f.content_main,
+      f.content_sub,
+      `宜：${f.yi.join('、') || '--'}`,
+      `忌：${f.ji.join('、') || '--'}`,
+    ].join('\n')
+  } else if (params.content) {
+    originalContent.value = params.content
+  } else {
+    originalContent.value = ''
+  }
   extraContent.value = ''
   visible.value = true
 }

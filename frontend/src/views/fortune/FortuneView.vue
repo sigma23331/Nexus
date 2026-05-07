@@ -341,7 +341,7 @@
         <div class="flex gap-3 mt-4">
           <button
             type="button"
-            class="flex-1 bg-purple-600 hover:bg-purple-700 rounded-xl py-2 text-sm font-medium"
+            class="flex-1 bg-purple-600 hover:bg-purple-700 rounded-xl py-2 text-sm font-medium text-white"
             @click="sharePreviewOpen = true"
           >
             生成运势卡片
@@ -349,7 +349,7 @@
           <button
             type="button"
             class="flex-1 bg-white border border-slate-200 text-slate-700 rounded-xl py-2 text-sm font-medium"
-            @click="shareFortuneCard"
+            @click="openShareFortuneModal"
           >
             分享
           </button>
@@ -430,6 +430,9 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- 通用分享弹窗 -->
+    <ShareToPlazaModal ref="shareModalRef" />
   </div>
 </template>
 
@@ -439,7 +442,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getFortuneToday, getFortuneTrend, getHistoryFortune } from '@/api/fortune'
 import FortuneShareReveal from './components/FortuneShareReveal.vue'
 import TodayFortuneContent from './components/TodayFortuneContent.vue'
-// import { useFortuneStore } from '@/stores/fortune'
+import ShareToPlazaModal from '@/components/common/ShareToPlazaModal.vue'
 
 type FortuneViewData = {
   id: string
@@ -692,40 +695,40 @@ const formatMMDD = (dateStr: string) => {
   return dateStr.length >= 10 ? dateStr.slice(5, 10) : dateStr
 }
 
-const fallbackCopy = (text: string) => {
-  navigator.clipboard
-    .writeText(text)
-    .then(() => {
-      alert('已复制到剪贴板，可以分享给朋友')
-    })
-    .catch(() => {
-      alert('复制失败，请手动复制')
-    })
-}
+// const fallbackCopy = (text: string) => {
+//   navigator.clipboard
+//     .writeText(text)
+//     .then(() => {
+//       alert('已复制到剪贴板，可以分享给朋友')
+//     })
+//     .catch(() => {
+//       alert('复制失败，请手动复制')
+//     })
+// }
 
-const shareFortuneCard = async () => {
-  const shareText = [
-    `今日运势：${fortuneData.value.title}（${fortuneData.value.score}分）`,
-    `签文：${fortuneData.value.content_main}`,
-    `解读：${fortuneData.value.content_sub}`,
-    `宜：${fortuneData.value.yi.join('、') || '--'}`,
-    `忌：${fortuneData.value.ji.join('、') || '--'}`,
-  ].join('\n')
+// const shareFortuneCard = async () => {
+//   const shareText = [
+//     `今日运势：${fortuneData.value.title}（${fortuneData.value.score}分）`,
+//     `签文：${fortuneData.value.content_main}`,
+//     `解读：${fortuneData.value.content_sub}`,
+//     `宜：${fortuneData.value.yi.join('、') || '--'}`,
+//     `忌：${fortuneData.value.ji.join('、') || '--'}`,
+//   ].join('\n')
 
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title: '心运岛 · 今日运势卡',
-        text: shareText,
-      })
-      return
-    } catch (error) {
-      if ((error as Error).name === 'AbortError') return
-    }
-  }
+//   if (navigator.share) {
+//     try {
+//       await navigator.share({
+//         title: '心运岛 · 今日运势卡',
+//         text: shareText,
+//       })
+//       return
+//     } catch (error) {
+//       if ((error as Error).name === 'AbortError') return
+//     }
+//   }
 
-  fallbackCopy(shareText)
-}
+//   fallbackCopy(shareText)
+// }
 
 const loadFortuneBoard = async () => {
   loading.value = true
@@ -872,31 +875,28 @@ onBeforeUnmount(() => {
   chartInstance = null
 })
 
-// ===== Pinia 接入示例（注释保留） =====
-// 1. 引入 store
-// const fortuneStore = useFortuneStore()
-//
-// 2. 从 store 读取数据（假设已经通过 API 设置过）
-// const fortuneData = computed(() => {
-//   if (fortuneStore.todayFortune) {
-//     return fortuneStore.todayFortune
-//   } else {
-//     // 降级：使用静态数据或展示占位
-//     return fallbackFortune
-//   }
-// })
-//
-// 3. 在 mounted 中请求数据并存入 store
-// onMounted(async () => {
-//   if (!fortuneStore.todayFortune) {
-//     const data = await getFortuneToday()  // 调用 API
-//     fortuneStore.setTodayFortune(data)
-//   }
-// })
-//
-// 4. 注意：getFortuneToday 需要定义在 src/api/fortune.ts 中
+// ===== 新增：通用分享弹窗逻辑 =====
+const shareModalRef = ref<InstanceType<typeof ShareToPlazaModal> | null>(null)
 
-// 为了不破坏当前显示，暂时不调用真实 API，保留静态数据
+// 打开分享编辑弹窗（用于运势）
+const openShareFortuneModal = () => {
+  shareModalRef.value?.open({
+    type: 'fortune',
+    sourceId: fortuneData.value.id,
+    fortuneData: {
+      title: fortuneData.value.title,
+      score: fortuneData.value.score,
+      content_main: fortuneData.value.content_main,
+      content_sub: fortuneData.value.content_sub,
+      yi: fortuneData.value.yi,
+      ji: fortuneData.value.ji,
+      love: fortuneData.value.love,
+      career: fortuneData.value.career,
+      health: fortuneData.value.health,
+      wealth: fortuneData.value.wealth,
+    },
+  })
+}
 </script>
 
 <style scoped>

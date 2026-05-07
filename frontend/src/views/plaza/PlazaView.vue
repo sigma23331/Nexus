@@ -1,7 +1,8 @@
 <template>
   <div class="min-h-screen bg-white text-slate-900 pb-20">
     <main class="px-6 py-4 space-y-8">
-      <!-- 测试卡片生成区域（保持不变） -->
+      <!--
+      测试卡片生成区域（临时注释）
       <section class="bg-slate-50 rounded-xl p-4 border border-slate-200">
         <h3 class="text-md font-semibold mb-3">🎴 测试生成卡片（点击下载）</h3>
         <div class="flex gap-3">
@@ -23,6 +24,7 @@
         <p class="text-xs text-slate-500 mt-2">图片将自动下载，可查看效果。</p>
         <canvas ref="cardCanvas" style="display: none"></canvas>
       </section>
+      -->
 
       <!-- 分享广场（带分类筛选） -->
       <section>
@@ -92,8 +94,6 @@ import { ref, computed, onMounted, watch } from 'vue'
 import PlazaCard from './components/PlazaCard.vue'
 import { getPlazaCards, likePlazaCard } from '@/api/plaza'
 import type { PlazaCard as PlazaCardType } from '@/types/models'
-import { useCardGenerator } from '@/composables/useCardGenerator'
-import type { FortuneCardData, AnswerCardData } from '@/utils/cardGenerator'
 import type { GetPlazaCardsParams } from '@/api/plaza'
 
 const cards = ref<PlazaCardType[]>([])
@@ -177,26 +177,7 @@ const handleLike = async (cardId: string, isLiked: boolean) => {
   }
 }
 
-// 卡片生成器（测试区域）
-const { isLoading, initCanvas, generateFortuneAndDownload, generateAnswerAndDownload } =
-  useCardGenerator()
-const cardCanvas = ref<HTMLCanvasElement | null>(null)
-const testFortuneData: FortuneCardData = {
-  text: '上上签·吉行',
-  sub: '宜稳中求进，静待花开',
-  stats: ['中上', '平稳', '注意作息', '谨慎消费'],
-}
-const testAnswerData: AnswerCardData = {
-  answer: '允许一切发生，专注当下就好。',
-}
-
 onMounted(() => {
-  if (cardCanvas.value) {
-    initCanvas(cardCanvas.value, 1024, 1024)
-  }
   fetchCards(true)
 })
-
-const testFortuneCard = () => generateFortuneAndDownload(testFortuneData, 'test_fortune.png')
-const testAnswerCard = () => generateAnswerAndDownload(testAnswerData, 'test_answer.png')
 </script>

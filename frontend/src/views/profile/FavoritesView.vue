@@ -98,6 +98,10 @@
           </button>
         </div>
       </div>
+      <!-- 底部提示 -->
+      <div class="py-4 text-center">
+        <p class="text-xs text-slate-400">—— 已经到底了 ——</p>
+      </div>
     </div>
 
     <!-- 空状态 -->

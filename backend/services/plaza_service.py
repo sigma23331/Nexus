@@ -175,3 +175,15 @@ def toggle_like(user_id, card_id, action):
         db.session.commit()
 
     return {"cardId": card_id, "likes": card.likes_count, "isLiked": False}
+
+
+def delete_card(user_id, card_id):
+    card = PlazaCard.query.filter_by(id=card_id).first()
+    if not card:
+        raise LookupError("card not found")
+    if card.user_id != user_id:
+        raise PermissionError("无权删除他人卡片")
+
+    db.session.delete(card)
+    db.session.commit()
+    return {"success": True}

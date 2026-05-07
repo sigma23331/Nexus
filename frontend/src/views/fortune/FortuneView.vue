@@ -438,7 +438,7 @@
 
 <script setup lang="ts">
 import * as echarts from 'echarts'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getFortuneToday, getFortuneTrend, getHistoryFortune } from '@/api/fortune'
 import FortuneShareReveal from './components/FortuneShareReveal.vue'
 import TodayFortuneContent from './components/TodayFortuneContent.vue'
@@ -498,8 +498,7 @@ const fortuneSharePayload = computed(() => ({
   ji: fortuneData.value.ji,
 }))
 
-const trendScores = ref<number[]>([])
-const filledTrendDays = ref(0)
+const trendPoints = ref<Array<{ date: string; value: number }>>([])
 const historyFortunes = ref<
   Array<{
     id: string
@@ -519,17 +518,59 @@ const selectedHistory = ref<(typeof historyFortunes.value)[number] | null>(null)
 const chartRef = ref<HTMLElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
 
-const chartScores = computed<(number | null)[]>(() => {
-  const filled = Math.min(Math.max(filledTrendDays.value, 0), 7)
-  if (filled === 0) return [fortuneData.value.score, null, null, null, null, null, null]
+const normalizeMonthDay = (value: string) => {
+  if (!value) return ''
+  const raw = value.trim().replace(/\//g, '-')
+  const match = raw.match(/^(\d{1,2})-(\d{1,2})$/)
+  if (!match) return ''
+  const month = match[1].padStart(2, '0')
+  const day = match[2].padStart(2, '0')
+  return `${month}-${day}`
+}
 
-  // 历史不足7天：第1天从第1格开始依次填充；满7天后切换为最近7天滚动
-  if (filled < 7) {
-    const validScores = trendScores.value.slice(-filled)
-    return [...validScores, ...Array.from({ length: 7 - filled }, () => null)]
+const formatDateLabel = (dateObj: Date) => {
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+  const day = String(dateObj.getDate()).padStart(2, '0')
+  return `${month}-${day}`
+}
+
+const chartDates = computed<string[]>(() => {
+  const baseDate = new Date()
+  const todayRaw = fortuneData.value.date || ''
+  if (todayRaw.length >= 10) {
+    const parsed = new Date(todayRaw.slice(0, 10))
+    if (!Number.isNaN(parsed.getTime())) {
+      baseDate.setTime(parsed.getTime())
+    }
   }
+  const days: string[] = []
+  for (let i = 6; i >= 0; i -= 1) {
+    const current = new Date(baseDate)
+    current.setDate(baseDate.getDate() - i)
+    days.push(formatDateLabel(current))
+  }
+  return days
+})
 
-  return trendScores.value.slice(-7)
+const chartScores = computed<(number | null)[]>(() => {
+  const scoreMap = new Map<string, number>()
+  trendPoints.value.forEach((item) => {
+    const key = normalizeMonthDay(item.date)
+    const value = Number(item.value)
+    if (!key || Number.isNaN(value)) return
+    scoreMap.set(key, value)
+  })
+
+  return chartDates.value.map((date) => (scoreMap.has(date) ? scoreMap.get(date)! : null))
+})
+
+const chartAxisLabels = computed<string[]>(() => {
+  return chartDates.value.map((date, index) => {
+    const isLatest = index === chartDates.value.length - 1
+    const hasScore = chartScores.value[index] !== null
+    if (isLatest || hasScore) return date
+    return ''
+  })
 })
 
 const currentScore = computed(() => {
@@ -744,12 +785,18 @@ const loadFortuneBoard = async () => {
     initBoardDrawState(fortuneData.value.date)
 
     const points = Array.isArray(trend.trendPoints) ? trend.trendPoints : []
-    trendScores.value = points.map((item) => Number(item.value ?? 0))
+    trendPoints.value = points.map((item) => ({
+      date: String(item.date ?? ''),
+      value: Number(item.value ?? 0),
+    }))
     const historyList = Array.isArray(history.list) ? history.list : []
-    filledTrendDays.value = Math.min(historyList.length, 7)
-    if (!trendScores.value.length) {
-      trendScores.value = [fortuneData.value.score]
-      filledTrendDays.value = 1
+    if (!trendPoints.value.length) {
+      trendPoints.value = [
+        {
+          date: formatMMDD(fortuneData.value.date),
+          value: fortuneData.value.score,
+        },
+      ]
     }
 
     historyFortunes.value = historyList.map((item, index) => {
@@ -784,7 +831,7 @@ const initChart = () => {
 
   chartInstance.setOption({
     backgroundColor: 'transparent',
-    grid: { left: 10, right: 10, top: 16, bottom: 16, containLabel: true },
+    grid: { left: 12, right: 22, top: 16, bottom: 16, containLabel: true },
     tooltip: {
       trigger: 'axis',
       backgroundColor: 'rgba(17,24,39,0.92)',
@@ -793,13 +840,15 @@ const initChart = () => {
       formatter: (params: unknown) => {
         const rawPoint = Array.isArray(params) ? params[0] : params
         const point = (rawPoint || {}) as { axisValue?: string | number; value?: number }
-        return `第${point.axisValue ?? '--'}日 · ${scoreToSign(Number(point.value ?? 0))}`
+        const score = Number(point.value)
+        if (Number.isNaN(score)) return `${point.axisValue ?? '--'} · 暂无数据`
+        return `${point.axisValue ?? '--'} · ${scoreToSign(score)}`
       },
     },
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: ['1', '2', '3', '4', '5', '6', '7'],
+      data: chartAxisLabels.value,
       axisLine: { lineStyle: { color: '#f59e0b' } },
       axisLabel: { color: '#92400e' },
       splitLine: { show: false },
@@ -859,13 +908,19 @@ onMounted(() => {
 })
 
 watch(
-  [trendScores, filledTrendDays],
-  ([scores]) => {
-    if (!scores.length && !filledTrendDays.value) return
+  [trendPoints, chartDates],
+  () => {
     initChart()
   },
   { immediate: true },
 )
+
+watch(isBoardUnlocked, async (unlocked) => {
+  // 抽签后图表节点才会渲染，需在下一次 DOM 更新后再初始化图表
+  if (!unlocked) return
+  await nextTick()
+  initChart()
+})
 
 onBeforeUnmount(() => {
   boardDrawTimers.forEach(clearTimeout)

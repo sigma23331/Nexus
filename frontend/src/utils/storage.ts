@@ -53,7 +53,7 @@ export function clearAll(): void {
 
 // ==================== 日记存储业务接口 ====================
 
-export type MoodTag = 'happy' | 'calm' | 'sad' | 'angry' | 'tired' | 'anxious'
+export type MoodTag = 'happy' | 'calm' | 'sad' | 'angry' | 'tired'
 
 export interface DiaryEntry {
   date: string // YYYY-MM-DD

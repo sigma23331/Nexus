@@ -99,7 +99,7 @@ const moodEmoji: Record<string, string> = {
   happy: '😄',
   calm: '😌',
   tired: '😴',
-  anxious: '😟',
+  // anxious: '😟',
   angry: '😡',
   sad: '😢',
   null: '⚪️',
@@ -109,7 +109,7 @@ const moodLegend = [
   { emoji: '😄', value: 'happy', label: '开心' },
   { emoji: '😌', value: 'calm', label: '平静' },
   { emoji: '😴', value: 'tired', label: '困倦' },
-  { emoji: '😟', value: 'anxious', label: '焦虑' },
+  // { emoji: '😟', value: 'anxious', label: '焦虑' },
   { emoji: '😡', value: 'angry', label: '生气' },
   { emoji: '😢', value: 'sad', label: '难过' },
 ]

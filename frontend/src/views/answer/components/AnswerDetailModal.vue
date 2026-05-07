@@ -19,23 +19,18 @@
 
       <!-- 内容区域 -->
       <div class="px-6 py-4 space-y-5">
-        <!-- 问题 -->
         <div>
           <div class="text-xs text-slate-500 mb-1">你的问题</div>
           <p class="text-base font-medium text-slate-800 leading-relaxed">
             {{ detailData.question }}
           </p>
         </div>
-
-        <!-- 答案 -->
         <div>
           <div class="text-xs text-slate-500 mb-1">✨ 宇宙的回答</div>
           <p class="text-lg font-bold text-purple-700 leading-relaxed">
             {{ detailData.answerText }}
           </p>
         </div>
-
-        <!-- 时间 -->
         <div class="flex justify-end">
           <span class="text-[11px] text-slate-400">{{ formatDate(detailData.createdAt) }}</span>
         </div>
@@ -52,14 +47,25 @@
           <span>{{ detailData.isFavorited ? '已收藏' : '收藏' }}</span>
         </button>
         <button
-          @click="shareCard"
+          @click="openShareModal"
           class="flex items-center gap-2 text-sm text-slate-600 hover:text-purple-600 transition"
         >
           <span class="text-xl">📤</span>
-          <span>分享卡片</span>
+          <span>分享到广场</span>
         </button>
       </div>
     </div>
+  </div>
+
+  <!-- 通用分享弹窗 -->
+  <ShareToPlazaModal ref="shareModalRef" />
+
+  <!-- Toast 提示 -->
+  <div
+    v-if="toastMessage"
+    class="fixed bottom-20 left-4 right-4 bg-black/70 text-white text-sm text-center py-2 rounded-lg z-50"
+  >
+    {{ toastMessage }}
   </div>
 </template>
 
@@ -68,8 +74,8 @@ import { ref, reactive } from 'vue'
 import dayjs from 'dayjs'
 import { favoriteAnswer, type AnswerHistoryItem } from '@/api/answer'
 import { updateLocalFavoriteStatus } from '@/utils/answerService'
+import ShareToPlazaModal from '@/components/common/ShareToPlazaModal.vue'
 
-// 定义需要展示的数据（继承 AnswerHistoryItem 并确保 isFavorited 存在）
 interface AnswerDetail extends AnswerHistoryItem {
   isFavorited: boolean
 }
@@ -84,11 +90,14 @@ const detailData = reactive<AnswerDetail>({
 })
 
 const favoriteLoading = ref(false)
+const toastMessage = ref('')
+let toastTimer: ReturnType<typeof setTimeout> | null = null
+
+const shareModalRef = ref<InstanceType<typeof ShareToPlazaModal> | null>(null)
 
 const formatDate = (iso: string) => dayjs(iso).format('YYYY-MM-DD HH:mm')
 
 const open = (answer: AnswerHistoryItem) => {
-  // 复制数据到弹窗内部状态
   detailData.id = answer.id
   detailData.question = answer.question
   detailData.answerText = answer.answerText
@@ -99,13 +108,23 @@ const open = (answer: AnswerHistoryItem) => {
 
 const close = () => {
   visible.value = false
+  if (toastTimer) clearTimeout(toastTimer)
+  toastMessage.value = ''
 }
 
-// 切换收藏状态
+const showToast = (msg: string) => {
+  if (toastTimer) clearTimeout(toastTimer)
+  toastMessage.value = msg
+  toastTimer = setTimeout(() => {
+    toastMessage.value = ''
+    toastTimer = null
+  }, 2000)
+}
+
 const toggleFavorite = async () => {
   if (favoriteLoading.value) return
   if (!navigator.onLine) {
-    alert('网络不可用，请稍后重试')
+    showToast('网络不可用，请稍后重试')
     return
   }
   const action = detailData.isFavorited ? 'unfavorite' : 'favorite'
@@ -113,47 +132,25 @@ const toggleFavorite = async () => {
   try {
     await favoriteAnswer(detailData.id, action)
     const newStatus = !detailData.isFavorited
-    // 更新本地缓存并触发全局事件
     updateLocalFavoriteStatus(detailData.id, newStatus)
-    // 更新弹窗内的状态
     detailData.isFavorited = newStatus
+    showToast(newStatus ? '已收藏' : '已取消收藏')
   } catch (err) {
     console.error('操作失败', err)
-    alert('操作失败，请重试')
+    showToast('操作失败，请重试')
   } finally {
     favoriteLoading.value = false
   }
 }
 
-// 分享（调用 Web Share API 或降级为复制链接）
-const shareCard = async () => {
-  const shareText = `问：${detailData.question}\n答：${detailData.answerText}`
-  if (navigator.share) {
-    try {
-      await navigator.share({
-        title: '答案之书',
-        text: shareText,
-      })
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        console.error('分享失败', err)
-        fallbackCopy(shareText)
-      }
-    }
-  } else {
-    fallbackCopy(shareText)
-  }
-}
-
-const fallbackCopy = (text: string) => {
-  navigator.clipboard
-    .writeText(text)
-    .then(() => {
-      alert('已复制到剪贴板，可以分享给你的朋友')
-    })
-    .catch(() => {
-      alert('无法复制，请手动复制')
-    })
+// 打开分享编辑弹窗
+const openShareModal = () => {
+  const originalContent = `问：${detailData.question}\n答：${detailData.answerText}`
+  shareModalRef.value?.open({
+    type: 'answer',
+    sourceId: detailData.id,
+    content: originalContent,
+  })
 }
 
 defineExpose({ open, close })

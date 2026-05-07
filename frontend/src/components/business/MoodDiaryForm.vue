@@ -77,7 +77,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 
-type MoodTag = 'happy' | 'calm' | 'sad' | 'angry' | 'tired' | 'anxious'
+type MoodTag = 'happy' | 'calm' | 'sad' | 'angry' | 'tired'
 
 interface MoodOption {
   emoji: string
@@ -89,7 +89,6 @@ const MOOD_OPTIONS: readonly MoodOption[] = [
   { emoji: '😄', value: 'happy', label: '开心' },
   { emoji: '😌', value: 'calm', label: '平静' },
   { emoji: '😴', value: 'tired', label: '困倦' },
-  { emoji: '😟', value: 'anxious', label: '焦虑' },
   { emoji: '😡', value: 'angry', label: '生气' },
   { emoji: '😢', value: 'sad', label: '难过' },
 ]

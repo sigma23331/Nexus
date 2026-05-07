@@ -188,7 +188,7 @@ const moodEmoji = (tag: string) => {
     happy: '😄',
     calm: '😌',
     tired: '😴',
-    anxious: '😟',
+    // anxious: '😟',
     angry: '😡',
     sad: '😢',
   }

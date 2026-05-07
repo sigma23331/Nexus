@@ -49,7 +49,7 @@
       <!-- 设置密码（带自定义显示/隐藏图标） -->
       <div>
         <label class="block text-sm font-medium text-slate-700 mb-1">设置密码</label>
-        <div class="relative">
+        <div class="relative register-password-input">
           <input
             v-model="password"
             :type="showPassword ? 'text' : 'password'"

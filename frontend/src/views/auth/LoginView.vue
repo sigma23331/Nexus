@@ -55,7 +55,7 @@
       <!-- 密码登录（带自定义显示/隐藏图标） -->
       <div v-if="loginMode === 'password'">
         <label class="block text-sm font-medium text-slate-700 mb-1">密码</label>
-        <div class="relative">
+        <div class="relative login-password-input">
           <input
             v-model="password"
             :type="showPassword ? 'text' : 'password'"

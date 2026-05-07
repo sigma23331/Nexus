@@ -28,7 +28,8 @@
 
       <!-- 分享广场（带分类筛选） -->
       <section>
-        <div class="flex items-center justify-between mb-3">
+        <!-- 第一行：分类 + 只看我的 -->
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div class="flex gap-2">
             <button
               @click="filterType = 'all'"
@@ -64,7 +65,20 @@
               答案卡片
             </button>
           </div>
+          <button
+            @click="showOnlyMine = !showOnlyMine"
+            :class="[
+              'px-3 py-1 text-sm rounded-full transition-colors',
+              showOnlyMine
+                ? 'bg-purple-600 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+            ]"
+          >
+            {{ showOnlyMine ? '我的卡片' : '只看我的' }}
+          </button>
         </div>
+
+        <!-- 加载状态 -->
         <div v-if="loading" class="text-center py-8 text-slate-400">加载中...</div>
         <div v-else-if="error" class="text-center py-8 text-slate-400">服务器出错，请稍后重试</div>
         <div v-else-if="filteredCards.length === 0" class="text-center py-8 text-slate-400">
@@ -75,9 +89,13 @@
             v-for="card in filteredCards"
             :key="card.cardId"
             :card="card"
+            :is-owner="card.owner.uid === currentUserId"
             @like="handleLike"
+            @delete="handleDeleteCard"
           />
         </div>
+
+        <!-- 加载更多按钮 -->
         <div
           v-if="!error && hasMore && !loading && filteredCards.length > 0"
           class="text-center mt-4"
@@ -92,10 +110,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import PlazaCard from './components/PlazaCard.vue'
-import { getPlazaCards, likePlazaCard } from '@/api/plaza'
+import { getPlazaCards, likePlazaCard, deletePlazaCard } from '@/api/plaza'
 import type { PlazaCard as PlazaCardType } from '@/types/models'
 import type { GetPlazaCardsParams } from '@/api/plaza'
+import { useUserStore } from '@/stores/user'
 
+const userStore = useUserStore()
+const currentUserId = computed(() => userStore.userInfo?.uid || '')
+
+// 数据状态
 const cards = ref<PlazaCardType[]>([])
 const loading = ref(false)
 const error = ref(false)
@@ -103,18 +126,25 @@ const hasMore = ref(true)
 const nextCursor = ref<string | null>(null)
 const filterType = ref<'all' | 'fortune' | 'answer'>('all')
 const currentTab = ref<'hot' | 'latest'>('latest')
+const showOnlyMine = ref(false)
 
-// 前端过滤卡片
+// 前端过滤（分类 + 只看我的）
 const filteredCards = computed(() => {
-  if (filterType.value === 'all') return cards.value
-  return cards.value.filter((card) => card.type === filterType.value)
+  let filtered = cards.value
+  if (filterType.value !== 'all') {
+    filtered = filtered.filter((card) => card.type === filterType.value)
+  }
+  if (showOnlyMine.value && currentUserId.value) {
+    filtered = filtered.filter((card) => card.owner.uid === currentUserId.value)
+  }
+  return filtered
 })
 
-// 获取卡片数据（重置或追加）
+// 获取卡片列表（支持分页）
 const fetchCards = async (reset = true) => {
   if (loading.value) return
   loading.value = true
-  error.value = false // 重置错误
+  error.value = false
   try {
     const params: GetPlazaCardsParams = {
       tab: currentTab.value,
@@ -134,16 +164,14 @@ const fetchCards = async (reset = true) => {
   } catch (err) {
     console.error('获取广场卡片失败', err)
     error.value = true
-    if (reset) {
-      cards.value = [] // 清空旧数据，避免显示错误内容
-    }
+    if (reset) cards.value = []
     hasMore.value = false
   } finally {
     loading.value = false
   }
 }
 
-// 切换分类时重置列表
+// 重置并获取（切换筛选条件时调用）
 const resetAndFetch = () => {
   nextCursor.value = null
   hasMore.value = true
@@ -151,8 +179,8 @@ const resetAndFetch = () => {
   fetchCards(true)
 }
 
-// 监听分类变化
-watch(filterType, () => {
+// 监听筛选变化
+watch([filterType, showOnlyMine], () => {
   resetAndFetch()
 })
 
@@ -174,6 +202,18 @@ const handleLike = async (cardId: string, isLiked: boolean) => {
     }
   } catch (err) {
     console.error('点赞操作失败', err)
+  }
+}
+
+// 删除卡片
+const handleDeleteCard = async (cardId: string) => {
+  try {
+    await deletePlazaCard(cardId)
+    // 从本地列表移除
+    cards.value = cards.value.filter((c) => c.cardId !== cardId)
+  } catch (err) {
+    console.error('删除失败', err)
+    alert('删除失败，请重试')
   }
 }
 

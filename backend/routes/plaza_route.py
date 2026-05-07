@@ -80,3 +80,17 @@ def toggle_like():
         return fail(str(err), code=404)
 
     return success(data=payload, message="success", code=200)
+
+
+@plaza_bp.route('/card/<id>', methods=['DELETE'])
+@jwt_required()
+def delete_card(id):
+    user_id = get_jwt_identity()
+    try:
+        payload = plaza_service.delete_card(user_id=user_id, card_id=id)
+    except LookupError as err:
+        return fail(str(err), code=404)
+    except PermissionError as err:
+        return fail(str(err), code=403)
+
+    return success(data=payload, message="success", code=200)

@@ -3,18 +3,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 class Config:
-    """基础配置"""
     SECRET_KEY = os.environ.get('SECRET_KEY') or '123456'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = os.environ.get('FLASK_ENV') == 'development'
 
-    # JWT 配置
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or SECRET_KEY
-    JWT_ACCESS_TOKEN_EXPIRES = 604800  # 7天（示例，按需调整）
+    JWT_ACCESS_TOKEN_EXPIRES = 604800
 
-    # LLM 配置
     LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'real')
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME')
@@ -27,7 +23,6 @@ class Config:
     LLM_PROMPT_FORTUNE_VERSION = os.environ.get('LLM_PROMPT_FORTUNE_VERSION', 'v4')
     LLM_PROMPT_PROFILE_VERSION = os.environ.get('LLM_PROMPT_PROFILE_VERSION', 'v1')
 
-    # SMS / phone verification
     SMS_PROVIDER = os.environ.get('SMS_PROVIDER', 'mock')
     SMS_SIGN_NAME = os.environ.get('SMS_SIGN_NAME', '速通互联验证码')
     SMS_TEMPLATE_CODE = os.environ.get('SMS_TEMPLATE_CODE', '100001')
@@ -35,7 +30,6 @@ class Config:
     SMS_SEND_INTERVAL = int(os.environ.get('SMS_SEND_INTERVAL', '60'))
     DYPNS_API_ENDPOINT = os.environ.get('DYPNS_API_ENDPOINT', 'dypnsapi.aliyuncs.com')
 
-    # 数据库配置
     if os.environ.get('DATABASE_URL'):
         SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     else:
@@ -47,6 +41,15 @@ class Config:
         SQLALCHEMY_DATABASE_URI = (
             f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
         )
+
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": int(os.environ.get("DB_POOL_SIZE", "20")),
+        "max_overflow": int(os.environ.get("DB_MAX_OVERFLOW", "10")),
+        "pool_recycle": 3600,
+        "pool_pre_ping": True,
+    }
+
+    PASSWORD_HASH_METHOD = os.environ.get("PASSWORD_HASH_METHOD", "pbkdf2:sha256")
 
 
 class DevelopmentConfig(Config):

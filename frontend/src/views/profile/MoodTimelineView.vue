@@ -121,7 +121,7 @@
                 <span class="text-xs text-slate-500">{{ weekdayCn(row.weekday, row.date) }}</span>
               </div>
               <p class="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-600">
-                {{ row.snippet || '（无摘要）' }}
+                {{ row.snippet || '' }}
               </p>
               <span
                 v-if="row.localOnly"

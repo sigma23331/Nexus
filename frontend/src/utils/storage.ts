@@ -12,7 +12,7 @@ export enum StorageKey {
   // 用户偏好
   FONT_PREF = 'diary_note_font_style',
   // 日记数据
-  DIARIES = 'mood_diaries',
+  DIARIES = 'xyd_diaries',
 }
 
 /**

@@ -33,7 +33,7 @@
         <!-- 备注内容：文字颜色随心情变化，背景保持浅灰 -->
         <div class="bg-slate-50 rounded-xl p-4">
           <p :class="['text-sm whitespace-pre-wrap', moodTextColor]">
-            {{ detailData.content || '暂无备注' }}
+            {{ detailData.content || '' }}
           </p>
         </div>
       </div>

@@ -142,8 +142,10 @@ const handleSubmit = async () => {
     showToast('不能记录未来日期的日记', 'error')
     return
   }
-  if (!form.content.trim()) {
-    showToast('请填写备注内容', 'error')
+  // 移除 content 非空校验，允许空备注
+  // 如果需要，可以保留其他校验（如内容长度限制，但不强制非空）
+  if (form.content.length > 500) {
+    showToast('备注不能超过500字', 'error')
     return
   }
   submitting.value = true

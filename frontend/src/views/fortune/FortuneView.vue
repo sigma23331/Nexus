@@ -517,6 +517,7 @@ const historyDetailOpen = ref(false)
 const selectedHistory = ref<(typeof historyFortunes.value)[number] | null>(null)
 const chartRef = ref<HTMLElement | null>(null)
 let chartInstance: echarts.ECharts | null = null
+let chartInitRetryTimer: ReturnType<typeof setTimeout> | null = null
 
 const normalizeMonthDay = (value: string) => {
   if (!value) return ''
@@ -900,6 +901,21 @@ const initChart = () => {
   })
 }
 
+const initChartWhenReady = (retry = 0) => {
+  if (!isBoardUnlocked.value) return
+  const el = chartRef.value
+  if (!el || el.clientWidth <= 0 || el.clientHeight <= 0) {
+    if (retry >= 8) return
+    if (chartInitRetryTimer) clearTimeout(chartInitRetryTimer)
+    chartInitRetryTimer = setTimeout(() => {
+      initChartWhenReady(retry + 1)
+    }, 120)
+    return
+  }
+  initChart()
+  chartInstance?.resize()
+}
+
 const handleResize = () => chartInstance?.resize()
 
 onMounted(() => {
@@ -910,7 +926,7 @@ onMounted(() => {
 watch(
   [trendPoints, chartDates],
   () => {
-    initChart()
+    initChartWhenReady()
   },
   { immediate: true },
 )
@@ -919,12 +935,16 @@ watch(isBoardUnlocked, async (unlocked) => {
   // 抽签后图表节点才会渲染，需在下一次 DOM 更新后再初始化图表
   if (!unlocked) return
   await nextTick()
-  initChart()
+  initChartWhenReady()
 })
 
 onBeforeUnmount(() => {
   boardDrawTimers.forEach(clearTimeout)
   boardDrawTimers = []
+  if (chartInitRetryTimer) {
+    clearTimeout(chartInitRetryTimer)
+    chartInitRetryTimer = null
+  }
   window.removeEventListener('resize', handleResize)
   chartInstance?.dispose()
   chartInstance = null

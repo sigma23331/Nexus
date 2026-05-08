@@ -22,8 +22,6 @@ def _format_entry(entry):
 
 def create_entry(user_id, mood_tag, content, is_public=False):
     text = (content or "").strip()
-    if not text:
-        raise ValueError("content 必须为非空字符串")
     if len(text) > 2000:
         raise ValueError("content 长度不能超过2000")
 
@@ -103,8 +101,6 @@ def update_entry(user_id, entry_id, payload):
 
     if "content" in payload:
         text = (payload.get("content") or "").strip()
-        if not text:
-            raise ValueError("content 必须为非空字符串")
         if len(text) > 2000:
             raise ValueError("content 长度不能超过2000")
         entry.content = text

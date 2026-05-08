@@ -151,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getDiaryEntry, getDiaryTimeline } from '@/api/diary'
 import DiaryDetailModal from '@/components/business/DiaryDetailModal.vue'
@@ -188,7 +188,6 @@ const moodEmoji = (tag: string) => {
     happy: '😄',
     calm: '😌',
     tired: '😴',
-    // anxious: '😟',
     angry: '😡',
     sad: '😢',
   }
@@ -219,13 +218,11 @@ const localFallbackItems = computed(() => {
     }))
 })
 
-/** 是否还有服务端分页（与首屏合并的本机条数无关，只看接口 totalDays） */
 const hasMore = computed(() => {
   if (usingLocalOnly.value) return false
   return page.value * limit < total.value
 })
 
-/** 第一页：把本机有、但当前接口列表里没有的日期补在时间轴上 */
 function mergeFirstPage(apiList: DiaryTimelineItem[]): DiaryTimelineItem[] {
   const dates = new Set(apiList.map((r) => r.date))
   const extra = localFallbackItems.value.filter((l) => !dates.has(l.date))
@@ -332,7 +329,24 @@ function goBack() {
   else router.push({ name: 'profile' })
 }
 
+// 监听全局日记更新事件，立即刷新当前页
+function handleDiariesUpdated(event: Event) {
+  const customEvent = event as CustomEvent<{ year: number; month: number }>
+  const { year, month } = customEvent.detail
+  // 如果当前没有筛选月份，或者筛选的月份与保存的日记月份相同，则刷新
+  if (!yearMonth.value || yearMonth.value === `${year}-${String(month).padStart(2, '0')}`) {
+    // 重置到第一页并重新加载
+    page.value = 1
+    void fetchPage(false)
+  }
+}
+
 onMounted(() => {
   void fetchPage(false)
+  window.addEventListener('diaries-updated', handleDiariesUpdated)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('diaries-updated', handleDiariesUpdated)
 })
 </script>

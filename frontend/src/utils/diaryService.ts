@@ -76,7 +76,7 @@ export async function saveDiaryOfflineFirst(entry: {
   moodTag: MoodTag
   content: string
 }): Promise<{ localId: string; synced: boolean }> {
-  const localId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
+  const localId = `local_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
   const localEntry: LocalDiary = {
     id: localId,
     date: entry.date,
@@ -87,7 +87,13 @@ export async function saveDiaryOfflineFirst(entry: {
   }
   // 1. 先存本地
   upsertLocalDiary(localEntry)
-  // 2. 尝试同步到服务器（非阻塞）
+
+  // 2. 派发全局事件，通知所有组件立即刷新（保证刚写的日记能立即显示）
+  const year = parseInt(entry.date.slice(0, 4))
+  const month = parseInt(entry.date.slice(5, 7))
+  window.dispatchEvent(new CustomEvent('diaries-updated', { detail: { year, month } }))
+
+  // 3. 尝试同步到服务器（非阻塞）
   if (navigator.onLine) {
     try {
       const res = await createDiaryEntry({
@@ -142,7 +148,7 @@ export async function loadMonthDiaries(year: number, month: number): Promise<Loc
           upsertLocalDiary(existingLocal)
         }
       }
-      // 通知视图更新（通过事件或刷新组件，这里简单触发一个自定义事件）
+      // 再次触发事件（远程拉取完成，可能与本地已有数据重复，但也会触发UI更新）
       window.dispatchEvent(new CustomEvent('diaries-updated', { detail: { year, month } }))
     } catch (err) {
       console.error('拉取远程日记失败', err)

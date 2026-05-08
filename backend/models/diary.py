@@ -23,9 +23,7 @@ class DiaryEntry(BaseModel):
 
     @validates('content')
     def validate_content(self, key, content):
-        if not content or len(content.strip()) == 0:
-            raise ValueError('Content cannot be empty')
-        if len(content) > 2000:
+        if content is not None and len(content) > 2000:
             raise ValueError('Content cannot exceed 2000 characters')
         return content
 

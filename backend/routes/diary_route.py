@@ -28,8 +28,8 @@ def save_entry():
     except ValueError as err:
         return fail(str(err), code=400)
 
-    if not isinstance(content, str) or not content.strip():
-        return fail("content 必须为非空字符串", code=400)
+    if not isinstance(content, str):
+        return fail("content 必须为字符串", code=400)
 
     user_id = get_jwt_identity()
     try:

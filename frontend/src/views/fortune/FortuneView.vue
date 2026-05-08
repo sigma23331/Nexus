@@ -377,12 +377,14 @@
             </div>
             <div class="space-y-3 text-sm">
               <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p class="text-xs text-slate-500">{{ selectedHistory.date }}</p>
+                <p class="text-xs text-slate-500">{{ formatMMDD(selectedHistory.date) }}</p>
                 <p class="mt-1 text-base font-semibold text-slate-900">
                   {{ selectedHistory.title }}
                 </p>
-                <p class="mt-1 text-slate-700">{{ selectedHistory.summary }}</p>
-                <p class="mt-2 text-xs text-violet-700">{{ selectedHistory.story }}</p>
+                <!-- 显示签文主旨 -->
+                <p class="mt-1 text-slate-700">{{ selectedHistory.content_main || '—' }}</p>
+                <!-- 显示签文解读 -->
+                <p class="mt-1 text-xs text-slate-500">{{ selectedHistory.content_sub || '' }}</p>
               </div>
               <div
                 class="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2"
@@ -395,11 +397,13 @@
                   class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-700"
                 >
                   <p class="font-semibold">宜</p>
-                  <p class="mt-1">{{ selectedHistory.yi.join('、') }}</p>
+                  <!-- 显示完整的宜数组 -->
+                  <p class="mt-1">{{ selectedHistory.yi?.join('、') || '--' }}</p>
                 </div>
                 <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-700">
                   <p class="font-semibold">忌</p>
-                  <p class="mt-1">{{ selectedHistory.ji.join('、') }}</p>
+                  <!-- 显示完整的忌数组 -->
+                  <p class="mt-1">{{ selectedHistory.ji?.join('、') || '--' }}</p>
                 </div>
               </div>
             </div>
@@ -505,12 +509,16 @@ const historyFortunes = ref<
     date: string
     score: number
     title: string
+    // 以下为真实历史内容
+    content_main: string
+    content_sub: string
+    yi: string[]
+    ji: string[]
+    // 以下用于卡片摘要（保持不变）
     summary: string
     story: string
     linkText: string
     linkClass: string
-    yi: string[]
-    ji: string[]
   }>
 >([])
 const historyDetailOpen = ref(false)
@@ -810,12 +818,16 @@ const loadFortuneBoard = async () => {
         date: formatMMDD(item.date || ''),
         score: current,
         title: item.title || '--',
+        // 真实历史内容
+        content_main: item.content_main || '—',
+        content_sub: item.content_sub || '',
+        yi: item.yi || [],
+        ji: item.ji || [],
+        // 卡片摘要字段（保持原有风格）
         summary: scoreSummary(current),
         story: relation.story,
         linkText: relation.text,
         linkClass: relation.cls,
-        yi: fortuneData.value.yi.slice(0, 1),
-        ji: fortuneData.value.ji.slice(0, 1),
       }
     })
   } catch (error) {

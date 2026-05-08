@@ -31,6 +31,10 @@ export interface HistoryFortuneItem {
   date: string // YYYY-MM-DD
   score: number
   title: string
+  content_main?: string // 签文主旨（可选）
+  content_sub?: string // 签文解读（可选）
+  yi?: string[] // 宜（可选）
+  ji?: string[] // 忌（可选）
 }
 
 // 今日运势

@@ -812,7 +812,7 @@ const loadFortuneBoard = async () => {
     const [today, trend, history] = await Promise.all([
       getFortuneToday(),
       getFortuneTrend(),
-      getHistoryFortune(1, 7),
+      getHistoryFortune(1, 3),
     ])
 
     fortuneData.value = normalizeFortuneToday(today)

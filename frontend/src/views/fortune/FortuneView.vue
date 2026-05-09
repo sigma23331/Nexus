@@ -464,6 +464,7 @@ type FortuneViewData = {
   gua_meaning_lines: string[]
   lucky_hour_name: string
   lucky_hour_range: string
+  record_existed: boolean
 }
 
 const fortuneData = ref({
@@ -480,6 +481,7 @@ const fortuneData = ref({
   gua_meaning_lines: [] as string[],
   lucky_hour_name: '',
   lucky_hour_range: '',
+  record_existed: false as boolean,
   yi: [] as string[],
   ji: [] as string[],
 } satisfies FortuneViewData)
@@ -490,6 +492,7 @@ const isBoardUnlocked = ref(true)
 const boardDrawPhase = ref<'idle' | 'shaking' | 'stick'>('idle')
 let boardDrawTimers: ReturnType<typeof setTimeout>[] = []
 const boardDrawStorageKey = ref('')
+const boardDrawStorageKeys = ref<string[]>([])
 
 const sharePreviewOpen = ref(false)
 
@@ -689,12 +692,31 @@ const openHistoryDetail = (record: (typeof historyFortunes.value)[number]) => {
   selectedHistory.value = record
   historyDetailOpen.value = true
 }
-const initBoardDrawState = (fortuneDate: string) => {
-  const dateKey = fortuneDate || new Date().toISOString().slice(0, 10)
-  boardDrawStorageKey.value = `fortune-board-draw-played-${dateKey}`
-  const played = localStorage.getItem(boardDrawStorageKey.value) === '1'
+const getLocalDateKey = () => {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+const initBoardDrawState = (fortuneDate: string, recordExisted = false) => {
+  const dateKeys = Array.from(
+    new Set(
+      [fortuneDate?.slice(0, 10), getLocalDateKey()].filter((item): item is string =>
+        Boolean(item),
+      ),
+    ),
+  )
+  boardDrawStorageKeys.value = dateKeys.map((key) => `fortune-board-draw-played-${key}`)
+  boardDrawStorageKey.value = boardDrawStorageKeys.value[0] || ''
+  const localPlayed = boardDrawStorageKeys.value.some((key) => localStorage.getItem(key) === '1')
+  // 兜底：后端已存在今日记录，说明今天已抽过签（如换设备/清缓存场景）
+  const played = localPlayed || recordExisted
   isBoardUnlocked.value = played
   boardDrawPhase.value = played ? 'stick' : 'idle'
+  if (played && boardDrawStorageKeys.value.length) {
+    boardDrawStorageKeys.value.forEach((key) => localStorage.setItem(key, '1'))
+  }
 }
 
 const triggerBoardDraw = () => {
@@ -711,7 +733,9 @@ const triggerBoardDraw = () => {
   boardDrawTimers.push(
     setTimeout(() => {
       isBoardUnlocked.value = true
-      if (boardDrawStorageKey.value) {
+      if (boardDrawStorageKeys.value.length) {
+        boardDrawStorageKeys.value.forEach((key) => localStorage.setItem(key, '1'))
+      } else if (boardDrawStorageKey.value) {
         localStorage.setItem(boardDrawStorageKey.value, '1')
       }
     }, 3200),
@@ -735,6 +759,7 @@ const normalizeFortuneToday = (
     gua_meaning_lines: Array.isArray(raw.gua_meaning_lines) ? raw.gua_meaning_lines : [],
     lucky_hour_name: raw.lucky_hour_name || '',
     lucky_hour_range: raw.lucky_hour_range || '',
+    record_existed: Boolean(raw.record_existed),
     yi: Array.isArray(raw.yi) ? raw.yi : [],
     ji: Array.isArray(raw.ji) ? raw.ji : [],
   }
@@ -791,7 +816,7 @@ const loadFortuneBoard = async () => {
     ])
 
     fortuneData.value = normalizeFortuneToday(today)
-    initBoardDrawState(fortuneData.value.date)
+    initBoardDrawState(fortuneData.value.date, fortuneData.value.record_existed)
 
     const points = Array.isArray(trend.trendPoints) ? trend.trendPoints : []
     trendPoints.value = points.map((item) => ({

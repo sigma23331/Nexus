@@ -701,7 +701,11 @@ const getLocalDateKey = () => {
 }
 const initBoardDrawState = (fortuneDate: string, recordExisted = false) => {
   const dateKeys = Array.from(
-    new Set([fortuneDate?.slice(0, 10), getLocalDateKey()].filter((item): item is string => Boolean(item))),
+    new Set(
+      [fortuneDate?.slice(0, 10), getLocalDateKey()].filter((item): item is string =>
+        Boolean(item),
+      ),
+    ),
   )
   boardDrawStorageKeys.value = dateKeys.map((key) => `fortune-board-draw-played-${key}`)
   boardDrawStorageKey.value = boardDrawStorageKeys.value[0] || ''

@@ -79,7 +79,7 @@ def _deserialize_content_pair(raw_content):
     return text[:80], fallback_sub
 
 
-def _format_today_payload(record, delta=0):
+def _format_today_payload(record, delta=0, record_existed=False):
     content_main, content_sub = _deserialize_content_pair(record.content)
     lucky_hour = _resolve_lucky_hour(record.score or 0)
     gua_lines = _resolve_gua_meaning(record.score or 0, delta)
@@ -100,12 +100,14 @@ def _format_today_payload(record, delta=0):
         "gua_meaning_lines": gua_lines,
         "lucky_hour_name": lucky_hour["name"],
         "lucky_hour_range": lucky_hour["range"],
+        "record_existed": bool(record_existed),
     }
 
 
 def get_today_fortune(user_id):
     today = date.today()
     record = FortuneRecord.query.filter_by(user_id=user_id, date=today).first()
+    record_existed = bool(record)
 
     if not record:
         defaults = content_generation_service.generate_fortune(user_id=user_id, target_date=today)
@@ -129,7 +131,7 @@ def get_today_fortune(user_id):
     previous_score = previous_record.score if previous_record else record.score
     delta = (record.score or 0) - (previous_score or 0)
 
-    return _format_today_payload(record, delta=delta)
+    return _format_today_payload(record, delta=delta, record_existed=record_existed)
 
 
 def get_trend(user_id, days=7):

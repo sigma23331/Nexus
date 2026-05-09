@@ -18,6 +18,7 @@ export interface FortuneToday {
   gua_meaning_lines?: string[]
   lucky_hour_name?: string
   lucky_hour_range?: string
+  record_existed?: boolean
 }
 
 // 运势轨迹点

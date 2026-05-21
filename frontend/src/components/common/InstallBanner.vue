@@ -23,7 +23,7 @@
         <button @click="dismissManual" class="close-btn">✕</button>
       </div>
       <div class="manual-steps">
-        <!-- 根据平台动态显示不同步骤 -->
+        <!-- iOS 引导 -->
         <template v-if="platform === 'ios'">
           <div class="step">
             <span class="step-icon">1️⃣</span>
@@ -34,7 +34,9 @@
             <span>滑动找到<span class="em">添加到主屏幕</span></span>
           </div>
         </template>
-        <template v-else>
+
+        <!-- 支持PWA的浏览器（Chrome、Edge等）引导 -->
+        <template v-else-if="platform === 'pwa'">
           <div class="step">
             <span class="step-icon">1️⃣</span>
             <span>点击右上角<span class="em">菜单</span>按钮（⋮）</span>
@@ -44,6 +46,27 @@
             <span>选择<span class="em">添加到主屏幕</span>或<span class="em">安装应用</span></span>
           </div>
         </template>
+
+        <!-- 其他浏览器（QQ、Vivo、UC等）引导 - 4步书签法 -->
+        <template v-else>
+          <div class="step">
+            <span class="step-icon">1️⃣</span>
+            <span>点击浏览器右上角<span class="em">菜单</span>按钮</span>
+          </div>
+          <div class="step">
+            <span class="step-icon">2️⃣</span>
+            <span>选择<span class="em">添加到书签</span>（或收藏）</span>
+          </div>
+          <div class="step">
+            <span class="step-icon">3️⃣</span>
+            <span>编辑书签名（如“心运岛”），点击<span class="em">保存/完成</span></span>
+          </div>
+          <div class="step">
+            <span class="step-icon">4️⃣</span>
+            <span>再次打开菜单，选择<span class="em">添加到桌面</span>即可</span>
+          </div>
+        </template>
+
         <div class="step-img">
           <img :src="guideImage" alt="添加到主屏幕步骤" class="guide-img" />
         </div>
@@ -72,28 +95,45 @@ let isPageVisible = true
 
 const manualVisible = ref(false)
 
-// ========== 平台检测 ==========
-const platform = ref<'ios' | 'browser'>('browser')
+// ========== 平台检测（增强版） ==========
+// platform 类型：'ios' | 'pwa' | 'other'
+const platform = ref<'ios' | 'pwa' | 'other'>('other')
 
 const detectPlatform = () => {
-  const userAgent = navigator.userAgent.toLowerCase()
-  const isIOS = /iphone|ipad|ipod/.test(userAgent)
-  // 检测 iPadOS 13+ 伪装成 Mac 的情况
-  const isIPad =
-    /macintosh/.test(userAgent) && navigator.maxTouchPoints && navigator.maxTouchPoints > 2
+  const ua = navigator.userAgent.toLowerCase()
+  // 1. 检测 iOS / iPadOS
+  const isIOS = /iphone|ipad|ipod/.test(ua)
+  const isIPad = /macintosh/.test(ua) && navigator.maxTouchPoints && navigator.maxTouchPoints > 2
   if (isIOS || isIPad) {
     platform.value = 'ios'
+    return
+  }
+
+  // 2. 检测是否支持 PWA 安装的现代浏览器（Chrome、Edge、Samsung Internet、Opera等）
+  // 通过 UA 匹配常见内核，且排除国内定制浏览器（QQ、UC等）
+  const isChrome = /chrome/.test(ua) && !/edg|qq|ucbrowser|vivaldi/.test(ua)
+  const isEdge = /edg/.test(ua)
+  const isSamsung = /samsungbrowser/.test(ua)
+  const isOpera = /opr|opera/.test(ua)
+  // 也支持 Firefox（但 Firefox 对 PWA 支持有限，仍可归为 pwa 类）
+  const isFirefox = /firefox/.test(ua) && !/focus/.test(ua)
+
+  if (isChrome || isEdge || isSamsung || isOpera || isFirefox) {
+    platform.value = 'pwa'
   } else {
-    platform.value = 'browser'
+    // 其他浏览器（QQ、Vivo、UC、360、百度、夸克等）
+    platform.value = 'other'
   }
 }
 
 // 根据平台动态选择引导图片
 const guideImage = computed(() => {
-  return platform.value === 'ios' ? '/images/guide.png' : '/images/guide1.png'
+  if (platform.value === 'ios') return '/images/guide.png'
+  if (platform.value === 'pwa') return '/images/guide1.png'
+  return '/images/guide2.png'
 })
 
-// ========== 自动安装相关 ==========
+// ========== 自动安装相关（不变） ==========
 const isAutoDismissedRecently = () => {
   const dismissedTime = localStorage.getItem('pwa_auto_dismissed')
   if (!dismissedTime) return false
@@ -156,7 +196,7 @@ const handleVisibilityChange = () => {
   isPageVisible = !document.hidden
 }
 
-// ========== 手动引导相关 ==========
+// ========== 手动引导相关（不变） ==========
 const isManualDismissedRecently = () => {
   const dismissed = localStorage.getItem('pwa_manual_dismissed')
   if (!dismissed) return false
@@ -187,7 +227,7 @@ const manualInstall = () => {
   }
 }
 
-// ========== 检测自动安装支持 ==========
+// ========== 检测自动安装支持（不变） ==========
 const checkAutoSupport = () => {
   let timeoutId: ReturnType<typeof setTimeout>
   const onBeforeInstall = (e: Event) => {
@@ -219,7 +259,7 @@ onMounted(() => {
   // autoSupported.value = true
   // autoVisible.value = true
 
-  // 检测平台类型
+  // 检测平台类型（增强版）
   detectPlatform()
 
   if (isInstalled.value) return

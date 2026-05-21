@@ -1,17 +1,31 @@
-from datetime import date
 import json
+from datetime import date
 from pathlib import Path
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
-from .base import LLMProvider
 from tools.prompt_lab.selector import AnswerStyleSelector, FortuneContentSelector
+
+from .base import LLMProvider
 
 
 FORTUNE_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["score", "content_main", "content_sub", "love", "career", "health", "wealth", "yi", "ji"],
+    "required": [
+        "score",
+        "content_main",
+        "content_sub",
+        "love",
+        "career",
+        "health",
+        "wealth",
+        "yi",
+        "ji",
+        "gua_meaning_lines",
+        "lucky_hour_name",
+        "lucky_hour_range",
+    ],
     "properties": {
         "score": {"type": "integer", "minimum": 0, "maximum": 100},
         "content_main": {"type": "string", "maxLength": 80},
@@ -22,6 +36,14 @@ FORTUNE_SCHEMA = {
         "wealth": {"type": "string", "maxLength": 20},
         "yi": {"type": "array", "maxItems": 5, "items": {"type": "string", "maxLength": 20}},
         "ji": {"type": "array", "maxItems": 5, "items": {"type": "string", "maxLength": 20}},
+        "gua_meaning_lines": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {"type": "string", "maxLength": 40},
+        },
+        "lucky_hour_name": {"type": "string", "maxLength": 20},
+        "lucky_hour_range": {"type": "string", "maxLength": 20},
     },
 }
 
@@ -55,25 +77,34 @@ DEFAULT_PROMPT_TEXT = {
         "你会根据用户的问题，给出简短、富含哲思的回答。"
         "请用中文回答，尽量一句话，20字以内。"
         "不做医疗、法律、投资等专业诊断；不做绝对化承诺；避免高风险建议。"
-        "问题：{{question}}"
+        "问题：{question}"
     ),
     "fortune": (
         "你是心运岛的中文运势文案助手。"
-        "请仅输出json对象，不要输出markdown或额外解释。"
-        "字段必须包含：score,content_main,content_sub,love,career,health,wealth,yi,ji。"
-        "日期：{{target_date}}"
+        "只输出 JSON，不要输出 markdown 或额外解释。"
+        "字段必须包含：score,content_main,content_sub,love,career,health,wealth,yi,ji,gua_meaning_lines,lucky_hour_name,lucky_hour_range。"
+        "日期：{target_date}"
     ),
     "profile": (
         "你是专业的心理与行为分析助手。"
-        "请仅输出json对象，不要输出额外说明。"
+        "只输出 JSON，不要输出额外说明。"
         "字段必须包含：mood_tendency,topic_interests,self_context_tag。"
-        "历史样本：{{diary_summary}}\n{{question_summary}}"
+        "历史样本：{diary_summary}\n{question_summary}"
     ),
 }
 
 
 class RealProvider(LLMProvider):
-    def __init__(self, model_name, api_key, timeout, max_retries, base_url=None, prompts_dir=None, prompt_versions=None):
+    def __init__(
+        self,
+        model_name,
+        api_key,
+        timeout,
+        max_retries,
+        base_url=None,
+        prompts_dir=None,
+        prompt_versions=None,
+    ):
         if not model_name:
             raise ValueError("LLM_MODEL_NAME is required")
         if not api_key:
@@ -85,7 +116,9 @@ class RealProvider(LLMProvider):
         self.max_retries = max_retries
         self.base_url = (base_url or "https://api.openai.com/v1").rstrip("/")
         backend_root = Path(__file__).resolve().parents[3]
-        self.prompts_dir = Path(prompts_dir) if prompts_dir else (backend_root / "tools" / "prompt_lab" / "prompts")
+        self.prompts_dir = (
+            Path(prompts_dir) if prompts_dir else (backend_root / "tools" / "prompt_lab" / "prompts")
+        )
         self.prompt_versions = dict(DEFAULT_PROMPT_VERSIONS)
         if isinstance(prompt_versions, dict):
             for key, value in prompt_versions.items():
@@ -107,7 +140,15 @@ class RealProvider(LLMProvider):
         except Exception:
             return DEFAULT_PROMPT_TEXT[task]
 
-    def _chat(self, messages, temperature=0.7, response_format=None, max_tokens=None, frequency_penalty=None, top_p=None):
+    def _chat(
+        self,
+        messages,
+        temperature=0.7,
+        response_format=None,
+        max_tokens=None,
+        frequency_penalty=None,
+        top_p=None,
+    ):
         payload = {
             "model": self.model_name,
             "messages": messages,
@@ -197,10 +238,17 @@ class RealProvider(LLMProvider):
 
         yi = data.get("yi") if isinstance(data.get("yi"), list) else []
         ji = data.get("ji") if isinstance(data.get("ji"), list) else []
+        gua_lines = data.get("gua_meaning_lines") if isinstance(data.get("gua_meaning_lines"), list) else []
+
+        normalized_gua_lines = [str(item).strip()[:40] for item in gua_lines[:2] if str(item).strip()]
+        if len(normalized_gua_lines) < 2:
+            normalized_gua_lines = ["阴阳守中", "稳步前行，先稳后进"]
 
         return {
             "score": score,
-            "content_main": str(data.get("content_main", "今日节奏平衡，先完成最重要的一件事。")).strip()[:80],
+            "content_main": str(
+                data.get("content_main", "今日节奏平稳，先完成最重要的一件事。")
+            ).strip()[:80],
             "content_sub": str(data.get("content_sub", "稳中求进，心静则通达。")).strip()[:80],
             "love": str(data.get("love", "平稳")).strip()[:20],
             "career": str(data.get("career", "平稳")).strip()[:20],
@@ -208,6 +256,10 @@ class RealProvider(LLMProvider):
             "wealth": str(data.get("wealth", "平稳")).strip()[:20],
             "yi": [str(item).strip()[:20] for item in yi[:5] if str(item).strip()],
             "ji": [str(item).strip()[:20] for item in ji[:5] if str(item).strip()],
+            "gua_meaning_lines": normalized_gua_lines,
+            "lucky_hour_name": str(data.get("lucky_hour_name", "午时")).strip()[:20] or "午时",
+            "lucky_hour_range": str(data.get("lucky_hour_range", "11:00-13:00")).strip()[:20]
+            or "11:00-13:00",
         }
 
     def _normalize_profile(self, data):
@@ -262,6 +314,7 @@ class RealProvider(LLMProvider):
             style = selector.select()
         else:
             style = ""
+
         prompt_text = self._load_prompt_template("answer")
         rendered = self._render_inline(
             prompt_text,
@@ -271,23 +324,28 @@ class RealProvider(LLMProvider):
             },
         )
         text = self._chat(
-            messages=[
-                {
-                    "role": "user",
-                    "content": rendered,
-                }
-            ],
+            messages=[{"role": "user", "content": rendered}],
             temperature=1.2,
         )
         return self._truncate_answer_by_sentence(text, limit=100)
 
-    def generate_fortune(self, user_id, target_date: date, profile_context=None, score=None, title_template=None, keywords=None, yiji_items=None):
+    def generate_fortune(
+        self,
+        user_id,
+        target_date: date,
+        profile_context=None,
+        score=None,
+        title_template=None,
+        keywords=None,
+        yiji_items=None,
+    ):
         _ = user_id
         profile_context = profile_context or {}
         if score is not None and title_template is not None:
             version = "v4"
         else:
             version = self.prompt_versions.get("fortune")
+
         prompt_text = self._load_prompt_template("fortune")
         if version == "v4":
             selector = None
@@ -321,17 +379,15 @@ class RealProvider(LLMProvider):
                 {
                     "target_date": target_date.isoformat(),
                     "mood_tendency": profile_context.get("mood_tendency", "calm"),
-                    "topic_interests": ",".join(profile_context.get("topic_interests", [])) if isinstance(profile_context.get("topic_interests"), list) else profile_context.get("topic_interests", "health"),
+                    "topic_interests": ",".join(profile_context.get("topic_interests", []))
+                    if isinstance(profile_context.get("topic_interests"), list)
+                    else profile_context.get("topic_interests", "health"),
                     "self_context_tag": profile_context.get("self_context_tag", "日常"),
                 },
             )
+
         data = self._chat_json_schema(
-            messages=[
-                {
-                    "role": "user",
-                    "content": rendered,
-                }
-            ],
+            messages=[{"role": "user", "content": rendered}],
             schema_name="fortune_schema",
             schema=FORTUNE_SCHEMA,
             temperature=1.2,
@@ -348,7 +404,9 @@ class RealProvider(LLMProvider):
         ) or "无日记记录"
 
         question_summary = "\n".join(
-            q[:100] if isinstance(q, str) else (q.get("question", "")[:100] if isinstance(q, dict) else getattr(q, "question", "")[:100])
+            q[:100]
+            if isinstance(q, str)
+            else (q.get("question", "")[:100] if isinstance(q, dict) else getattr(q, "question", "")[:100])
             for q in (answer_questions or [])
         ) or "无提问记录"
 
@@ -362,12 +420,7 @@ class RealProvider(LLMProvider):
         )
 
         data = self._chat_json_schema(
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
+            messages=[{"role": "user", "content": prompt}],
             schema_name="profile_schema",
             schema=PROFILE_SCHEMA,
             temperature=0.6,

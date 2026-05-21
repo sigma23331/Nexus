@@ -1,7 +1,8 @@
+import random as _random
 from datetime import date, datetime
 from pathlib import Path
+
 from flask import current_app
-import random as _random
 
 from services.llm.providers.mock_provider import MockProvider
 from services.llm.providers.real_provider import RealProvider
@@ -36,8 +37,96 @@ def _score_to_title(score):
     if score >= 65:
         return "中平"
     if score >= 55:
-        return "小谨"
+        return "小吉"
     return "守静"
+
+
+def _default_gua_meaning(score):
+    if score >= 85:
+        return ["乾元得势", "顺势而为，主动推进"]
+    if score >= 75:
+        return ["木火通明", "节奏清朗，宜扩展布局"]
+    if score >= 65:
+        return ["阴阳守中", "稳步前行，先稳后进"]
+    if score >= 55:
+        return ["地山谦", "以退为进，夯实基础"]
+    return ["坎离未济", "先养精神，再谋后动"]
+
+
+def _default_lucky_hour(score):
+    if score >= 90:
+        return {"name": "辰时", "range": "07:00-09:00"}
+    if score >= 82:
+        return {"name": "巳时", "range": "09:00-11:00"}
+    if score >= 74:
+        return {"name": "午时", "range": "11:00-13:00"}
+    if score >= 66:
+        return {"name": "未时", "range": "13:00-15:00"}
+    return {"name": "酉时", "range": "17:00-19:00"}
+
+
+def _normalize_text(value, default="", limit=80):
+    text = str(value or "").strip()
+    if not text:
+        text = default
+    return text[:limit]
+
+
+def _normalize_list(value, limit=5, item_limit=20):
+    if not isinstance(value, list):
+        return []
+    result = []
+    for item in value:
+        text = str(item or "").strip()
+        if not text:
+            continue
+        result.append(text[:item_limit])
+        if len(result) >= limit:
+            break
+    return result
+
+
+def _normalize_gua_meaning_lines(value, score):
+    lines = _normalize_list(value, limit=2, item_limit=40)
+    if len(lines) == 2:
+        return lines
+    return _default_gua_meaning(score)
+
+
+def _normalize_lucky_hour(payload, score):
+    default = _default_lucky_hour(score)
+    name = _normalize_text(payload.get("lucky_hour_name"), default["name"], limit=20)
+    hour_range = _normalize_text(payload.get("lucky_hour_range"), default["range"], limit=20)
+    return {"name": name, "range": hour_range}
+
+
+def _normalize_fortune_payload(payload):
+    payload = payload if isinstance(payload, dict) else {}
+    score = _normalize_score(payload.get("score"))
+    lucky_hour = _normalize_lucky_hour(payload, score)
+    return {
+        "score": score,
+        "title": _score_to_title(score),
+        "content_main": _normalize_text(
+            payload.get("content_main"),
+            default="今日节奏平稳，先完成最重要的一件事。",
+            limit=80,
+        ),
+        "content_sub": _normalize_text(
+            payload.get("content_sub"),
+            default="稳中求进，心静则通达。",
+            limit=80,
+        ),
+        "love": _normalize_text(payload.get("love"), default="平稳", limit=20),
+        "career": _normalize_text(payload.get("career"), default="平稳", limit=20),
+        "health": _normalize_text(payload.get("health"), default="稳定", limit=20),
+        "wealth": _normalize_text(payload.get("wealth"), default="平稳", limit=20),
+        "yi": _normalize_list(payload.get("yi"), limit=5, item_limit=20),
+        "ji": _normalize_list(payload.get("ji"), limit=5, item_limit=20),
+        "gua_meaning_lines": _normalize_gua_meaning_lines(payload.get("gua_meaning_lines"), score),
+        "lucky_hour_name": lucky_hour["name"],
+        "lucky_hour_range": lucky_hour["range"],
+    }
 
 
 def get_provider(force_refresh=False):
@@ -45,7 +134,6 @@ def get_provider(force_refresh=False):
     if _provider_cache is not None and not force_refresh:
         return _provider_cache
 
-    provider_name = None
     try:
         provider_name = current_app.config.get("LLM_PROVIDER", "mock")
     except RuntimeError:
@@ -98,7 +186,7 @@ def generate_answer(question, user_id):
 
 def generate_fortune(user_id, target_date):
     if not isinstance(target_date, date):
-        raise ValueError("target_date 必须为 date")
+        raise ValueError("target_date must be a date")
 
     provider = get_provider()
     version = getattr(provider, "prompt_versions", {}).get("fortune", "")
@@ -148,7 +236,11 @@ def generate_fortune(user_id, target_date):
 
         try:
             try:
-                payload = provider.generate_fortune(user_id=user_id, target_date=target_date, profile_context=profile_context)
+                payload = provider.generate_fortune(
+                    user_id=user_id,
+                    target_date=target_date,
+                    profile_context=profile_context,
+                )
             except TypeError:
                 payload = provider.generate_fortune(user_id=user_id, target_date=target_date)
             generated_by = "provider"
@@ -156,18 +248,6 @@ def generate_fortune(user_id, target_date):
             payload = _fallback_fortune(target_date)
             generated_by = "fallback"
 
-    score = _normalize_score(payload.get("score"))
-
-    return {
-        "score": score,
-        "title": _score_to_title(score),
-        "content_main": payload["content_main"],
-        "content_sub": payload["content_sub"],
-        "love": payload["love"],
-        "career": payload["career"],
-        "health": payload["health"],
-        "wealth": payload["wealth"],
-        "yi": payload.get("yi", []),
-        "ji": payload.get("ji", []),
-        "generatedBy": generated_by,
-    }
+    normalized = _normalize_fortune_payload(payload)
+    normalized["generatedBy"] = generated_by
+    return normalized

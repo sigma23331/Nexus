@@ -1,13 +1,13 @@
 import json
 from datetime import date, timedelta
 
-from models.fortune import FortuneRecord
 from extensions import db
+from models.fortune import FortuneRecord
 from services import content_generation_service
 
 
 def _resolve_gua_meaning(score, delta=0):
-    # 后端统一控制卦意文案，按“趋势 + 分数段”组合判断
+    """Legacy fallback for historical rows missing gua copy."""
     if delta >= 8:
         return ["雷火丰", "势能大开，宜果断推进"]
     if delta >= 3:
@@ -30,11 +30,11 @@ def _resolve_gua_meaning(score, delta=0):
         return ["阴阳守中", "守正出新，宜稳步前行"]
     if score >= 60:
         return ["地山谦", "以退为进，宜夯实基础"]
-    return ["坎离未济", "先养精蓄锐，再谋后动"]
+    return ["坎离未济", "先养精神锋锐，再谋后动"]
 
 
 def _resolve_lucky_hour(score):
-    # 后端统一控制开运时辰文案，细化分档，避免前后端规则不一致
+    """Legacy fallback for historical rows missing lucky-hour copy."""
     if score >= 90:
         return {"name": "辰时", "range": "07:00-09:00"}
     if score >= 82:
@@ -79,10 +79,30 @@ def _deserialize_content_pair(raw_content):
     return text[:80], fallback_sub
 
 
+def _normalize_history_lines(record, delta=0):
+    lines = getattr(record, "gua_meaning_lines", None)
+    if isinstance(lines, list):
+        normalized = [str(item or "").strip()[:40] for item in lines if str(item or "").strip()]
+        if len(normalized) >= 2:
+            return normalized[:2]
+    return _resolve_gua_meaning(getattr(record, "score", 0) or 0, delta)
+
+
+def _normalize_lucky_hour(record):
+    score = getattr(record, "score", 0) or 0
+    fallback = _resolve_lucky_hour(score)
+    name = str(getattr(record, "lucky_hour_name", "") or "").strip()[:20]
+    hour_range = str(getattr(record, "lucky_hour_range", "") or "").strip()[:20]
+    return {
+        "name": name or fallback["name"],
+        "range": hour_range or fallback["range"],
+    }
+
+
 def _format_today_payload(record, delta=0, record_existed=False):
     content_main, content_sub = _deserialize_content_pair(record.content)
-    lucky_hour = _resolve_lucky_hour(record.score or 0)
-    gua_lines = _resolve_gua_meaning(record.score or 0, delta)
+    lucky_hour = _normalize_lucky_hour(record)
+    gua_lines = _normalize_history_lines(record, delta)
 
     return {
         "id": record.id,
@@ -91,12 +111,12 @@ def _format_today_payload(record, delta=0, record_existed=False):
         "title": record.title,
         "content_main": content_main[:80],
         "content_sub": content_sub[:80],
-        "love": "平稳",
-        "career": "平稳",
-        "health": "稳定",
-        "wealth": "平稳",
-        "yi": record.yi or [],
-        "ji": record.ji or [],
+        "love": str(getattr(record, "love", "") or "平稳")[:20],
+        "career": str(getattr(record, "career", "") or "平稳")[:20],
+        "health": str(getattr(record, "health", "") or "稳定")[:20],
+        "wealth": str(getattr(record, "wealth", "") or "平稳")[:20],
+        "yi": list(getattr(record, "yi", None) or []),
+        "ji": list(getattr(record, "ji", None) or []),
         "gua_meaning_lines": gua_lines,
         "lucky_hour_name": lucky_hour["name"],
         "lucky_hour_range": lucky_hour["range"],
@@ -117,17 +137,28 @@ def get_today_fortune(user_id):
             score=defaults["score"],
             title=defaults["title"],
             content=_serialize_content_pair(defaults["content_main"], defaults["content_sub"]),
+            love=defaults["love"],
+            career=defaults["career"],
+            health=defaults["health"],
+            wealth=defaults["wealth"],
             yi=defaults["yi"],
             ji=defaults["ji"],
+            gua_meaning_lines=defaults["gua_meaning_lines"],
+            lucky_hour_name=defaults["lucky_hour_name"],
+            lucky_hour_range=defaults["lucky_hour_range"],
         )
         db.session.add(record)
         db.session.commit()
         db.session.refresh(record)
 
-    previous_record = FortuneRecord.query.filter(
-        FortuneRecord.user_id == user_id,
-        FortuneRecord.date < today,
-    ).order_by(FortuneRecord.date.desc()).first()
+    previous_record = (
+        FortuneRecord.query.filter(
+            FortuneRecord.user_id == user_id,
+            FortuneRecord.date < today,
+        )
+        .order_by(FortuneRecord.date.desc())
+        .first()
+    )
     previous_score = previous_record.score if previous_record else record.score
     delta = (record.score or 0) - (previous_score or 0)
 
@@ -138,20 +169,26 @@ def get_trend(user_id, days=7):
     end = date.today()
     start = end - timedelta(days=days - 1)
 
-    records = FortuneRecord.query.filter(
-        FortuneRecord.user_id == user_id,
-        FortuneRecord.date >= start,
-        FortuneRecord.date <= end,
-    ).order_by(FortuneRecord.date.asc()).all()
+    records = (
+        FortuneRecord.query.filter(
+            FortuneRecord.user_id == user_id,
+            FortuneRecord.date >= start,
+            FortuneRecord.date <= end,
+        )
+        .order_by(FortuneRecord.date.asc())
+        .all()
+    )
 
     score_by_date = {record.date: record.score for record in records}
     points = []
     cursor = start
     while cursor <= end:
-        points.append({
-            "date": cursor.strftime("%m-%d"),
-            "value": score_by_date.get(cursor, 0),
-        })
+        points.append(
+            {
+                "date": cursor.strftime("%m-%d"),
+                "value": score_by_date.get(cursor, 0),
+            }
+        )
         cursor += timedelta(days=1)
 
     return {"trendPoints": points}

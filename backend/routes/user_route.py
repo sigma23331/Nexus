@@ -9,7 +9,7 @@ from models.diary import DiaryEntry
 from extensions import db
 from services.profile_analysis_service import ProfileAnalysisService
 from services.user_profile_service import UserProfileService
-from services.fortune_service import _deserialize_content_pair
+from services.fortune_service import _deserialize_content_pair, _normalize_history_lines, _normalize_lucky_hour
 
 user_bp = Blueprint('user', __name__)
 
@@ -146,14 +146,22 @@ def get_fortune_history():
     fortune_list = []
     for rec in pagination.items:
         content_main, content_sub = _deserialize_content_pair(rec.content)
+        lucky_hour = _normalize_lucky_hour(rec)
         fortune_list.append({
             "date": rec.date.isoformat() if rec.date else None,
             "score": rec.score,
             "title": rec.title,
             "content_main": content_main,
             "content_sub": content_sub,
+            "love": getattr(rec, "love", None) or "平稳",
+            "career": getattr(rec, "career", None) or "平稳",
+            "health": getattr(rec, "health", None) or "稳定",
+            "wealth": getattr(rec, "wealth", None) or "平稳",
             "yi": rec.yi or [],
-            "ji": rec.ji or []
+            "ji": rec.ji or [],
+            "gua_meaning_lines": _normalize_history_lines(rec),
+            "lucky_hour_name": lucky_hour["name"],
+            "lucky_hour_range": lucky_hour["range"],
         })
 
     return jsonify(code=200, message="success", data={

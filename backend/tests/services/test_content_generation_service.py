@@ -6,7 +6,7 @@ from services import content_generation_service as cgs
 
 
 def test_generate_answer_rejects_empty_question():
-    with pytest.raises(ValueError, match="question 必须为非空字符串"):
+    with pytest.raises(ValueError, match="question must be a non-empty string"):
         cgs.generate_answer("   ", user_id="u1")
 
 
@@ -56,6 +56,9 @@ def test_generate_fortune_returns_required_fields(monkeypatch):
                 "wealth": "向好",
                 "yi": ["学习"],
                 "ji": ["熬夜"],
+                "gua_meaning_lines": ["火土相生", "顺势加速，主动求进"],
+                "lucky_hour_name": "巳时",
+                "lucky_hour_range": "09:00-11:00",
             }
 
     monkeypatch.setattr(cgs, "get_provider", lambda: _Provider())
@@ -70,6 +73,9 @@ def test_generate_fortune_returns_required_fields(monkeypatch):
     assert payload["career"] == "平稳"
     assert payload["health"] == "稳定"
     assert payload["wealth"] == "向好"
+    assert payload["gua_meaning_lines"] == ["火土相生", "顺势加速，主动求进"]
+    assert payload["lucky_hour_name"] == "巳时"
+    assert payload["lucky_hour_range"] == "09:00-11:00"
     assert payload["generatedBy"] == "provider"
 
 
@@ -77,7 +83,7 @@ def test_score_to_title_matches_frontend_thresholds():
     assert cgs._score_to_title(85) == "上上签"
     assert cgs._score_to_title(75) == "上吉"
     assert cgs._score_to_title(65) == "中平"
-    assert cgs._score_to_title(55) == "小谨"
+    assert cgs._score_to_title(55) == "小吉"
     assert cgs._score_to_title(54) == "守静"
 
 
@@ -96,6 +102,9 @@ def test_generate_fortune_passes_profile_context_when_available(monkeypatch):
                 "wealth": "谨慎",
                 "yi": ["专注"],
                 "ji": ["拖延"],
+                "gua_meaning_lines": ["阴阳守中", "守正出新，稳步推进"],
+                "lucky_hour_name": "午时",
+                "lucky_hour_range": "11:00-13:00",
             }
 
     class _Profile:
@@ -130,6 +139,9 @@ def test_generate_fortune_falls_back_to_legacy_provider_signature(monkeypatch):
                 "wealth": "平稳",
                 "yi": [],
                 "ji": [],
+                "gua_meaning_lines": ["阴阳守中", "稳步前行，先稳后进"],
+                "lucky_hour_name": "午时",
+                "lucky_hour_range": "11:00-13:00",
             }
 
     provider = _Provider()
@@ -139,3 +151,28 @@ def test_generate_fortune_falls_back_to_legacy_provider_signature(monkeypatch):
     payload = cgs.generate_fortune(user_id="u1", target_date=date(2026, 4, 25))
     assert payload["generatedBy"] == "provider"
     assert provider.called == 1
+
+
+def test_generate_fortune_backfills_missing_new_fields(monkeypatch):
+    class _Provider:
+        def generate_fortune(self, user_id, target_date):
+            _ = (user_id, target_date)
+            return {
+                "score": 90,
+                "content_main": "适合主动出击。",
+                "content_sub": "把握势头。",
+                "love": "顺畅",
+                "career": "高涨",
+                "health": "稳定",
+                "wealth": "向好",
+                "yi": ["沟通"],
+                "ji": ["拖延"],
+            }
+
+    monkeypatch.setattr(cgs, "get_provider", lambda: _Provider())
+
+    payload = cgs.generate_fortune(user_id="u1", target_date=date(2026, 4, 25))
+
+    assert payload["gua_meaning_lines"]
+    assert payload["lucky_hour_name"]
+    assert payload["lucky_hour_range"]

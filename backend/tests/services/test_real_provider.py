@@ -23,7 +23,7 @@ def test_chat_json_schema_falls_back_when_response_format_unsupported(monkeypatc
         calls.append(response_format)
         if response_format is not None:
             raise RuntimeError("unsupported response_format")
-        return '{"score": 88, "title": "大吉", "content_main": "顺势而为", "content_sub": "稳中有进", "love": "中上", "career": "平稳", "health": "稳定", "wealth": "向好", "yi": ["学习"], "ji": ["熬夜"]}'
+        return '{"score":88,"content_main":"顺势而为","content_sub":"稳中有进","love":"中上","career":"平稳","health":"稳定","wealth":"向好","yi":["学习"],"ji":["熬夜"],"gua_meaning_lines":["火土相生","顺势加速，主动求进"],"lucky_hour_name":"巳时","lucky_hour_range":"09:00-11:00"}'
 
     monkeypatch.setattr(provider, "_chat", fake_chat)
 
@@ -53,7 +53,7 @@ def test_chat_json_schema_uses_deepseek_json_object(monkeypatch):
     def fake_chat(messages, temperature=1.5, response_format=None, max_tokens=None):
         _ = (messages, temperature, max_tokens)
         captured["response_format"] = response_format
-        return '{"score": 80, "title": "吉", "content_main": "顺势而为", "content_sub": "稳中求进", "love": "中上", "career": "平稳", "health": "稳定", "wealth": "向好", "yi": ["学习"], "ji": ["熬夜"]}'
+        return '{"score":80,"content_main":"顺势而为","content_sub":"稳中求进","love":"中上","career":"平稳","health":"稳定","wealth":"向好","yi":["学习"],"ji":["熬夜"],"gua_meaning_lines":["阴阳守中","守正出新，稳步前行"],"lucky_hour_name":"午时","lucky_hour_range":"11:00-13:00"}'
 
     monkeypatch.setattr(provider, "_chat", fake_chat)
 
@@ -68,14 +68,13 @@ def test_chat_json_schema_uses_deepseek_json_object(monkeypatch):
     assert captured["response_format"] == {"type": "json_object"}
 
 
-def test_generate_fortune_normalizes_and_includes_lucky_fields(monkeypatch):
+def test_generate_fortune_normalizes_new_contract_fields(monkeypatch):
     provider = _provider()
 
     def fake_chat_json_schema(messages, schema_name, schema, temperature=0.3, max_tokens=512):
         _ = (messages, schema_name, schema, temperature, max_tokens)
         return {
             "score": 999,
-            "title": "上上签上上签上上签上上签上上签上上签",
             "content_main": "A" * 200,
             "content_sub": "B" * 200,
             "love": "爱情运势很旺盛且有很多描述",
@@ -84,6 +83,9 @@ def test_generate_fortune_normalizes_and_includes_lucky_fields(monkeypatch):
             "wealth": "财富方面谨慎增长描述",
             "yi": ["学习打卡学习打卡学习打卡", "", 123, "运动"],
             "ji": ["熬夜熬夜熬夜熬夜熬夜", "拖延"],
+            "gua_meaning_lines": ["第一句" * 20, "第二句" * 20, "多余一句"],
+            "lucky_hour_name": "午时午时午时午时",
+            "lucky_hour_range": "11:00-13:00加长版",
         }
 
     monkeypatch.setattr(provider, "_chat_json_schema", fake_chat_json_schema)
@@ -99,6 +101,8 @@ def test_generate_fortune_normalizes_and_includes_lucky_fields(monkeypatch):
     assert len(payload["wealth"]) <= 20
     assert payload["yi"][0] == "学习打卡学习打卡学习打卡"
     assert payload["yi"][1] == "123"
+    assert len(payload["gua_meaning_lines"]) == 2
+    assert payload["lucky_hour_name"].startswith("午时")
 
 
 def test_analyze_user_profile_keeps_free_text_and_normalizes_list(monkeypatch):
@@ -109,7 +113,7 @@ def test_analyze_user_profile_keeps_free_text_and_normalizes_list(monkeypatch):
         return {
             "mood_tendency": "depressed",
             "topic_interests": ["unknown", "health", "health", "finance", "career", "study"],
-            "self_context_tag": "  备考冲刺阶段备考冲刺阶段备考冲刺阶段  ",
+            "self_context_tag": "  备考冲刺阶段备考冲刺阶段备考冲刺阶段 ",
         }
 
     monkeypatch.setattr(provider, "_chat_json_schema", fake_chat_json_schema)
@@ -140,7 +144,7 @@ def test_generate_answer_prompt_contains_safety_constraints_and_sentence_truncat
     payload = provider.generate_answer("我最近有点迷茫", user_id="u1")
 
     assert payload == "第一句完整。"
-    assert captured["temperature"] == 0.7
+    assert captured["temperature"] == 1.2
     assert captured["response_format"] is None
     prompt_content = captured["messages"][0]["content"]
     assert "我最近有点迷茫" in prompt_content
@@ -205,6 +209,9 @@ def test_generate_fortune_renders_profile_context_into_prompt(monkeypatch, tmp_p
             "wealth": "向好",
             "yi": ["学习"],
             "ji": ["熬夜"],
+            "gua_meaning_lines": ["阴阳守中", "守正出新，稳步前行"],
+            "lucky_hour_name": "午时",
+            "lucky_hour_range": "11:00-13:00",
         }
 
     monkeypatch.setattr(provider, "_chat_json_schema", fake_chat_json_schema)
@@ -250,7 +257,7 @@ def test_generate_profile_uses_versioned_prompt_template(monkeypatch, tmp_path):
     monkeypatch.setattr(provider, "_chat_json_schema", fake_chat_json_schema)
     payload = provider.analyze_user_profile(
         diary_entries=[{"mood_tag": "happy", "content": "今天不错"}],
-        answer_questions=[{"question": "接下来怎么办"}],
+        answer_questions=[{"question": "接下来怎么做"}],
     )
     assert payload["mood_tendency"] == "calm"
     assert "D=[happy] 今天不错" in captured["content"]

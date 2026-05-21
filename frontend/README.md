@@ -221,5 +221,5 @@ npm run preview:pwa   # 构建并启动预览，默认 http://localhost:4173
 2. **Application → Service Workers**：状态为 activated，来源为 `sw.js`。
 3. **Lighthouse → Progressive Web App**：Installable、Service Worker 项通过。
 4. **离线**：先正常打开并浏览几个页面 → Network 勾选 **Offline** → 刷新，壳页面仍可打开。
-5. **安装**：个人中心 → 设置 →「添加到主屏幕」；或等待底部安装横幅出现（Chrome / iOS 引导）。
+5. **安装**：个人中心 → 设置 →「安装到桌面」（Chrome 桌面端）；iOS Safari 会显示添加到主屏幕说明。
 6. 构建产物应包含：`dist/sw.js`、`dist/workbox-*.js`、`dist/manifest.json`、`dist/offline.html`。

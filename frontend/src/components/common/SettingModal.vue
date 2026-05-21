@@ -41,13 +41,30 @@
           <span class="text-purple-400">›</span>
         </div>
 
-        <!-- 添加到主屏幕（由 InstallBanner 处理安装/引导） -->
+        <!-- 添加到主屏幕 -->
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
           @click="handleInstallToDesktop"
         >
           <span class="text-slate-700 hover:text-purple-700">添加到主屏幕</span>
           <span class="text-purple-400">›</span>
+        </div>
+
+        <div
+          v-if="showInstallEntry"
+          class="px-5 py-4 hover:bg-purple-50/80 transition duration-150"
+          @click="handleInstallApp"
+        >
+          <div class="flex items-center justify-between cursor-pointer">
+            <span class="text-slate-700 hover:text-purple-700">安装到桌面</span>
+            <span class="text-purple-400">›</span>
+          </div>
+          <p
+            v-if="iosInstallHint && !canInstall"
+            class="mt-2 text-xs leading-relaxed text-slate-500"
+          >
+            {{ iosInstallHint }}
+          </p>
         </div>
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
@@ -109,8 +126,10 @@ import PrivacyPolicyModal from './PrivacyPolicyModal.vue'
 import PromptModal from './PromptModal.vue'
 import ConfirmModal from './ConfirmModal.vue'
 import ChangePasswordModal from './ChangePasswordModal.vue'
+import { usePwaInstall } from '@/composables/usePwaInstall'
 
 const router = useRouter()
+const { canInstall, showInstallEntry, iosInstallHint, promptInstall } = usePwaInstall()
 const userStore = useUserStore()
 const visible = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -213,6 +232,17 @@ const handleDeleteAccount = async () => {
     localStorage.clear()
     router.replace('/login')
     close()
+  }
+}
+
+const handleInstallApp = async () => {
+  if (canInstall.value) {
+    const accepted = await promptInstall()
+    if (!accepted) return
+    return
+  }
+  if (iosInstallHint.value) {
+    alert(iosInstallHint.value)
   }
 }
 

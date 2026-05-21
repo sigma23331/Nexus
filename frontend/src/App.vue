@@ -11,7 +11,7 @@
       </keep-alive>
     </router-view>
     <TabBar v-if="showTabBar" />
-    <PwaUpdateBanner />
+    <InstallBanner />
   </div>
 </template>
 
@@ -19,7 +19,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import TabBar from '@/components/layout/TabBar.vue'
-import PwaUpdateBanner from '@/components/common/PwaUpdateBanner.vue'
+import InstallBanner from '@/components/common/InstallBanner.vue'
 
 const route = useRoute()
 const showTabBar = computed(() => route.meta.tabBar === true)

@@ -128,6 +128,31 @@ jobs:
             export FLASK_ENV=production
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
 
+            python - <<'PY'
+            import os
+            from sqlalchemy import create_engine, inspect, text
+
+            database_url = os.environ["DATABASE_URL"]
+            engine = create_engine(database_url)
+            inspector = inspect(engine)
+            tables = set(inspector.get_table_names())
+
+            has_version_table = "alembic_version" in tables
+            base_tables = {"sms_codes", "users", "fortune_records"}
+            has_legacy_schema = base_tables.issubset(tables)
+
+            if not has_version_table and has_legacy_schema:
+                print("Detected legacy schema without alembic_version; stamping base revision.")
+                with engine.begin() as connection:
+                    connection.execute(text("CREATE TABLE IF NOT EXISTS alembic_version (version_num VARCHAR(32) NOT NULL)"))
+                    connection.execute(text("DELETE FROM alembic_version"))
+                    connection.execute(text("INSERT INTO alembic_version (version_num) VALUES ('de707e93b7ec')"))
+            elif has_version_table:
+                print("Detected alembic_version table; proceeding with normal upgrade.")
+            else:
+                print("No existing schema detected; proceeding with normal upgrade.")
+            PY
+
             python -m flask db upgrade
 
             sudo systemctl restart nexus-backend

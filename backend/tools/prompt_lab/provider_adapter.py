@@ -43,15 +43,29 @@ def _fortune_schema_valid(data):
         "wealth",
         "yi",
         "ji",
+        "gua_meaning_lines",
+        "lucky_hour_name",
+        "lucky_hour_range",
     }
     if not required.issubset(set(data.keys())):
         return False
     if not isinstance(data.get("score"), int):
         return False
-    scalar_keys = ["content_main", "content_sub", "love", "career", "health", "wealth"]
+    scalar_keys = [
+        "content_main",
+        "content_sub",
+        "love",
+        "career",
+        "health",
+        "wealth",
+        "lucky_hour_name",
+        "lucky_hour_range",
+    ]
     if any(not isinstance(data.get(key), str) for key in scalar_keys):
         return False
     if not isinstance(data.get("yi"), list) or not isinstance(data.get("ji"), list):
+        return False
+    if not isinstance(data.get("gua_meaning_lines"), list) or len(data.get("gua_meaning_lines")) != 2:
         return False
     return True
 
@@ -60,6 +74,10 @@ def _normalize_fortune_contract(data):
     data = data if isinstance(data, dict) else {}
     content_main = str(data.get("content_main") or data.get("content") or "").strip()
     content_sub = str(data.get("content_sub") or "稳中求进，心静则通达。").strip()
+    gua_lines = data.get("gua_meaning_lines") if isinstance(data.get("gua_meaning_lines"), list) else []
+    normalized_gua_lines = [str(item or "").strip()[:40] for item in gua_lines[:2] if str(item or "").strip()]
+    if len(normalized_gua_lines) < 2:
+        normalized_gua_lines = ["阴阳守中", "稳步前行，先稳后进"]
     return {
         "score": int(data.get("score", 70)) if str(data.get("score", "")).isdigit() else 70,
         "content_main": content_main,
@@ -70,6 +88,9 @@ def _normalize_fortune_contract(data):
         "wealth": str(data.get("wealth") or "平稳").strip(),
         "yi": data.get("yi") if isinstance(data.get("yi"), list) else [],
         "ji": data.get("ji") if isinstance(data.get("ji"), list) else [],
+        "gua_meaning_lines": normalized_gua_lines,
+        "lucky_hour_name": str(data.get("lucky_hour_name") or "午时").strip(),
+        "lucky_hour_range": str(data.get("lucky_hour_range") or "11:00-13:00").strip(),
     }
 
 
@@ -190,12 +211,17 @@ class PromptLabProviderAdapter:
                     "yi_samples": "\n".join(yiji_items.get("yi", [])),
                     "ji_samples": "\n".join(yiji_items.get("ji", [])),
                     "mood_tendency": str(context.get("mood_tendency") or "calm"),
-                    "topic_interests": ",".join(context.get("topic_interests") or []) if isinstance(context.get("topic_interests"), list) else str(context.get("topic_interests") or ""),
+                    "topic_interests": ",".join(context.get("topic_interests") or [])
+                    if isinstance(context.get("topic_interests"), list)
+                    else str(context.get("topic_interests") or ""),
                     "self_context_tag": str(context.get("self_context_tag") or "日常"),
                 },
             )
             if self.provider_mode == "mock":
-                data = self.provider.generate_fortune(user_id="prompt-lab", target_date=datetime.strptime(target_date, "%Y-%m-%d").date())
+                data = self.provider.generate_fortune(
+                    user_id="prompt-lab",
+                    target_date=datetime.strptime(target_date, "%Y-%m-%d").date(),
+                )
                 parse_success = True
             else:
                 output = self.provider._chat(
@@ -235,8 +261,16 @@ class PromptLabProviderAdapter:
     def run_profile(self, diary_entries, answer_questions, prompt_text, temperature, frequency_penalty=None, top_p=None):
         start = time.perf_counter()
         try:
-            diary_summary = "\n".join((str((item or {}).get("content", ""))[:100] for item in (diary_entries or []) if isinstance(item, dict)))
-            question_summary = "\n".join((str((item or {}).get("question", ""))[:100] for item in (answer_questions or []) if isinstance(item, dict)))
+            diary_summary = "\n".join(
+                str((item or {}).get("content", ""))[:100]
+                for item in (diary_entries or [])
+                if isinstance(item, dict)
+            )
+            question_summary = "\n".join(
+                str((item or {}).get("question", ""))[:100]
+                for item in (answer_questions or [])
+                if isinstance(item, dict)
+            )
             rendered = _render_inline(
                 prompt_text,
                 {
@@ -245,7 +279,10 @@ class PromptLabProviderAdapter:
                 },
             )
             if self.provider_mode == "mock":
-                data = self.provider.analyze_user_profile(diary_entries=diary_entries, answer_questions=answer_questions)
+                data = self.provider.analyze_user_profile(
+                    diary_entries=diary_entries,
+                    answer_questions=answer_questions,
+                )
                 parse_success = True
             else:
                 output = self.provider._chat(

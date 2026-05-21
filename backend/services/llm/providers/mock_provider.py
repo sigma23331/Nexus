@@ -1,3 +1,4 @@
+import random
 from datetime import date
 
 from .base import LLMProvider
@@ -5,7 +6,7 @@ from .base import LLMProvider
 
 _MOOD_TENDENCIES = ["optimistic", "calm", "anxious", "reflective", "energetic"]
 _INTEREST_POOL = ["career", "health", "love", "study", "family", "social", "finance"]
-_CONTEXT_TAGS = ["日常", "备考期", "职场新人", "情感波动期", "成长期"]
+_CONTEXT_TAGS = ["日常", "备考期", "职场新人", "情绪波动期", "成长期"]
 
 
 class MockProvider(LLMProvider):
@@ -24,15 +25,21 @@ class MockProvider(LLMProvider):
         score = 70 + (target_date.day % 25)
         if score >= 85:
             title = "大吉 · 宜行"
+            gua_lines = ["乾元得势", "顺势而为，主动推进"]
+            lucky_hour = {"name": "辰时", "range": "07:00-09:00"}
         elif score >= 70:
             title = "小吉 · 守成"
+            gua_lines = ["木火通明", "节奏清朗，稳步加速"]
+            lucky_hour = {"name": "午时", "range": "11:00-13:00"}
         else:
             title = "平稳 · 蓄力"
+            gua_lines = ["地山谦", "先稳节奏，再图后劲"]
+            lucky_hour = {"name": "酉时", "range": "17:00-19:00"}
 
         return {
             "score": score,
             "title": title,
-            "content_main": "今日节奏平衡，先完成最重要的一件事。",
+            "content_main": "今日节奏平稳，先完成最重要的一件事。",
             "content_sub": "稳中求进，避免分心。",
             "love": "平稳",
             "career": "向好",
@@ -40,6 +47,9 @@ class MockProvider(LLMProvider):
             "wealth": "谨慎",
             "yi": ["规律作息", "专注学习", "温和沟通"],
             "ji": ["冲动决定", "过度熬夜", "拖延"],
+            "gua_meaning_lines": gua_lines,
+            "lucky_hour_name": lucky_hour["name"],
+            "lucky_hour_range": lucky_hour["range"],
         }
 
     def analyze_user_profile(self, diary_entries: list, answer_questions: list) -> dict:
@@ -52,7 +62,13 @@ class MockProvider(LLMProvider):
         else:
             dominant_mood = "calm"
 
-        mood_map = {"happy": "optimistic", "calm": "calm", "sad": "anxious", "angry": "anxious", "tired": "reflective"}
+        mood_map = {
+            "happy": "optimistic",
+            "calm": "calm",
+            "sad": "anxious",
+            "angry": "anxious",
+            "tired": "reflective",
+        }
         mood_tendency = mood_map.get(str(dominant_mood).lower(), "calm")
 
         content_text = ""
@@ -63,7 +79,6 @@ class MockProvider(LLMProvider):
             text = q if isinstance(q, str) else q.get("question", "") if isinstance(q, dict) else getattr(q, "question", "")
             content_text += text + " "
 
-        import random
         seed = len(content_text)
         rng = random.Random(seed)
         interests = rng.sample(_INTEREST_POOL, min(3, len(_INTEREST_POOL)))

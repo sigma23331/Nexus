@@ -23,6 +23,7 @@ def test_mock_fortune_has_boolean_parse_and_schema():
     assert row["schema_valid"] is True
     assert '"content_main"' in row["output_preview"]
     assert '"content_main"' in row["output_text"]
+    assert '"gua_meaning_lines"' in row["output_text"]
 
 
 def test_real_mode_maps_model_to_real_provider_constructor(monkeypatch):

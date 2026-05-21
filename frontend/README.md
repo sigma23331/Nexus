@@ -43,6 +43,8 @@ Ctrl + C -> Y
 npm run build
 # 生产构建： 执行预览
 npm run preview
+# PWA 本地验证（构建 + 预览，需 HTTPS 或 localhost）
+npm run preview:pwa
 
 # 前端代码规范
 # 检查是否有错误（frontend）
@@ -207,3 +209,17 @@ frontend/
 7. **路由与布局**
    - 默认使用 `App.vue` 作为根布局，内部包含 `<router-view>` 和 `<TabBar>`。
    - 若需要无 TabBar 的页面（如登录页），可通过路由 `meta` 控制 TabBar 显隐。
+
+## PWA 验证（本地）
+
+```bash
+cd frontend
+npm run preview:pwa   # 构建并启动预览，默认 http://localhost:4173
+```
+
+1. Chrome 打开预览地址 → F12 → **Application → Manifest**：应显示「心运岛」，无红色错误。
+2. **Application → Service Workers**：状态为 activated，来源为 `sw.js`。
+3. **Lighthouse → Progressive Web App**：Installable、Service Worker 项通过。
+4. **离线**：先正常打开并浏览几个页面 → Network 勾选 **Offline** → 刷新，壳页面仍可打开。
+5. **安装**：个人中心 → 设置 →「安装到桌面」（Chrome 桌面端）；iOS Safari 会显示添加到主屏幕说明。
+6. 构建产物应包含：`dist/sw.js`、`dist/workbox-*.js`、`dist/manifest.json`、`dist/offline.html`。

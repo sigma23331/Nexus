@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "preview:pwa": "vite build && vite preview --host",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
     "format": "prettier --write .",

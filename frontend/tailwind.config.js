@@ -29,5 +29,6 @@ export default {
       },
     },
   },
-  plugins: [require('@tailwindcss/line-clamp')],
+  // line-clamp 已内置于 Tailwind CSS 3.3+
+  plugins: [],
 }

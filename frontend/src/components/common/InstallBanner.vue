@@ -23,16 +23,29 @@
         <button @click="dismissManual" class="close-btn">✕</button>
       </div>
       <div class="manual-steps">
-        <div class="step">
-          <span class="step-icon">1️⃣</span>
-          <span>点击底部<span class="em">分享</span>按钮</span>
-        </div>
-        <div class="step">
-          <span class="step-icon">2️⃣</span>
-          <span>滑动找到<span class="em">添加到主屏幕</span></span>
-        </div>
+        <!-- 根据平台动态显示不同步骤 -->
+        <template v-if="platform === 'ios'">
+          <div class="step">
+            <span class="step-icon">1️⃣</span>
+            <span>点击底部<span class="em">分享</span>按钮</span>
+          </div>
+          <div class="step">
+            <span class="step-icon">2️⃣</span>
+            <span>滑动找到<span class="em">添加到主屏幕</span></span>
+          </div>
+        </template>
+        <template v-else>
+          <div class="step">
+            <span class="step-icon">1️⃣</span>
+            <span>点击右上角<span class="em">菜单</span>按钮（⋮）</span>
+          </div>
+          <div class="step">
+            <span class="step-icon">2️⃣</span>
+            <span>选择<span class="em">添加到主屏幕</span>或<span class="em">安装应用</span></span>
+          </div>
+        </template>
         <div class="step-img">
-          <img src="/images/guide.png" alt="添加到主屏幕步骤" class="guide-img" />
+          <img :src="guideImage" alt="添加到主屏幕步骤" class="guide-img" />
         </div>
       </div>
       <p class="manual-note">将心运岛添加到主屏幕，使用更便捷~</p>
@@ -41,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, provide } from 'vue'
+import { ref, onMounted, onUnmounted, provide, computed } from 'vue'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -59,7 +72,28 @@ let isPageVisible = true
 
 const manualVisible = ref(false)
 
-// 自动安装相关
+// ========== 平台检测 ==========
+const platform = ref<'ios' | 'browser'>('browser')
+
+const detectPlatform = () => {
+  const userAgent = navigator.userAgent.toLowerCase()
+  const isIOS = /iphone|ipad|ipod/.test(userAgent)
+  // 检测 iPadOS 13+ 伪装成 Mac 的情况
+  const isIPad =
+    /macintosh/.test(userAgent) && navigator.maxTouchPoints && navigator.maxTouchPoints > 2
+  if (isIOS || isIPad) {
+    platform.value = 'ios'
+  } else {
+    platform.value = 'browser'
+  }
+}
+
+// 根据平台动态选择引导图片
+const guideImage = computed(() => {
+  return platform.value === 'ios' ? '/images/guide.png' : '/images/guide1.png'
+})
+
+// ========== 自动安装相关 ==========
 const isAutoDismissedRecently = () => {
   const dismissedTime = localStorage.getItem('pwa_auto_dismissed')
   if (!dismissedTime) return false
@@ -122,7 +156,7 @@ const handleVisibilityChange = () => {
   isPageVisible = !document.hidden
 }
 
-// 手动引导相关
+// ========== 手动引导相关 ==========
 const isManualDismissedRecently = () => {
   const dismissed = localStorage.getItem('pwa_manual_dismissed')
   if (!dismissed) return false
@@ -153,6 +187,7 @@ const manualInstall = () => {
   }
 }
 
+// ========== 检测自动安装支持 ==========
 const checkAutoSupport = () => {
   let timeoutId: ReturnType<typeof setTimeout>
   const onBeforeInstall = (e: Event) => {
@@ -180,9 +215,12 @@ const handleManualInstallEvent = () => {
 }
 
 onMounted(() => {
-  // 调试代码（需要时取消注释即可强制显示自动横幅）
+  // 调试代码（取消注释可强制显示自动横幅）
   // autoSupported.value = true
   // autoVisible.value = true
+
+  // 检测平台类型
+  detectPlatform()
 
   if (isInstalled.value) return
 

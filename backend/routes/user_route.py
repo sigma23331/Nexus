@@ -1,17 +1,42 @@
 # backend/routes/user.py
 import re
-from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from models.user import User
-from models.fortune import FortuneRecord
-from models.answer import AnswerRecord
-from models.diary import DiaryEntry
+from datetime import date
+
+from flask import Blueprint, current_app, jsonify, request
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from sqlalchemy.exc import IntegrityError
+
 from extensions import db
+from models.diary import DiaryEntry
+from models.fortune import FortuneRecord
+from models.user import Gender, User
+from services.fortune_service import (
+    _deserialize_content_pair,
+    _normalize_history_lines,
+    _normalize_lucky_hour,
+)
 from services.profile_analysis_service import ProfileAnalysisService
 from services.user_profile_service import UserProfileService
-from services.fortune_service import _deserialize_content_pair, _normalize_history_lines, _normalize_lucky_hour
 
 user_bp = Blueprint('user', __name__)
+
+
+def _serialize_user_info(user):
+    gender = getattr(user, 'gender', None)
+    if isinstance(gender, Gender):
+        gender_value = gender.value
+    elif isinstance(gender, str) and gender:
+        gender_value = gender
+    else:
+        gender_value = Gender.SECRET.value
+
+    return {
+        "uid": user.id,
+        "nickname": user.nickname,
+        "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png",
+        "birthday": user.birthday.isoformat() if getattr(user, 'birthday', None) else None,
+        "gender": gender_value,
+    }
 
 
 def get_current_user():
@@ -40,17 +65,13 @@ def get_profile():
     try:
         ProfileAnalysisService.trigger_analysis_if_needed(user_id=user.id)
     except Exception:
-        current_app.logger.warning(f"mood analysis failed for user {user.id}", exc_info=True)
+        current_app.logger.warning("mood analysis failed for user %s", user.id, exc_info=True)
 
     profile = UserProfileService.get_by_user_id(user.id)
     profile_data = UserProfileService.to_dict(profile) if profile else None
 
     return jsonify(code=200, message="success", data={
-        "userInfo": {
-            "uid": user.id,
-            "nickname": user.nickname,
-            "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png"
-        },
+        "userInfo": _serialize_user_info(user),
         "stats": {
             "diaryCount": diary_count,
             "answerCollected": answer_collected,
@@ -73,10 +94,10 @@ def update_profile():
     if not payload or not isinstance(payload, dict):
         return jsonify(code=400, message="请求体必须是有效的JSON对象", data=None), 400
 
-    allowed_fields = {'nickname', 'avatar'}
+    allowed_fields = {'nickname', 'avatar', 'birthday', 'gender'}
     provided_fields = {k for k in payload.keys() if k in allowed_fields}
     if not provided_fields:
-        return jsonify(code=400, message="仅支持更新 nickname 或 avatar", data=None), 400
+        return jsonify(code=400, message="仅支持更新 nickname、avatar、birthday 或 gender", data=None), 400
 
     # 昵称更新：非空、长度限制、唯一性
     if 'nickname' in provided_fields:
@@ -103,6 +124,27 @@ def update_profile():
             return jsonify(code=400, message="头像数据过大，请压缩后重试", data=None), 400
         user.avatar = avatar
 
+    if 'birthday' in provided_fields:
+        birthday = payload.get('birthday')
+        if birthday in (None, ''):
+            user.birthday = None
+        elif not isinstance(birthday, str):
+            return jsonify(code=400, message="birthday 必须为 YYYY-MM-DD 格式", data=None), 400
+        else:
+            try:
+                user.birthday = date.fromisoformat(birthday.strip())
+            except ValueError:
+                return jsonify(code=400, message="birthday 必须为 YYYY-MM-DD 格式", data=None), 400
+
+    if 'gender' in provided_fields:
+        gender = payload.get('gender')
+        if not isinstance(gender, str):
+            return jsonify(code=400, message="gender 必须为 male、female 或 secret", data=None), 400
+        gender = gender.strip().lower()
+        if gender not in {item.value for item in Gender}:
+            return jsonify(code=400, message="gender 必须为 male、female 或 secret", data=None), 400
+        user.gender = Gender(gender)
+
     try:
         db.session.commit()
     except Exception:
@@ -111,11 +153,7 @@ def update_profile():
         return jsonify(code=500, message="更新失败，请稍后重试", data=None), 500
 
     return jsonify(code=200, message="更新成功", data={
-        "userInfo": {
-            "uid": user.id,
-            "nickname": user.nickname,
-            "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png"
-        }
+        "userInfo": _serialize_user_info(user)
     }), 200
 
 
@@ -193,10 +231,12 @@ def get_favorite_answers():
     # 通过 favorites 关系获取收藏的答案记录（按收藏时间降序，收藏表继承了 BaseModel 有 created_at）
     # Favorite 模型关联了 answer，且 Favorite 本身有 created_at 字段表示收藏时间
     from models.association import Favorite
-    fav_pagination = Favorite.query\
-        .filter_by(user_id=user.id)\
-        .order_by(Favorite.created_at.desc())\
+
+    fav_pagination = (
+        Favorite.query.filter_by(user_id=user.id)
+        .order_by(Favorite.created_at.desc())
         .paginate(page=page, per_page=limit, error_out=False)
+    )
 
     answer_list = []
     for fav in fav_pagination.items:
@@ -249,9 +289,9 @@ def update_avatar():
     user.avatar = avatar_url
     try:
         db.session.commit()
-    except Exception as e:
+    except Exception as exc:
         db.session.rollback()
-        current_app.logger.error(f"更新头像失败: {e}", exc_info=True)
+        current_app.logger.error("更新头像失败: %s", exc, exc_info=True)
         return jsonify(code=500, message="更新失败，请稍后重试", data=None), 500
 
     return jsonify(code=200, message="头像更新成功", data={
@@ -288,9 +328,9 @@ def update_nickname():
     except IntegrityError:
         db.session.rollback()
         return jsonify(code=409, message="该昵称已被使用，请更换", data=None), 409
-    except Exception as e:
+    except Exception as exc:
         db.session.rollback()
-        current_app.logger.error(f"更新昵称失败: {e}", exc_info=True)
+        current_app.logger.error("更新昵称失败: %s", exc, exc_info=True)
         return jsonify(code=500, message="更新失败，请稍后重试", data=None), 500
 
     return jsonify(code=200, message="昵称更新成功", data={
@@ -321,16 +361,16 @@ def update_password():
         return jsonify(code=400, message="密码必须是字符串", data=None), 400
 
     if len(new_password) < 6 or len(new_password) > 20:
-        return jsonify(code=400, message="密码长度需为6-20位", data=None), 400
+        return jsonify(code=400, message="密码长度需为 6-20 位", data=None), 400
 
     # 设置新密码（自动计算哈希）
     user.set_password(new_password)
 
     try:
         db.session.commit()
-    except Exception as e:
+    except Exception as exc:
         db.session.rollback()
-        current_app.logger.error(f"修改密码失败: {e}", exc_info=True)
+        current_app.logger.error("修改密码失败: %s", exc, exc_info=True)
         return jsonify(code=500, message="修改失败，请稍后重试", data=None), 500
 
     return jsonify(code=200, message="密码修改成功", data={"success": True}), 200

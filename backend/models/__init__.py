@@ -1,7 +1,7 @@
 """
 数据模型统一导出
 """
-from .user import User
+from .user import Gender, User
 from .fortune import FortuneRecord
 from .answer import AnswerRecord
 from .diary import DiaryEntry, MoodType
@@ -12,6 +12,7 @@ from .user_profile import UserProfile, AnswerStyle, PreferredFeature, ActiveHour
 
 __all__ = [
     'User',
+    'Gender',
     'FortuneRecord',
     'AnswerRecord',
     'DiaryEntry',

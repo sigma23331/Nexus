@@ -19,7 +19,7 @@
     <div class="manual-content">
       <div class="manual-header">
         <span class="icon">📲</span>
-        <span>添加到主屏幕</span>
+        <span>手动安装引导</span>
         <button @click="dismissManual" class="close-btn">✕</button>
       </div>
       <div class="manual-steps">
@@ -366,13 +366,13 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 .manual-content {
-  max-height: 60vh;
+  max-height: 90vh;
   overflow-y: auto;
 }
 .manual-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   padding-right: 30px;
   position: relative;
   font-weight: bold;

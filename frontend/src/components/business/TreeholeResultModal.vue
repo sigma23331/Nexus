@@ -51,7 +51,9 @@ defineExpose({ open, close })
 }
 .result-modal-enter-active .result-modal-panel,
 .result-modal-leave-active .result-modal-panel {
-  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 300ms ease;
+  transition:
+    transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 300ms ease;
 }
 .result-modal-enter-from {
   background-color: rgba(0, 0, 0, 0);

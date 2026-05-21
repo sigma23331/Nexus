@@ -41,7 +41,9 @@
             <div class="text-purple-400 text-xl">→</div>
           </div>
           <!-- 装饰小圆点 -->
-          <div class="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-purple-200/30 blur-xl"></div>
+          <div
+            class="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-purple-200/30 blur-xl"
+          ></div>
         </div>
       </section>
 

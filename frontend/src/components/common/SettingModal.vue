@@ -32,7 +32,7 @@
           <span class="text-slate-700 hover:text-purple-700">修改昵称</span>
           <span class="text-purple-400">›</span>
         </div>
-        <!-- 修改密码（使用新弹窗） -->
+        <!-- 修改密码 -->
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
           @click="changePassword"
@@ -40,6 +40,16 @@
           <span class="text-slate-700 hover:text-purple-700">修改密码</span>
           <span class="text-purple-400">›</span>
         </div>
+
+        <!-- 添加到主屏幕 -->
+        <div
+          class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
+          @click="handleInstallToDesktop"
+        >
+          <span class="text-slate-700 hover:text-purple-700">添加到主屏幕</span>
+          <span class="text-purple-400">›</span>
+        </div>
+
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
           @click="handleLogout"
@@ -86,7 +96,6 @@
     <PrivacyPolicyModal ref="privacyPolicyModalRef" />
     <PromptModal ref="promptModalRef" />
     <ConfirmModal ref="confirmModalRef" />
-    <!-- 修改密码专用弹窗 -->
     <ChangePasswordModal ref="changePasswordModalRef" />
   </div>
 </template>
@@ -166,12 +175,17 @@ const changeNickname = async () => {
   }
 }
 
-// 修改密码（使用新弹窗）
+// 修改密码
 const changePassword = async () => {
   const success = await changePasswordModalRef.value?.open()
   if (success) {
-    // 密码修改成功，可做额外操作（如提示退出登录等，弹窗内已 alert，此处留空）
+    // 密码修改成功，可做额外操作
   }
+}
+
+// 添加到主屏幕：触发自定义事件，由 InstallBanner 处理
+const handleInstallToDesktop = () => {
+  window.dispatchEvent(new CustomEvent('manual-install-trigger'))
 }
 
 // 退出登录

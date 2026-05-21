@@ -14,8 +14,8 @@
     </div>
   </div>
 
-  <!-- 手动引导模式（iOS 等不支持 beforeinstallprompt 的环境），已安装后不再显示 -->
-  <div v-if="!isInstalled && !autoSupported && manualVisible" class="install-banner manual">
+  <!-- 手动引导模式（适用于无法自动安装的环境） -->
+  <div v-if="!isInstalled && manualVisible" class="install-banner manual">
     <div class="manual-content">
       <div class="manual-header">
         <span class="icon">📲</span>
@@ -48,7 +48,6 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-// 是否已经安装过 PWA（永久标记）
 const isInstalled = ref(localStorage.getItem('pwa_installed') === 'true')
 
 const autoSupported = ref(false)
@@ -60,7 +59,7 @@ let isPageVisible = true
 
 const manualVisible = ref(false)
 
-// 以下函数必须在顶层定义，以便模板可以访问
+// 自动安装相关
 const isAutoDismissedRecently = () => {
   const dismissedTime = localStorage.getItem('pwa_auto_dismissed')
   if (!dismissedTime) return false
@@ -90,17 +89,20 @@ const showAutoBanner = () => {
 }
 
 const installApp = async () => {
-  if (!deferredPrompt) return
-  deferredPrompt.prompt()
-  const { outcome } = await deferredPrompt.userChoice
-  if (outcome === 'accepted') {
-    localStorage.setItem('pwa_installed', 'true')
-    isInstalled.value = true
-    autoVisible.value = false
-    localStorage.removeItem('pwa_auto_dismissed')
+  if (deferredPrompt) {
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    if (outcome === 'accepted') {
+      localStorage.setItem('pwa_installed', 'true')
+      isInstalled.value = true
+      autoVisible.value = false
+      localStorage.removeItem('pwa_auto_dismissed')
+    }
+    deferredPrompt = null
+    stopTimer()
+  } else {
+    showManualGuideForce()
   }
-  deferredPrompt = null
-  stopTimer()
 }
 
 const startTimer = () => {
@@ -120,6 +122,7 @@ const handleVisibilityChange = () => {
   isPageVisible = !document.hidden
 }
 
+// 手动引导相关
 const isManualDismissedRecently = () => {
   const dismissed = localStorage.getItem('pwa_manual_dismissed')
   if (!dismissed) return false
@@ -138,13 +141,15 @@ const showManualGuide = () => {
   manualVisible.value = true
 }
 
+const showManualGuideForce = () => {
+  manualVisible.value = true
+}
+
 const manualInstall = () => {
-  if (autoSupported.value && deferredPrompt) {
+  if (deferredPrompt) {
     installApp()
-  } else if (!autoSupported.value) {
-    showManualGuide()
   } else {
-    alert('当前环境暂不支持自动安装，请使用浏览器菜单手动添加')
+    showManualGuideForce()
   }
 }
 
@@ -170,13 +175,15 @@ const checkAutoSupport = () => {
 
 provide('triggerManualInstall', manualInstall)
 
+const handleManualInstallEvent = () => {
+  manualInstall()
+}
+
 onMounted(() => {
-  // ========== 调试代码（需要时取消注释即可强制显示自动横幅） ==========
+  // 调试代码（需要时取消注释即可强制显示自动横幅）
   // autoSupported.value = true
   // autoVisible.value = true
-  // ========== 调试代码结束 ==========
 
-  // 如果已经安装，则不再执行任何安装检测逻辑
   if (isInstalled.value) return
 
   checkAutoSupport()
@@ -188,11 +195,13 @@ onMounted(() => {
     stopTimer()
   })
   document.addEventListener('visibilitychange', handleVisibilityChange)
+  window.addEventListener('manual-install-trigger', handleManualInstallEvent)
 })
 
 onUnmounted(() => {
   stopTimer()
   document.removeEventListener('visibilitychange', handleVisibilityChange)
+  window.removeEventListener('manual-install-trigger', handleManualInstallEvent)
 })
 </script>
 
@@ -263,20 +272,10 @@ onUnmounted(() => {
 .dismiss-btn:hover {
   background: #e2e8f0;
 }
-.close-btn {
-  background: none;
-  border: none;
-  color: #64748b;
-  font-size: 18px;
-  cursor: pointer;
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
+
+/* ========== 手动引导卡片样式优化 ========== */
 .manual {
-  bottom: 20px;
+  bottom: env(safe-area-inset-bottom, 20px);
   left: 16px;
   right: 16px;
   background: rgba(0, 0, 0, 0.85);
@@ -284,23 +283,43 @@ onUnmounted(() => {
   border-radius: 20px;
   padding: 16px;
   color: white;
+  max-width: calc(100% - 32px);
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 .manual-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 .manual-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding-right: 30px;
+  position: relative;
   font-weight: bold;
   font-size: 16px;
+}
+.close-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .manual-steps {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-top: 8px;
 }
 .step {
   display: flex;
@@ -333,5 +352,17 @@ onUnmounted(() => {
   text-align: center;
   opacity: 0.8;
   margin-top: 8px;
+}
+
+/* 针对 PWA 独立窗口微调 */
+@media all and (display-mode: standalone) {
+  .manual {
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+  }
+  .manual-content {
+    max-height: 90vh;
+  }
 }
 </style>

@@ -26,6 +26,25 @@
       </section>
       -->
 
+      <!-- ========== 今日树洞入口（新增） ========== -->
+      <section>
+        <div
+          @click="openTreeholeModal"
+          class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-50 to-purple-50 p-5 shadow-sm cursor-pointer transition hover:shadow-md active:scale-[0.98]"
+        >
+          <div class="flex items-center gap-4">
+            <div class="text-4xl">🌳</div>
+            <div class="flex-1">
+              <h3 class="text-base font-bold text-slate-800">今日树洞</h3>
+              <p class="text-xs text-slate-500 mt-0.5">把你的烦恼丢进来，它会消失不见～</p>
+            </div>
+            <div class="text-purple-400 text-xl">→</div>
+          </div>
+          <!-- 装饰小圆点 -->
+          <div class="absolute -right-4 -top-4 h-16 w-16 rounded-full bg-purple-200/30 blur-xl"></div>
+        </div>
+      </section>
+
       <!-- 分享广场（带分类筛选） -->
       <section>
         <!-- 第一行：分类 + 只看我的 -->
@@ -104,12 +123,20 @@
         </div>
       </section>
     </main>
+
+    <!-- 今日树洞输入弹窗 -->
+    <TreeholeModal ref="treeholeModalRef" @submit="handleTreeholeSubmit" />
+
+    <!-- 今日树洞结果弹窗（类似答案之书） -->
+    <TreeholeResultModal ref="treeholeResultRef" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import PlazaCard from './components/PlazaCard.vue'
+import TreeholeModal from '@/components/business/TreeholeModal.vue'
+import TreeholeResultModal from '@/components/business/TreeholeResultModal.vue'
 import { getPlazaCards, likePlazaCard, deletePlazaCard } from '@/api/plaza'
 import type { PlazaCard as PlazaCardType } from '@/types/models'
 import type { GetPlazaCardsParams } from '@/api/plaza'
@@ -127,6 +154,18 @@ const nextCursor = ref<string | null>(null)
 const filterType = ref<'all' | 'fortune' | 'answer'>('all')
 const currentTab = ref<'hot' | 'latest'>('latest')
 const showOnlyMine = ref(false)
+const treeholeModalRef = ref<InstanceType<typeof TreeholeModal> | null>(null)
+const treeholeResultRef = ref<InstanceType<typeof TreeholeResultModal> | null>(null)
+
+// 打开树洞输入弹窗
+const openTreeholeModal = () => {
+  treeholeModalRef.value?.open()
+}
+
+// 处理提交烦恼（关闭输入窗，打开结果窗）
+const handleTreeholeSubmit = () => {
+  treeholeResultRef.value?.open()
+}
 
 // 前端过滤（分类 + 只看我的）
 const filteredCards = computed(() => {

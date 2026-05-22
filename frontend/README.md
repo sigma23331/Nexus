@@ -75,6 +75,7 @@ frontend/
 │   │   ├── icon-192.png            # PWA 图标 192x192
 │   │   └── icon-512.png            # PWA 图标 512x512
 │   ├── images/
+│   │   ├── badges/                 # 徽章设计（彩+灰）
 │   │   ├── login_top.png           # 登陆文字
 │   │   ├── login_top2.png          # 登陆文字
 │   │   ├── card_fortune.png        # 运势卡片模板

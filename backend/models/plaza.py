@@ -24,6 +24,7 @@ class PlazaCard(BaseModel):
     content = db.Column(db.String(100), nullable=True)
     tags = db.Column(ARRAY(db.String(10)), nullable=True)
     likes_count = db.Column(db.Integer, default=0, nullable=False)
+    comments_count = db.Column(db.Integer, default=0, nullable=False)
 
     fortune_id = db.Column(db.String(64), db.ForeignKey('fortune_records.id'), nullable=True)
     answer_id = db.Column(db.String(64), db.ForeignKey('answer_records.id'), nullable=True)
@@ -32,6 +33,7 @@ class PlazaCard(BaseModel):
     fortune = db.relationship('FortuneRecord', back_populates='plaza_card', foreign_keys=[fortune_id])
     answer = db.relationship('AnswerRecord', back_populates='plaza_card', foreign_keys=[answer_id])
     likes = db.relationship('Like', back_populates='card', cascade='all, delete-orphan')
+    comments = db.relationship('PlazaComment', back_populates='card', cascade='all, delete-orphan')
 
     @validates('tags')
     def validate_tags(self, key, tags):

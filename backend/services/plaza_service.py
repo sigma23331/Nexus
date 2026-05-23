@@ -48,6 +48,7 @@ def _format_card(card, current_user_id, liked_card_ids=None):
         "content": card.content,
         "stats": {
             "likes": card.likes_count,
+            "comments": getattr(card, "comments_count", 0),
             "isLiked": is_liked,
         },
         "createdAt": card.created_at.isoformat() + "Z" if card.created_at else None,
@@ -128,6 +129,7 @@ def create_card(user_id, payload):
         tags=tags,
         likes_count=0,
     )
+    card.comments_count = 0
 
     if card_type == "answer":
         answer = AnswerRecord.query.filter_by(id=source_id.strip()).first()

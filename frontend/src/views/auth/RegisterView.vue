@@ -146,6 +146,13 @@
     <!-- 协议弹窗 -->
     <UserAgreementModal ref="userAgreementModalRef" />
     <PrivacyPolicyModal ref="privacyPolicyModalRef" />
+
+    <!-- 首次登录资料收集弹窗 -->
+    <ProfileCollectModal
+      ref="profileModalRef"
+      @completed="onProfileCompleted"
+      @skipped="onProfileSkipped"
+    />
   </div>
 </template>
 
@@ -153,10 +160,15 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { sendSmsCode, register } from '@/api/auth'
+import { useUserStore } from '@/stores/user'
 import UserAgreementModal from '@/components/common/UserAgreementModal.vue'
 import PrivacyPolicyModal from '@/components/common/PrivacyPolicyModal.vue'
+import ProfileCollectModal from '@/components/common/ProfileCollectModal.vue'
+import type { LoginResponse } from '@/types/api'
 
 const router = useRouter()
+const userStore = useUserStore()
+const profileModalRef = ref<InstanceType<typeof ProfileCollectModal> | null>(null)
 
 const userAgreementModalRef = ref<InstanceType<typeof UserAgreementModal> | null>(null)
 const privacyPolicyModalRef = ref<InstanceType<typeof PrivacyPolicyModal> | null>(null)
@@ -170,7 +182,7 @@ const code = ref('')
 const password = ref('')
 const agreeProtocol = ref(false)
 const registerLoading = ref(false)
-const showPassword = ref(false) // 控制密码显示/隐藏
+const showPassword = ref(false)
 
 // 倒计时
 const countdown = ref(0)
@@ -227,20 +239,42 @@ const handleSendCode = async () => {
   }
 }
 
-// 注册
+// 注册（修改后：自动登录并弹出资料收集）
 const handleRegister = async () => {
   if (!isFormValid.value) return
   registerLoading.value = true
   try {
-    await register(phone.value, code.value, password.value)
-    alert('注册成功，请登录')
-    router.push('/login')
+    const response: LoginResponse = await register(phone.value, code.value, password.value)
+    const { token: newToken, userInfo: userData, isNewUser } = response
+
+    // 存储登录状态
+    userStore.setToken(newToken)
+    userStore.setUserInfo(userData)
+
+    if (isNewUser) {
+      // 首次注册：获取完整用户信息（包含 birthday、gender 等）后再弹窗
+      await userStore.fetchUserInfo()
+      profileModalRef.value?.open()
+    } else {
+      // 理论上注册一定是新用户，但为了安全保留分支
+      router.replace('/')
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : '注册失败，请重试'
     alert(message)
   } finally {
     registerLoading.value = false
   }
+}
+
+// 弹窗完成（保存资料后）
+const onProfileCompleted = () => {
+  router.replace('/')
+}
+
+// 弹窗跳过
+const onProfileSkipped = () => {
+  router.replace('/')
 }
 
 // 清理定时器

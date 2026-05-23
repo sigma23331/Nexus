@@ -5,12 +5,15 @@ export interface ApiResponse<T = any> {
   data: T
 }
 
-// 新增登录响应类型
+// 登录/注册响应数据类型
 export interface LoginResponse {
   token: string
   userInfo: {
     uid: string
     nickname: string
     avatar: string
+    birthday?: string | null
+    gender?: 'male' | 'female' | 'secret' | null
   }
+  isNewUser: boolean
 }

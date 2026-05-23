@@ -127,6 +127,13 @@
         <router-link to="/register" class="text-purple-600 font-medium ml-1">立即注册</router-link>
       </div>
     </div>
+
+    <!-- 首次登录资料收集弹窗 -->
+    <ProfileCollectModal
+      ref="profileModalRef"
+      @completed="onProfileCompleted"
+      @skipped="onProfileSkipped"
+    />
   </div>
 </template>
 
@@ -136,10 +143,13 @@ import { useRouter, useRoute } from 'vue-router'
 import { sendSmsCode, loginBySms, loginByPassword } from '@/api/auth'
 import { getUserProfile } from '@/api/user'
 import { useUserStore } from '@/stores/user'
+import ProfileCollectModal from '@/components/common/ProfileCollectModal.vue'
+import type { LoginResponse } from '@/types/api'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const profileModalRef = ref<InstanceType<typeof ProfileCollectModal> | null>(null)
 
 // 登录模式
 const loginMode = ref<'sms' | 'password'>('sms')
@@ -147,7 +157,7 @@ const phone = ref('')
 const smsCode = ref('')
 const password = ref('')
 const loginLoading = ref(false)
-const showPassword = ref(false) // 控制密码显示/隐藏
+const showPassword = ref(false)
 
 // 倒计时
 const smsCountdown = ref(0)
@@ -207,24 +217,46 @@ const handleLogin = async () => {
   if (!isFormValid.value) return
   loginLoading.value = true
   try {
-    let response
+    let response: LoginResponse
     if (loginMode.value === 'sms') {
       response = await loginBySms(phone.value, smsCode.value)
     } else {
       response = await loginByPassword(phone.value, password.value)
     }
-    const loginData = 'data' in response ? response.data : response
-    userStore.setToken(loginData.token)
-    const profile = await getUserProfile()
-    userStore.setUserInfo(profile.userInfo)
-    const redirectPath = (route.query.redirect as string) || '/'
-    router.replace(redirectPath)
+    // 注意：request 拦截器已直接返回 data，所以 response 即为 { token, userInfo, isNewUser }
+    const { token: newToken, userInfo: userData, isNewUser } = response
+    userStore.setToken(newToken)
+    userStore.setUserInfo(userData)
+
+    if (isNewUser) {
+      // 首次登录：获取完整用户信息（包含 birthday、gender 等）后再弹窗
+      await userStore.fetchUserInfo()
+      profileModalRef.value?.open()
+    } else {
+      // 非首次登录：原有逻辑，调用 getUserProfile 刷新用户信息（保持兼容）
+      const profile = await getUserProfile()
+      userStore.setUserInfo(profile.userInfo)
+      const redirectPath = (route.query.redirect as string) || '/'
+      router.replace(redirectPath)
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : '登录失败'
     alert(message)
   } finally {
     loginLoading.value = false
   }
+}
+
+// 弹窗完成（保存资料后）
+const onProfileCompleted = async () => {
+  const redirectPath = (route.query.redirect as string) || '/'
+  router.replace(redirectPath)
+}
+
+// 弹窗跳过
+const onProfileSkipped = () => {
+  const redirectPath = (route.query.redirect as string) || '/'
+  router.replace(redirectPath)
 }
 
 onUnmounted(() => {

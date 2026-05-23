@@ -18,7 +18,13 @@
             <h2 class="text-xl font-bold text-slate-800">
               {{ userStore.userInfo?.nickname || '未登录' }}
             </h2>
-            <p class="text-xs text-slate-500 mt-1">UID: {{ userStore.userInfo?.uid || '--' }}</p>
+            <!-- 一行左右布局：生日 + 性别（带图标） -->
+            <div class="flex justify-between items-center mt-1 gap-4">
+              <span class="text-xs text-slate-500"> 🎂 {{ formattedBirthday }} </span>
+              <span class="text-xs text-slate-500 flex items-center gap-1">
+                {{ genderIcon }} {{ genderText }}
+              </span>
+            </div>
           </div>
         </div>
         <button
@@ -79,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onActivated, onUnmounted } from 'vue'
+import { ref, onMounted, onActivated, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getUserProfile } from '@/api/user'
@@ -105,6 +111,39 @@ const historyCount = ref(0)
 const moodModalRef = ref<InstanceType<typeof MoodDiaryModal> | null>(null)
 const monthlyOverviewRef = ref<InstanceType<typeof MonthlyMoodOverview> | null>(null)
 const settingModalRef = ref<InstanceType<typeof SettingModal> | null>(null)
+
+// 性别图标和文字映射
+const genderIcon = computed(() => {
+  const gender = userStore.userInfo?.gender
+  switch (gender) {
+    case 'male':
+      return '♂'
+    case 'female':
+      return '♀'
+    default:
+      return '🔒'
+  }
+})
+
+const genderText = computed(() => {
+  const gender = userStore.userInfo?.gender
+  switch (gender) {
+    case 'male':
+      return '男'
+    case 'female':
+      return '女'
+    default:
+      return '保密'
+  }
+})
+
+// 生日格式化：YYYY-MM-DD → YYYY年MM月DD日，若无则返回“未填写”
+const formattedBirthday = computed(() => {
+  const birthday = userStore.userInfo?.birthday
+  if (!birthday) return '未填写'
+  const [year, month, day] = birthday.split('-')
+  return `${year}年${month}月${day}日`
+})
 
 const openMoodModal = () => moodModalRef.value?.open()
 const openSettings = () => settingModalRef.value?.open()

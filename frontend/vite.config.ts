@@ -3,12 +3,33 @@ import vue from '@vitejs/plugin-vue'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { VitePWA } from 'vite-plugin-pwa'
+// 1. 引入图片压缩插件
+import ViteImagemin from 'vite-plugin-imagemin'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [
     vue(),
+    
+    // 2. 在 PWA 插件之前加入图片自动压缩配置
+    ViteImagemin({
+      gifsicle: { optimizationLevel: 7, interlaced: false },
+      optipng: { optimizationLevel: 7 },
+      pngquant: {
+        quality: [0.7, 0.8], // 自动将 PNG 压缩至 70%~80% 质量，大幅减小体积
+        speed: 4,
+      },
+      mozjpeg: { quality: 75 },
+      svgo: {
+        plugins: [
+          { name: 'removeViewBox' },
+          { name: 'removeEmptyAttrs', active: false },
+        ],
+      },
+    }),
+
+    // 3. PWA 插件保持在你原本的配置不变
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'offline.html', 'icons/*.png'],

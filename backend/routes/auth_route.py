@@ -3,10 +3,16 @@ import re
 import logging
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from alibabacloud_credentials.credentials import AccessKeyCredential
-from alibabacloud_dypnsapi20170525 import models as dypns_models
-from alibabacloud_dypnsapi20170525.client import Client as DypnsClient
-from alibabacloud_tea_openapi import models as open_api_models
+try:
+    from alibabacloud_credentials.credentials import AccessKeyCredential
+    from alibabacloud_dypnsapi20170525 import models as dypns_models
+    from alibabacloud_dypnsapi20170525.client import Client as DypnsClient
+    from alibabacloud_tea_openapi import models as open_api_models
+except ImportError:  # pragma: no cover - optional dependency fallback for tests/local env
+    AccessKeyCredential = None
+    dypns_models = None
+    DypnsClient = None
+    open_api_models = None
 from models.user import User
 from extensions import db
 from services import sms_service
@@ -37,6 +43,8 @@ def _get_dypns_client() -> DypnsClient:
     global _dypns_client
     if _dypns_client is None:
         try:
+            if not all([AccessKeyCredential, DypnsClient, open_api_models]):
+                raise ValueError("阿里云号码认证 SDK 未安装")
             access_key = os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_ID', '')
             secret_key = os.environ.get('ALIBABA_CLOUD_ACCESS_KEY_SECRET', '')
             if not access_key or not secret_key:

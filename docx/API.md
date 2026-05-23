@@ -390,6 +390,10 @@
 ### 4.1 提交提问并抽取答案
 
 - **接口**: `POST /answer/ask`
+- **说明**:
+  - 提问内容会在调用 LLM 前先做内容审核。
+  - 命中政治敏感、广告导流、辱骂攻击、自伤高风险等内容时，接口会直接拒绝，不进入生成链路。
+  - AI 输出在返回前也会再做一次审核；若审核不通过，系统会自动重生成 1 次，仍失败则回退到安全兜底文案。
 - **入参**:
   ```json
   {
@@ -405,6 +409,8 @@
     "createdAt": "2026-04-10T00:00:00Z" 
   }
   ```
+- **错误**:
+  - 400: 提问内容包含敏感或高风险信息，请调整后重试
 
 ### 4.2 获取历史提问记录
 
@@ -487,6 +493,7 @@
         "content": "有时候不回答也是一种回答。",   // 可选，1-100字符
         "stats": {
           "likes": 24,
+          "comments": 3,
           "isLiked": false
         },
         "createdAt": "2026-04-18T10:30:00Z"
@@ -500,6 +507,9 @@
 ### 5.2 发布一张分享卡片
 
 - **接口**: `POST /plaza/card`
+- **说明**:
+  - `content` 与 `tags` 在发布前会做内容审核。
+  - 命中政治敏感、广告导流、辱骂攻击等高风险内容时，接口会直接拒绝发布。
 - **入参**:
   
   ```json
@@ -515,6 +525,7 @@
 - **返回 data**: 新创建的卡片对象 (同 5.1 中的卡片结构)
 - **错误**:
   - 400: 参数校验失败（如 `snapshotUrl` 不是有效图片格式）
+  - 400: 分享文案或标签包含敏感或高风险信息
   - 429: 超出每小时发布限制
 
 ### 5.3 点赞 / 取消点赞卡片
@@ -557,6 +568,198 @@
 - **错误**:
   - 403: 无权删除他人卡片
   - 404: 卡片不存在
+
+### 5.5 获取某张卡片的评论列表
+
+- **接口**: `GET /plaza/cards/{cardId}/comments`
+- **说明**:
+  - 返回顶级评论列表。
+  - 每条顶级评论会附带 `replyCount` 和最多 2 条回复预览。
+  - 仅返回公开可见评论。
+- **查询参数**:
+  - `cursor`: 游标字符串，首次请求不传
+  - `limit`: integer, 1-20, 默认 20
+- **返回 data**:
+
+  ```json
+  {
+    "list": [
+      {
+        "commentId": "cmt_1001",
+        "cardId": "uuid_789",
+        "owner": {
+          "uid": "10010",
+          "nickname": "风起南山",
+          "avatar": "https://img.com/u1.jpg"
+        },
+        "content": "这张卡片很治愈。",
+        "parentId": null,
+        "replyToUser": null,
+        "status": "visible",
+        "createdAt": "2026-05-23T12:30:00Z",
+        "canDelete": false,
+        "replyCount": 1,
+        "replies": [
+          {
+            "commentId": "cmt_1002",
+            "cardId": "uuid_789",
+            "owner": {
+              "uid": "10011",
+              "nickname": "晴天",
+              "avatar": "https://img.com/u2.jpg"
+            },
+            "content": "同感。",
+            "parentId": "cmt_1001",
+            "replyToUser": {
+              "uid": "10010",
+              "nickname": "风起南山",
+              "avatar": "https://img.com/u1.jpg"
+            },
+            "status": "visible",
+            "createdAt": "2026-05-23T12:35:00Z",
+            "canDelete": false,
+            "replyCount": 0,
+            "replies": []
+          }
+        ]
+      }
+    ],
+    "nextCursor": "base64encoded_cursor",
+    "hasMore": true
+  }
+  ```
+
+### 5.6 发表评论 / 回复评论
+
+- **接口**: `POST /plaza/cards/{cardId}/comments`
+- **说明**:
+  - 支持两级结构：顶级评论 + 一级回复。
+  - `parentId` 为空表示顶级评论，不为空表示回复顶级评论。
+  - 评论内容会先做审核：
+    - `pass` -> 直接可见
+    - `review` -> 进入 `pending_review`
+    - `reject` -> 直接拒绝
+- **入参**:
+
+  ```json
+  {
+    "content": "这张卡片很治愈。",   // required, 1-200字符
+    "parentId": "cmt_1001"          // optional, 回复顶级评论时传
+  }
+  ```
+
+- **返回 data**:
+
+  ```json
+  {
+    "commentId": "cmt_1003",
+    "cardId": "uuid_789",
+    "owner": {
+      "uid": "10086",
+      "nickname": "林深时见鹿",
+      "avatar": "https://img.com/u.jpg"
+    },
+    "content": "这张卡片很治愈。",
+    "parentId": null,
+    "replyToUser": null,
+    "status": "visible",
+    "createdAt": "2026-05-23T13:00:00Z",
+    "canDelete": true,
+    "replyCount": 0,
+    "replies": []
+  }
+  ```
+
+- **错误**:
+  - 400: `content` 为空、超长或 `parentId` 非法
+  - 400: 评论内容包含敏感或高风险信息
+  - 404: 卡片不存在或父评论不存在
+
+### 5.7 获取某条顶级评论的全部回复
+
+- **接口**: `GET /plaza/comments/{commentId}/replies`
+- **说明**: 仅支持查询顶级评论的回复列表。
+- **查询参数**:
+  - `cursor`: 游标字符串，首次请求不传
+  - `limit`: integer, 1-20, 默认 20
+- **返回 data**:
+
+  ```json
+  {
+    "list": [
+      {
+        "commentId": "cmt_1002",
+        "cardId": "uuid_789",
+        "owner": {
+          "uid": "10011",
+          "nickname": "晴天",
+          "avatar": "https://img.com/u2.jpg"
+        },
+        "content": "同感。",
+        "parentId": "cmt_1001",
+        "replyToUser": {
+          "uid": "10010",
+          "nickname": "风起南山",
+          "avatar": "https://img.com/u1.jpg"
+        },
+        "status": "visible",
+        "createdAt": "2026-05-23T12:35:00Z",
+        "canDelete": false,
+        "replyCount": 0,
+        "replies": []
+      }
+    ],
+    "nextCursor": null,
+    "hasMore": false
+  }
+  ```
+
+### 5.8 删除评论
+
+- **接口**: `DELETE /plaza/comments/{commentId}`
+- **说明**: 仅评论作者可删除；删除为软删除。
+- **返回 data**:
+
+  ```json
+  {
+    "success": true
+  }
+  ```
+
+- **错误**:
+  - 403: 无权删除他人评论
+  - 404: 评论不存在
+
+### 5.9 举报评论
+
+- **接口**: `POST /plaza/comments/{commentId}/reports`
+- **说明**:
+  - 同一用户不能重复举报同一条评论。
+  - `reasonText` 为可选补充说明，也会做内容审核。
+  - 当同一评论的举报数达到阈值时，评论会自动转为 `hidden`。
+- **入参**:
+
+  ```json
+  {
+    "reasonCode": "abuse",      // required, porn | abuse | politics | illegal | spam | self_harm | other
+    "reasonText": "包含攻击性表达" // optional, 最多200字符
+  }
+  ```
+
+- **返回 data**:
+
+  ```json
+  {
+    "success": true,
+    "reportCount": 1
+  }
+  ```
+
+- **错误**:
+  - 400: `reasonCode` 非法
+  - 400: `reasonText` 包含敏感或高风险信息
+  - 400: 重复举报
+  - 404: 评论不存在
 
 ---
 

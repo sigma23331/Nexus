@@ -7,6 +7,7 @@ from models.association import Like
 from models.fortune import FortuneRecord
 from models.plaza import CardType, PlazaCard
 from models.user import User
+from services import content_review_service
 
 
 def _encode_cursor(created_at, card_id):
@@ -48,10 +49,33 @@ def _format_card(card, current_user_id, liked_card_ids=None):
         "content": card.content,
         "stats": {
             "likes": card.likes_count,
+            "comments": getattr(card, "comments_count", 0),
             "isLiked": is_liked,
         },
         "createdAt": card.created_at.isoformat() + "Z" if card.created_at else None,
     }
+
+
+def _review_card_payload(user_id, content, tags):
+    if content:
+        result = content_review_service.review_user_generated_text(
+            scene="plaza_card_content",
+            text=content,
+            user_id=user_id,
+            target_type="plaza_card",
+        )
+        if result.action != content_review_service.ACTION_PASS:
+            raise ValueError("分享文案包含敏感或高风险信息，请调整后重试")
+
+    if tags:
+        result = content_review_service.review_user_generated_text(
+            scene="plaza_card_tags",
+            text=" ".join(tags),
+            user_id=user_id,
+            target_type="plaza_card",
+        )
+        if result.action != content_review_service.ACTION_PASS:
+            raise ValueError("标签包含敏感或高风险信息，请调整后重试")
 
 
 def list_cards(user_id, tab="latest", cursor=None, limit=10):
@@ -119,6 +143,7 @@ def create_card(user_id, payload):
             raise ValueError("tags 必须为数组")
         if len(tags) > 3:
             raise ValueError("tags 最多3个")
+    _review_card_payload(user_id=user_id, content=content, tags=tags)
 
     card = PlazaCard(
         user_id=user_id,
@@ -128,6 +153,7 @@ def create_card(user_id, payload):
         tags=tags,
         likes_count=0,
     )
+    card.comments_count = 0
 
     if card_type == "answer":
         answer = AnswerRecord.query.filter_by(id=source_id.strip()).first()

@@ -29,6 +29,11 @@ class Config:
     SMS_CODE_LENGTH = int(os.environ.get('SMS_CODE_LENGTH', '6'))
     SMS_SEND_INTERVAL = int(os.environ.get('SMS_SEND_INTERVAL', '60'))
     DYPNS_API_ENDPOINT = os.environ.get('DYPNS_API_ENDPOINT', 'dypnsapi.aliyuncs.com')
+    ALIYUN_GREEN_ENABLED = os.environ.get('ALIYUN_GREEN_ENABLED', 'false').lower() == 'true'
+    ALIYUN_GREEN_REGION = os.environ.get('ALIYUN_GREEN_REGION', 'cn-shanghai')
+    ALIYUN_GREEN_ENDPOINT = os.environ.get('ALIYUN_GREEN_ENDPOINT', 'green.cn-shanghai.aliyuncs.com')
+    ALIYUN_GREEN_TIMEOUT = int(os.environ.get('ALIYUN_GREEN_TIMEOUT', '3'))
+    ALIYUN_GREEN_FAIL_OPEN = os.environ.get('ALIYUN_GREEN_FAIL_OPEN', 'false').lower() == 'true'
 
     if os.environ.get('DATABASE_URL'):
         SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')

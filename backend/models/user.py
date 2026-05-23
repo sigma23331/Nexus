@@ -41,6 +41,20 @@ class User(BaseModel):
     answers = relationship('AnswerRecord', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
     diaries = relationship('DiaryEntry', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
     plaza_cards = relationship('PlazaCard', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
+    comments = relationship(
+        'PlazaComment',
+        foreign_keys='PlazaComment.user_id',
+        back_populates='user',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+    )
+    comment_reports = relationship(
+        'PlazaCommentReport',
+        foreign_keys='PlazaCommentReport.reporter_user_id',
+        back_populates='reporter',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+    )
     favorites = relationship('Favorite', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
     likes = relationship('Like', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
     profile = relationship('UserProfile', back_populates='user', uselist=False, cascade='all, delete-orphan')

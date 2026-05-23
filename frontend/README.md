@@ -106,14 +106,18 @@ frontend/
     │   │   ├── PrivacyPolicyModal.vue  # 隐私政策弹窗
     │   │   ├── SettingModal.vue        # 设置弹窗
     │   │   ├── PromptModal.vue         # 自定义输入弹窗（修改昵称等）
-    │   │   └── ConfirmModal.vue        # 自定义确认弹窗（退出/切换/注销）
+    │   │   ├── ConfirmModal.vue        # 自定义确认弹窗（退出/切换/注销）
+    │   │   ├── ProfileEditModal.vue    # 登录用户个人信息修改弹窗（昵称、头像、生日、性别）
+    │   │   └── ProfileCollectModal.vue # 首次登录信息收集弹窗（昵称、头像、生日、性别）
     |   |
     │   ├── layout/                 # 布局组件（TabBar、Header、安全区容器）
     │   └── business/               # 业务组件（运势卡片、答案卡片、日记条目等）
     │       ├── DiaryDetailModal.vue    # 日记详情弹窗
     │       ├── MonthlyMoodOverview.vue # 月度情绪概览（日历）
     │       ├── MoodDiaryForm.vue       # 情绪日记表单
-    │       └── MoodDiaryModal.vue      # 情绪日记弹窗（含表单）
+    │       ├── MoodDiaryModal.vue      # 情绪日记弹窗（含表单）
+    │       ├── TreeholeModal.vue           # 树洞输入弹窗
+    │       └── TreeholeResultModal.vue     # 树洞答案弹窗
     │
     ├── composables/                # 组合式函数（封装可复用的响应式逻辑）
     │   ├── useAuth.ts              # 登录、token 管理

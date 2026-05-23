@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { UserInfo } from '@/types/models'
+import { getUserProfile } from '@/api/user' // 需要引入
 
 // 辅助函数：从 localStorage 读取用户信息
 function loadUserInfo(): UserInfo | null {
@@ -52,6 +53,16 @@ export const useUserStore = defineStore('user', () => {
     setUserInfo(null)
   }
 
+  // 新增：从后端获取最新用户信息并更新 store
+  async function fetchUserInfo() {
+    try {
+      const res = await getUserProfile()
+      setUserInfo(res.userInfo)
+    } catch (error) {
+      console.error('获取用户信息失败', error)
+    }
+  }
+
   return {
     token,
     userInfo,
@@ -60,5 +71,6 @@ export const useUserStore = defineStore('user', () => {
     setUserInfo,
     loginSuccess,
     logout,
+    fetchUserInfo,
   }
 })

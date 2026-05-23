@@ -18,20 +18,15 @@
       </div>
 
       <div class="flex-1 overflow-y-auto divide-y divide-purple-100">
+        <!-- 合并后的修改个人信息 -->
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
-          @click="changeAvatar"
+          @click="openProfileEdit"
         >
-          <span class="text-slate-700 hover:text-purple-700">修改头像</span>
+          <span class="text-slate-700 hover:text-purple-700">修改个人信息</span>
           <span class="text-purple-400">›</span>
         </div>
-        <div
-          class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
-          @click="changeNickname"
-        >
-          <span class="text-slate-700 hover:text-purple-700">修改昵称</span>
-          <span class="text-purple-400">›</span>
-        </div>
+
         <!-- 修改密码 -->
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
@@ -41,7 +36,7 @@
           <span class="text-purple-400">›</span>
         </div>
 
-        <!-- 添加到主屏幕（由 InstallBanner 处理安装/引导） -->
+        <!-- 添加到主屏幕 -->
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
           @click="handleInstallToDesktop"
@@ -49,6 +44,7 @@
           <span class="text-slate-700 hover:text-purple-700">添加到主屏幕</span>
           <span class="text-purple-400">›</span>
         </div>
+
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
           @click="handleLogout"
@@ -56,6 +52,7 @@
           <span class="text-slate-700 hover:text-purple-700">退出登录</span>
           <span class="text-purple-400">›</span>
         </div>
+
         <!-- 注销账号 -->
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-rose-50/80 transition duration-150"
@@ -64,6 +61,7 @@
           <span class="text-rose-600">注销账号</span>
           <span class="text-rose-300">›</span>
         </div>
+
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
           @click="openAgreement"
@@ -71,6 +69,7 @@
           <span class="text-slate-700 hover:text-purple-700">用户协议</span>
           <span class="text-purple-400">›</span>
         </div>
+
         <div
           class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-purple-50/80 transition duration-150"
           @click="openPrivacy"
@@ -81,21 +80,12 @@
       </div>
     </div>
 
-    <!-- 隐藏文件上传 -->
-    <input
-      type="file"
-      ref="fileInput"
-      accept="image/*"
-      style="display: none"
-      @change="onFileChange"
-    />
-
     <!-- 弹窗组件 -->
     <UserAgreementModal ref="userAgreementModalRef" />
     <PrivacyPolicyModal ref="privacyPolicyModalRef" />
-    <PromptModal ref="promptModalRef" />
     <ConfirmModal ref="confirmModalRef" />
     <ChangePasswordModal ref="changePasswordModalRef" />
+    <ProfileEditModal ref="profileEditModalRef" />
   </div>
 </template>
 
@@ -103,22 +93,21 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { updateUserProfile } from '@/api/user'
 import UserAgreementModal from './UserAgreementModal.vue'
 import PrivacyPolicyModal from './PrivacyPolicyModal.vue'
-import PromptModal from './PromptModal.vue'
 import ConfirmModal from './ConfirmModal.vue'
 import ChangePasswordModal from './ChangePasswordModal.vue'
+import ProfileEditModal from './ProfileEditModal.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 const visible = ref(false)
-const fileInput = ref<HTMLInputElement | null>(null)
+
 const userAgreementModalRef = ref<InstanceType<typeof UserAgreementModal> | null>(null)
 const privacyPolicyModalRef = ref<InstanceType<typeof PrivacyPolicyModal> | null>(null)
-const promptModalRef = ref<InstanceType<typeof PromptModal> | null>(null)
 const confirmModalRef = ref<InstanceType<typeof ConfirmModal> | null>(null)
 const changePasswordModalRef = ref<InstanceType<typeof ChangePasswordModal> | null>(null)
+const profileEditModalRef = ref<InstanceType<typeof ProfileEditModal> | null>(null)
 
 const open = () => {
   visible.value = true
@@ -127,51 +116,10 @@ const close = () => {
   visible.value = false
 }
 
-// 修改头像
-const changeAvatar = () => fileInput.value?.click()
-const onFileChange = async (event: Event) => {
-  const input = event.target as HTMLInputElement
-  if (!input.files?.length) return
-  const file = input.files[0]
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    const avatarBase64 = e.target?.result as string
-    try {
-      await updateUserProfile({ avatar: avatarBase64 })
-      const current = userStore.userInfo
-      if (current) {
-        userStore.setUserInfo({ ...current, avatar: avatarBase64 })
-      }
-      close()
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '头像更新失败，请重试'
-      alert(message)
-    }
-  }
-  reader.readAsDataURL(file)
-}
-
-// 修改昵称
-const changeNickname = async () => {
-  const newNick = await promptModalRef.value?.open({
-    title: '修改昵称',
-    message: '请输入新的昵称',
-    placeholder: '昵称',
-    defaultValue: userStore.userInfo?.nickname || '',
-  })
-  if (newNick && newNick.trim()) {
-    try {
-      await updateUserProfile({ nickname: newNick.trim() })
-      const current = userStore.userInfo
-      if (current) {
-        userStore.setUserInfo({ ...current, nickname: newNick.trim() })
-      }
-      close()
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '昵称更新失败，请重试'
-      alert(message)
-    }
-  }
+// 打开个人信息编辑弹窗
+const openProfileEdit = () => {
+  profileEditModalRef.value?.open()
+  // 不关闭设置面板，让用户编辑完成后自行关闭
 }
 
 // 修改密码
@@ -182,7 +130,7 @@ const changePassword = async () => {
   }
 }
 
-// 添加到主屏幕：触发自定义事件，由 InstallBanner 处理
+// 添加到主屏幕
 const handleInstallToDesktop = () => {
   window.dispatchEvent(new CustomEvent('manual-install-trigger'))
 }

@@ -33,6 +33,7 @@ export default defineConfig({
       manifest: false, // 使用 public/manifest.json
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        maximumFileSizeToCacheInBytes: 3145728,
         // Vue SPA：离线时回退到已预缓存的 index.html
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/, /^\/v1/],

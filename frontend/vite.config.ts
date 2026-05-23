@@ -11,7 +11,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [
     vue(),
-    
+
     // 2. 在 PWA 插件之前加入图片自动压缩配置
     ViteImagemin({
       gifsicle: { optimizationLevel: 7, interlaced: false },
@@ -22,10 +22,7 @@ export default defineConfig({
       },
       mozjpeg: { quality: 75 },
       svgo: {
-        plugins: [
-          { name: 'removeViewBox' },
-          { name: 'removeEmptyAttrs', active: false },
-        ],
+        plugins: [{ name: 'removeViewBox' }, { name: 'removeEmptyAttrs', active: false }],
       },
     }),
 

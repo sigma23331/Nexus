@@ -2,15 +2,58 @@ from models.answer import AnswerRecord
 from models.association import Favorite
 from extensions import db
 from services import content_generation_service
+from services import content_review_service
+
+
+SAFE_FALLBACK_ANSWER = "先把心放稳一点，答案会慢慢清晰。"
+
+
+def _review_question_or_raise(user_id, question):
+    result = content_review_service.review_user_generated_text(
+        scene="answer_question_input",
+        text=question,
+        user_id=user_id,
+        target_type="answer_question",
+    )
+    if result.action != content_review_service.ACTION_PASS:
+        raise ValueError("问题内容包含敏感或高风险信息，请调整后重试")
+
+
+def _generate_safe_answer(question, user_id):
+    generation = content_generation_service.generate_answer(question=question, user_id=user_id)
+    answer_text = generation["answerText"]
+    review = content_review_service.review_ai_generated_text(
+        scene="answer_output",
+        text=answer_text,
+        user_id=user_id,
+        target_type="answer_output",
+    )
+    if review.action == content_review_service.ACTION_PASS:
+        return answer_text
+
+    regenerated = content_generation_service.generate_answer(question=question, user_id=user_id)
+    regenerated_text = regenerated["answerText"]
+    second_review = content_review_service.review_ai_generated_text(
+        scene="answer_output",
+        text=regenerated_text,
+        user_id=user_id,
+        target_type="answer_output",
+    )
+    if second_review.action == content_review_service.ACTION_PASS:
+        return regenerated_text
+
+    return SAFE_FALLBACK_ANSWER
 
 
 def ask_question(user_id, question):
-    generation = content_generation_service.generate_answer(question=question, user_id=user_id)
+    normalized_question = question.strip()
+    _review_question_or_raise(user_id=user_id, question=normalized_question)
+    answer_text = _generate_safe_answer(question=normalized_question, user_id=user_id)
 
     record = AnswerRecord(
         user_id=user_id,
-        question=question.strip(),
-        answer_text=generation["answerText"],
+        question=normalized_question,
+        answer_text=answer_text,
     )
     db.session.add(record)
     db.session.commit()

@@ -23,7 +23,10 @@ def ask_answer():
         return fail("question 长度不能超过200", code=400)
 
     user_id = get_jwt_identity()
-    payload = answer_service.ask_question(user_id=user_id, question=question)
+    try:
+        payload = answer_service.ask_question(user_id=user_id, question=question)
+    except ValueError as err:
+        return fail(str(err), code=400)
     try:
         UserProfileService.update_profile_by_behavior(
             user_id=user_id, event_type="answer_created", event_time=datetime.utcnow()

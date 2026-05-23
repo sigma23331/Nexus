@@ -60,7 +60,71 @@ def test_ask_question_creates_record_and_returns_payload(monkeypatch):
     assert payload["answerText"] == "Keep moving."
     assert payload["createdAt"].endswith("Z")
     assert session.commits == 1
-    assert len(session.added) == 1
+    assert any(isinstance(item, _AnswerRecord) for item in session.added)
+
+
+def test_ask_question_rejects_sensitive_input(monkeypatch):
+    monkeypatch.setattr(
+        answer_service.content_review_service,
+        "review_user_generated_text",
+        lambda **_: answer_service.content_review_service.ReviewResult(
+            action=answer_service.content_review_service.ACTION_REJECT,
+            labels=["politics"],
+            reason_code="POLITICAL_SENSITIVE",
+            severity=answer_service.content_review_service.SEVERITY_HIGH,
+        ),
+    )
+
+    with pytest.raises(ValueError):
+        answer_service.ask_question("u1", "政治敏感问题")
+
+
+def test_ask_question_falls_back_when_ai_output_fails_review(monkeypatch):
+    session = _SessionSpy()
+    monkeypatch.setattr(answer_service.db, "session", session)
+
+    answers = iter(
+        [
+            {"answerText": "政治敏感回复"},
+            {"answerText": "正常回复"},
+        ]
+    )
+    monkeypatch.setattr(answer_service.content_generation_service, "generate_answer", lambda **_: next(answers))
+
+    def fake_review_user(**_kwargs):
+        return answer_service.content_review_service.ReviewResult(
+            action=answer_service.content_review_service.ACTION_PASS,
+        )
+
+    ai_results = iter(
+        [
+            answer_service.content_review_service.ReviewResult(
+                action=answer_service.content_review_service.ACTION_FALLBACK,
+                labels=["politics"],
+                reason_code="POLITICAL_SENSITIVE",
+                severity=answer_service.content_review_service.SEVERITY_HIGH,
+            ),
+            answer_service.content_review_service.ReviewResult(
+                action=answer_service.content_review_service.ACTION_PASS,
+            ),
+        ]
+    )
+
+    class _AnswerRecord:
+        def __init__(self, user_id, question, answer_text):
+            self.id = "ans-2"
+            self.user_id = user_id
+            self.question = question
+            self.answer_text = answer_text
+            self.created_at = datetime(2026, 5, 7, 10, 0, 0)
+
+    monkeypatch.setattr(answer_service, "AnswerRecord", _AnswerRecord)
+    monkeypatch.setattr(answer_service.content_review_service, "review_user_generated_text", fake_review_user)
+    monkeypatch.setattr(answer_service.content_review_service, "review_ai_generated_text", lambda **_: next(ai_results))
+
+    payload = answer_service.ask_question("u1", "hello")
+
+    assert payload["answerText"] == "正常回复"
 
 
 def test_list_history_marks_favorited_ids(monkeypatch):

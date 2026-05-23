@@ -33,6 +33,17 @@ def test_ask_answer_success(client, auth_header, monkeypatch):
     assert response.get_json()["data"]["answerId"] == "a1"
 
 
+def test_ask_answer_returns_400_when_review_rejects(client, auth_header, monkeypatch):
+    def fake_ask_question(**_kwargs):
+        raise ValueError("问题内容包含敏感或高风险信息，请调整后重试")
+
+    monkeypatch.setattr(route_module.answer_service, "ask_question", fake_ask_question)
+
+    response = client.post("/v1/answer/ask", json={"question": "hello"}, headers=auth_header)
+
+    assert response.status_code == 400
+
+
 def test_answer_history_bad_page_returns_400(client, auth_header):
     response = client.get("/v1/answer/history?page=bad&limit=10", headers=auth_header)
     assert response.status_code == 400

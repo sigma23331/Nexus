@@ -9,6 +9,7 @@ from .plaza import PlazaCard, CardType
 from .plaza_comment import PlazaComment
 from .plaza_comment_report import PlazaCommentReport
 from .association import Favorite, Like, SmsCode
+from .content_moderation_log import ContentModerationLog
 from .user_profile import UserProfile, AnswerStyle, PreferredFeature, ActiveHourBucket
 
 
@@ -26,6 +27,7 @@ __all__ = [
     'Favorite',
     'Like',
     'SmsCode',
+    'ContentModerationLog',
     'UserProfile',
     'AnswerStyle',
     'PreferredFeature',

@@ -27,12 +27,6 @@
             </div>
           </div>
         </div>
-        <button
-          @click="openSettings"
-          class="p-2 rounded-full hover:bg-slate-100 text-2xl text-slate-600"
-        >
-          ⚙️
-        </button>
       </div>
     </div>
 
@@ -53,6 +47,26 @@
           >
             <span>📅 历史运势记录</span>
             <span class="text-sm text-slate-500">{{ historyCount }}</span>
+          </li>
+          <!-- 新增：设置入口 -->
+          <li
+            class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
+            @click="router.push('/profile/settings')"
+          >
+            <div class="flex items-center gap-2">
+              <IconSettings />
+              <span>设置</span>
+            </div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-4 w-4 text-slate-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 18l6-6-6-6" />
+            </svg>
           </li>
         </ul>
       </section>
@@ -80,7 +94,6 @@
     </main>
 
     <MoodDiaryModal ref="moodModalRef" @submitted="onDiarySubmitted" />
-    <SettingModal ref="settingModalRef" />
   </div>
 </template>
 
@@ -93,9 +106,9 @@ import { getHistoryFortune } from '@/api/fortune'
 import { getFavoriteAnswers } from '@/api/answer'
 import MonthlyMoodOverview from '@/components/business/MonthlyMoodOverview.vue'
 import MoodDiaryModal from '@/components/business/MoodDiaryModal.vue'
-import SettingModal from '@/components/common/SettingModal.vue'
 import { saveDiaryOfflineFirst } from '@/utils/diaryService'
 import type { MoodTag } from '@/utils/storage'
+import IconSettings from '@/components/icons/IconSettings.vue'
 
 interface DiaryData {
   date: string
@@ -110,7 +123,6 @@ const historyCount = ref(0)
 
 const moodModalRef = ref<InstanceType<typeof MoodDiaryModal> | null>(null)
 const monthlyOverviewRef = ref<InstanceType<typeof MonthlyMoodOverview> | null>(null)
-const settingModalRef = ref<InstanceType<typeof SettingModal> | null>(null)
 
 // 性别图标和文字映射
 const genderIcon = computed(() => {
@@ -146,7 +158,6 @@ const formattedBirthday = computed(() => {
 })
 
 const openMoodModal = () => moodModalRef.value?.open()
-const openSettings = () => settingModalRef.value?.open()
 
 const onDiarySubmitted = async (data: DiaryData) => {
   await saveDiaryOfflineFirst({

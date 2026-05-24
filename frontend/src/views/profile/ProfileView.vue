@@ -53,7 +53,10 @@
             class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
             @click="router.push('/profile/settings')"
           >
-            <span>⚙️ 设置</span>
+            <div class="flex items-center gap-2">
+              <IconSettings />
+              <span>设置</span>
+            </div>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="h-4 w-4 text-slate-500"
@@ -91,7 +94,6 @@
     </main>
 
     <MoodDiaryModal ref="moodModalRef" @submitted="onDiarySubmitted" />
-    <SettingModal ref="settingModalRef" />
   </div>
 </template>
 
@@ -104,9 +106,9 @@ import { getHistoryFortune } from '@/api/fortune'
 import { getFavoriteAnswers } from '@/api/answer'
 import MonthlyMoodOverview from '@/components/business/MonthlyMoodOverview.vue'
 import MoodDiaryModal from '@/components/business/MoodDiaryModal.vue'
-import SettingModal from '@/components/common/SettingModal.vue'
 import { saveDiaryOfflineFirst } from '@/utils/diaryService'
 import type { MoodTag } from '@/utils/storage'
+import IconSettings from '@/components/icons/IconSettings.vue'
 
 interface DiaryData {
   date: string

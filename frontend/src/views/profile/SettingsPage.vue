@@ -25,12 +25,13 @@
     <div class="mt-3 space-y-3">
       <!-- 账号与安全板块 -->
       <div class="bg-white rounded-lg mx-3 overflow-hidden">
-        <SettingItem label="修改个人信息" @click="openProfileEdit">
+        <SettingItem label="个人资料" @click="openProfileEdit">
           <template #icon><IconUser /></template>
         </SettingItem>
         <Divider />
+        <!-- 修改密码 -->
         <SettingItem label="修改密码" @click="changePassword">
-          <template #icon><IconLock /></template>
+          <template #icon><IconKey /></template>
         </SettingItem>
       </div>
 
@@ -41,14 +42,29 @@
         </SettingItem>
       </div>
 
+      <!-- 隐私与权限板块 -->
+      <div class="bg-white rounded-lg mx-3 overflow-hidden">
+        <SettingItem label="隐私与权限" @click="goToPrivacySettings">
+          <template #icon><IconLock /></template>
+        </SettingItem>
+      </div>
+
       <!-- 其他板块 -->
       <div class="bg-white rounded-lg mx-3 overflow-hidden">
         <SettingItem label="用户协议" @click="openAgreement">
           <template #icon><IconDocument /></template>
         </SettingItem>
         <Divider />
+        <!-- 隐私政策：保持盾牌 -->
         <SettingItem label="隐私政策" @click="openPrivacy">
           <template #icon><IconShield /></template>
+        </SettingItem>
+      </div>
+
+      <!-- 帮助与反馈板块 -->
+      <div class="bg-white rounded-lg mx-3 overflow-hidden">
+        <SettingItem label="帮助与反馈" @click="goToHelp">
+          <template #icon><IconHelp /></template>
         </SettingItem>
       </div>
 
@@ -82,8 +98,8 @@ import PrivacyPolicyModal from '@/components/common/PrivacyPolicyModal.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import ChangePasswordModal from '@/components/common/ChangePasswordModal.vue'
 import ProfileEditModal from '@/components/common/ProfileEditModal.vue'
-import SettingItem from '@/components/common/SettingItem.vue'
-import Divider from '@/components/common/Divider.vue'
+import SettingItem from '@/views/profile/components/SettingItem.vue'
+import Divider from '@/views/profile/components/Divider.vue'
 // 导入图标组件
 import IconUser from '@/components/icons/IconUser.vue'
 import IconLock from '@/components/icons/IconLock.vue'
@@ -92,6 +108,8 @@ import IconDocument from '@/components/icons/IconDocument.vue'
 import IconShield from '@/components/icons/IconShield.vue'
 import IconLogout from '@/components/icons/IconLogout.vue'
 import IconTrash from '@/components/icons/IconTrash.vue'
+import IconKey from '@/components/icons/IconKey.vue'
+import IconHelp from '@/components/icons/IconHelp.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -105,6 +123,14 @@ const profileEditModalRef = ref<InstanceType<typeof ProfileEditModal> | null>(nu
 const openProfileEdit = () => profileEditModalRef.value?.open()
 const changePassword = async () => await changePasswordModalRef.value?.open()
 const handleInstallToDesktop = () => window.dispatchEvent(new CustomEvent('manual-install-trigger'))
+
+// 临时弹窗提示（未实现页面）
+const goToPrivacySettings = () => {
+  alert('隐私与权限设置正在开发中，敬请期待～')
+}
+const goToHelp = () => {
+  alert('帮助与反馈正在开发中，敬请期待～')
+}
 
 const handleLogout = async () => {
   const confirmed = await confirmModalRef.value?.open({

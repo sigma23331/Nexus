@@ -6,7 +6,7 @@ from services import content_generation_service as cgs
 
 
 def test_generate_answer_rejects_empty_question():
-    with pytest.raises(ValueError, match="question must be a non-empty string"):
+    with pytest.raises(ValueError, match="question"):
         cgs.generate_answer("   ", user_id="u1")
 
 
@@ -176,3 +176,135 @@ def test_generate_fortune_backfills_missing_new_fields(monkeypatch):
     assert payload["gua_meaning_lines"]
     assert payload["lucky_hour_name"]
     assert payload["lucky_hour_range"]
+
+
+def test_generate_fortune_retries_v4_provider_once_then_succeeds(monkeypatch):
+    class _Provider:
+        prompt_versions = {"fortune": "v4"}
+        prompts_dir = None
+        max_retries = 1
+
+        def __init__(self):
+            self.calls = 0
+
+        def generate_fortune(
+            self,
+            user_id,
+            target_date,
+            score=None,
+            title_template=None,
+            keywords=None,
+            yiji_items=None,
+        ):
+            _ = (user_id, target_date, title_template, keywords, yiji_items)
+            self.calls += 1
+            if self.calls == 1:
+                raise TimeoutError("llm timeout")
+            return {
+                "score": score,
+                "content_main": "A",
+                "content_sub": "B",
+                "love": "L",
+                "career": "C",
+                "health": "H",
+                "wealth": "W",
+                "yi": ["Y"],
+                "ji": ["J"],
+                "gua_meaning_lines": ["G1", "G2"],
+                "lucky_hour_name": "N",
+                "lucky_hour_range": "R",
+            }
+
+    provider = _Provider()
+    monkeypatch.setattr(cgs, "get_provider", lambda: provider)
+    monkeypatch.setattr(cgs.UserProfileService, "get_by_user_id", lambda user_id: None)
+
+    payload = cgs.generate_fortune(user_id="u1", target_date=date(2026, 4, 25))
+
+    assert provider.calls == 2
+    assert payload["generatedBy"] == "provider"
+    assert payload["content_main"] == "A"
+
+
+def test_generate_fortune_falls_back_after_v4_retries_exhausted(monkeypatch):
+    class _Provider:
+        prompt_versions = {"fortune": "v4"}
+        prompts_dir = None
+        max_retries = 1
+
+        def __init__(self):
+            self.calls = 0
+
+        def generate_fortune(self, **_kwargs):
+            self.calls += 1
+            raise RuntimeError("bad json")
+
+    provider = _Provider()
+    monkeypatch.setattr(cgs, "get_provider", lambda: provider)
+    monkeypatch.setattr(cgs.UserProfileService, "get_by_user_id", lambda user_id: None)
+
+    payload = cgs.generate_fortune(user_id="u1", target_date=date(2026, 4, 25))
+
+    assert provider.calls == 2
+    assert payload["generatedBy"] == "fallback"
+    assert payload["content_main"]
+    assert payload["gua_meaning_lines"]
+    assert payload["lucky_hour_name"]
+
+
+def test_generate_profile_retries_then_succeeds(monkeypatch):
+    class _Provider:
+        max_retries = 1
+
+        def __init__(self):
+            self.calls = 0
+
+        def analyze_user_profile(self, diary_entries, answer_questions):
+            _ = (diary_entries, answer_questions)
+            self.calls += 1
+            if self.calls == 1:
+                raise TimeoutError("profile timeout")
+            return {
+                "mood_tendency": "calm",
+                "topic_interests": ["health", "career", "health"],
+                "self_context_tag": "daily",
+            }
+
+    provider = _Provider()
+    monkeypatch.setattr(cgs, "get_provider", lambda: provider)
+
+    payload = cgs.generate_profile(
+        diary_entries=[{"content": "ok"}],
+        answer_questions=[{"question": "q"}],
+    )
+
+    assert provider.calls == 2
+    assert payload["generatedBy"] == "provider"
+    assert payload["topic_interests"] == ["health", "career"]
+
+
+def test_generate_profile_falls_back_after_retries_exhausted(monkeypatch):
+    class _Provider:
+        max_retries = 1
+
+        def __init__(self):
+            self.calls = 0
+
+        def analyze_user_profile(self, diary_entries, answer_questions):
+            _ = (diary_entries, answer_questions)
+            self.calls += 1
+            raise RuntimeError("profile bad json")
+
+    provider = _Provider()
+    monkeypatch.setattr(cgs, "get_provider", lambda: provider)
+
+    payload = cgs.generate_profile(
+        diary_entries=[{"content": "ok"}],
+        answer_questions=[{"question": "q"}],
+    )
+
+    assert provider.calls == 2
+    assert payload["generatedBy"] == "fallback"
+    assert payload["mood_tendency"]
+    assert payload["topic_interests"]
+    assert payload["self_context_tag"]

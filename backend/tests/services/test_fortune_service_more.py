@@ -143,6 +143,13 @@ def test_get_today_fortune_generates_record_when_absent(monkeypatch):
             "lucky_hour_range": "11:00-13:00",
         },
     )
+    monkeypatch.setattr(
+        fortune_service.content_review_service,
+        "review_ai_generated_text",
+        lambda **_: fortune_service.content_review_service.ReviewResult(
+            action=fortune_service.content_review_service.ACTION_PASS,
+        ),
+    )
 
     today = date.today()
 
@@ -209,6 +216,63 @@ def test_get_today_fortune_generates_record_when_absent(monkeypatch):
     assert payload["gua_meaning_lines"] == ["木火通明", "思路清朗，宜扩展布局"]
     assert calls["add"] == 1
     assert calls["commit"] == 1
+
+
+def test_generate_safe_fortune_uses_fallback_when_reviews_fail(monkeypatch):
+    generated = []
+
+    def fake_generate_fortune(**_kwargs):
+        generated.append(True)
+        return {
+            "score": 82,
+            "title": "涓婂悏",
+            "content_main": "unsafe",
+            "content_sub": "unsafe",
+            "love": "骞崇ǔ",
+            "career": "鍚戝ソ",
+            "health": "绋冲畾",
+            "wealth": "骞崇ǔ",
+            "yi": ["瀛︿範"],
+            "ji": ["鐔"],
+            "gua_meaning_lines": ["G1", "G2"],
+            "lucky_hour_name": "N",
+            "lucky_hour_range": "R",
+        }
+
+    monkeypatch.setattr(fortune_service.content_generation_service, "generate_fortune", fake_generate_fortune)
+    monkeypatch.setattr(
+        fortune_service.content_generation_service,
+        "generate_fallback_fortune",
+        lambda _target_date: {
+            "score": 70,
+            "title": "fallback",
+            "content_main": "safe",
+            "content_sub": "safe",
+            "love": "safe",
+            "career": "safe",
+            "health": "safe",
+            "wealth": "safe",
+            "yi": [],
+            "ji": [],
+            "gua_meaning_lines": ["safe1", "safe2"],
+            "lucky_hour_name": "safe",
+            "lucky_hour_range": "safe",
+            "generatedBy": "fallback",
+        },
+    )
+    monkeypatch.setattr(
+        fortune_service.content_review_service,
+        "review_ai_generated_text",
+        lambda **_: fortune_service.content_review_service.ReviewResult(
+            action=fortune_service.content_review_service.ACTION_FALLBACK,
+        ),
+    )
+
+    payload = fortune_service._generate_safe_fortune("u1", date(2026, 5, 24))
+
+    assert len(generated) == 2
+    assert payload["generatedBy"] == "fallback"
+    assert payload["content_main"] == "safe"
 
 
 def test_format_today_payload_falls_back_when_new_columns_missing():

@@ -65,40 +65,12 @@
             @click="showPassword = !showPassword"
             class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-purple-600 transition"
           >
-            <svg
-              v-if="showPassword"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-5 h-5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-              />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
+            <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <svg
-              v-else
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-5 h-5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.864-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65"
-              />
+            <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.864-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65" />
               <circle cx="12" cy="12" r="3" />
             </svg>
           </button>
@@ -108,24 +80,28 @@
 
       <!-- 协议勾选 -->
       <div class="flex items-start gap-2">
-        <input
-          v-model="agreeProtocol"
-          type="checkbox"
-          id="protocol"
-          class="mt-1 w-4 h-4 text-purple-600 rounded"
-        />
+        <input v-model="agreeProtocol" type="checkbox" id="protocol" class="mt-1 w-4 h-4 text-purple-600 rounded" />
         <label for="protocol" class="text-sm text-slate-600 leading-tight">
           我已阅读并同意
-          <a href="#" class="text-purple-600 hover:underline" @click.prevent="openUserAgreement"
-            >《用户协议》</a
-          >
+          <a href="#" class="text-purple-600 hover:underline" @click.prevent="openUserAgreement">《用户协议》</a>
           及
-          <a href="#" class="text-purple-600 hover:underline" @click.prevent="openPrivacyPolicy"
-            >《隐私政策》</a
-          >
+          <a href="#" class="text-purple-600 hover:underline" @click.prevent="openPrivacyPolicy">《隐私政策》</a>
         </label>
       </div>
       <p v-if="protocolError" class="text-xs text-red-500 -mt-2">{{ protocolError }}</p>
+
+      <!-- Turnstile 人机验证组件（仅在发送验证码时显示） -->
+      <div v-if="showTurnstile" class="flex justify-center">
+        <VueTurnstile
+          ref="turnstileRef"
+          :site-key="turnstileSiteKey"
+          v-model="turnstileToken"
+          :size="'normal'"
+          :theme="'auto'"
+          @expired="onTurnstileExpired"
+          @error="onTurnstileError"
+        />
+      </div>
 
       <!-- 注册按钮 -->
       <button
@@ -164,6 +140,7 @@ import { useUserStore } from '@/stores/user'
 import UserAgreementModal from '@/components/common/UserAgreementModal.vue'
 import PrivacyPolicyModal from '@/components/common/PrivacyPolicyModal.vue'
 import ProfileCollectModal from '@/components/common/ProfileCollectModal.vue'
+import VueTurnstile from 'vue-turnstile'
 import type { LoginResponse } from '@/types/api'
 
 const router = useRouter()
@@ -175,6 +152,12 @@ const privacyPolicyModalRef = ref<InstanceType<typeof PrivacyPolicyModal> | null
 
 const openUserAgreement = () => userAgreementModalRef.value?.open()
 const openPrivacyPolicy = () => privacyPolicyModalRef.value?.open()
+
+// Turnstile 相关
+const turnstileRef = ref<InstanceType<typeof VueTurnstile> | null>(null)
+const showTurnstile = ref(false)
+const turnstileToken = ref<string>('')
+const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY
 
 // 表单数据
 const phone = ref('')
@@ -218,12 +201,41 @@ const isFormValid = computed(() => {
   )
 })
 
-// 发送验证码
+// Turnstile 回调
+const onTurnstileVerify = (token: string) => {
+  turnstileToken.value = token
+  console.log('Turnstile verified')
+}
+
+const onTurnstileExpired = () => {
+  turnstileToken.value = ''
+  console.log('Turnstile expired')
+}
+
+const onTurnstileError = () => {
+  turnstileToken.value = ''
+  console.log('Turnstile error')
+}
+
+// 发送验证码（携带 Turnstile token）
 const handleSendCode = async () => {
   if (!isPhoneValid.value) return
   if (countdown.value > 0) return
+
+  // 首次发送时显示 Turnstile 组件
+  if (!showTurnstile.value) {
+    showTurnstile.value = true
+    return
+  }
+
+  // 等待 Turnstile 完成验证
+  if (!turnstileToken.value) {
+    alert('请完成人机验证')
+    return
+  }
+
   try {
-    await sendSmsCode(phone.value)
+    await sendSmsCode(phone.value, turnstileToken.value)
     countdown.value = 60
     if (timer) clearInterval(timer)
     timer = setInterval(() => {
@@ -233,13 +245,20 @@ const handleSendCode = async () => {
         timer = null
       }
     }, 1000)
+    // 发送成功后重置 Turnstile 状态
+    turnstileRef.value?.reset()
+    turnstileToken.value = ''
+    showTurnstile.value = false
   } catch (err) {
     const message = err instanceof Error ? err.message : '验证码发送失败'
     alert(message)
+    // 发送失败，重置 Turnstile 让用户重试
+    turnstileRef.value?.reset()
+    turnstileToken.value = ''
   }
 }
 
-// 注册（修改后：自动登录并弹出资料收集）
+// 注册
 const handleRegister = async () => {
   if (!isFormValid.value) return
   registerLoading.value = true
@@ -247,16 +266,13 @@ const handleRegister = async () => {
     const response: LoginResponse = await register(phone.value, code.value, password.value)
     const { token: newToken, userInfo: userData, isNewUser } = response
 
-    // 存储登录状态
     userStore.setToken(newToken)
     userStore.setUserInfo(userData)
 
     if (isNewUser) {
-      // 首次注册：获取完整用户信息（包含 birthday、gender 等）后再弹窗
       await userStore.fetchUserInfo()
       profileModalRef.value?.open()
     } else {
-      // 理论上注册一定是新用户，但为了安全保留分支
       router.replace('/')
     }
   } catch (err) {
@@ -267,24 +283,21 @@ const handleRegister = async () => {
   }
 }
 
-// 弹窗完成（保存资料后）
+// 弹窗完成/跳过
 const onProfileCompleted = () => {
   router.replace('/')
 }
 
-// 弹窗跳过
 const onProfileSkipped = () => {
   router.replace('/')
 }
 
-// 清理定时器
 onUnmounted(() => {
   if (timer) clearInterval(timer)
 })
 </script>
 
 <style scoped>
-/* 隐藏浏览器原生密码显示/隐藏按钮（仅作用于本页面的密码输入框） */
 .register-password-input input[type='password']::-ms-reveal,
 .register-password-input input[type='password']::-ms-clear {
   display: none;

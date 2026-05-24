@@ -129,7 +129,7 @@ const goToPrivacySettings = () => {
   alert('隐私与权限设置正在开发中，敬请期待～')
 }
 const goToHelp = () => {
-  alert('帮助与反馈正在开发中，敬请期待～')
+  router.push('/profile/settings/help')
 }
 
 const handleLogout = async () => {

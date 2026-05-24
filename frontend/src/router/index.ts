@@ -80,6 +80,12 @@ const router = createRouter({
       component: () => import('@/views/profile/SettingsPage.vue'),
       meta: { title: '设置', requiresAuth: true },
     },
+    {
+      path: '/profile/settings/help',
+      name: 'HelpFeedback',
+      component: () => import('@/views/profile/HelpFeedback.vue'),
+      meta: { title: '帮助与反馈', requiresAuth: true },
+    },
   ],
 })
 

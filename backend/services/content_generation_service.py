@@ -21,6 +21,46 @@ def _fallback_fortune(target_date):
     return MockProvider().generate_fortune(user_id="", target_date=target_date)
 
 
+def _fallback_profile(diary_entries=None, answer_questions=None):
+    return MockProvider().analyze_user_profile(
+        diary_entries=diary_entries or [],
+        answer_questions=answer_questions or [],
+    )
+
+
+def _get_generation_attempts(provider):
+    try:
+        retries = int(getattr(provider, "max_retries", 0) or 0)
+    except Exception:
+        retries = 0
+    return max(1, retries + 1)
+
+
+def _log_generation_retry(task, attempt, max_attempts, exc):
+    try:
+        current_app.logger.warning(
+            "llm_generation_retry task=%s attempt=%s/%s error=%s",
+            task,
+            attempt,
+            max_attempts,
+            str(exc)[:200],
+            exc_info=True,
+        )
+    except RuntimeError:
+        pass
+
+
+def _log_generation_fallback(task, exc):
+    try:
+        current_app.logger.warning(
+            "llm_generation_fallback task=%s error=%s",
+            task,
+            str(exc)[:200],
+        )
+    except RuntimeError:
+        pass
+
+
 def _normalize_score(score):
     try:
         value = int(score)
@@ -129,6 +169,25 @@ def _normalize_fortune_payload(payload):
     }
 
 
+def _normalize_profile_payload(payload):
+    payload = payload if isinstance(payload, dict) else {}
+    mood_tendency = _normalize_text(payload.get("mood_tendency"), default="calm", limit=50)
+    topic_interests = []
+    for item in _normalize_list(payload.get("topic_interests"), limit=5, item_limit=30):
+        if item not in topic_interests:
+            topic_interests.append(item)
+        if len(topic_interests) >= 3:
+            break
+    if not topic_interests:
+        topic_interests = ["health"]
+    self_context_tag = _normalize_text(payload.get("self_context_tag"), default="daily", limit=20)
+    return {
+        "mood_tendency": mood_tendency,
+        "topic_interests": topic_interests,
+        "self_context_tag": self_context_tag,
+    }
+
+
 def get_provider(force_refresh=False):
     global _provider_cache
     if _provider_cache is not None and not force_refresh:
@@ -184,6 +243,43 @@ def generate_answer(question, user_id):
     }
 
 
+def generate_profile(diary_entries, answer_questions):
+    provider = get_provider()
+    payload = None
+    generated_by = "fallback"
+    max_attempts = _get_generation_attempts(provider)
+    last_error = None
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            payload = provider.analyze_user_profile(
+                diary_entries=diary_entries or [],
+                answer_questions=answer_questions or [],
+            )
+            generated_by = "provider"
+            last_error = None
+            break
+        except Exception as exc:
+            last_error = exc
+            if attempt < max_attempts:
+                _log_generation_retry("profile", attempt, max_attempts, exc)
+
+    if generated_by != "provider":
+        if last_error is not None:
+            _log_generation_fallback("profile", last_error)
+        payload = _fallback_profile(diary_entries=diary_entries, answer_questions=answer_questions)
+
+    normalized = _normalize_profile_payload(payload)
+    normalized["generatedBy"] = generated_by
+    return normalized
+
+
+def generate_fallback_fortune(target_date):
+    normalized = _normalize_fortune_payload(_fallback_fortune(target_date))
+    normalized["generatedBy"] = "fallback"
+    return normalized
+
+
 def generate_fortune(user_id, target_date):
     if not isinstance(target_date, date):
         raise ValueError("target_date must be a date")
@@ -212,19 +308,35 @@ def generate_fortune(user_id, target_date):
             keywords = {"love": "平稳", "career": "平稳", "health": "稳定", "wealth": "平稳"}
             yiji_items = {"yi": [], "ji": []}
 
-        try:
-            payload = provider.generate_fortune(
-                user_id=user_id,
-                target_date=target_date,
-                score=score,
-                title_template=title_template,
-                keywords=keywords,
-                yiji_items=yiji_items,
-            )
-            generated_by = "provider"
-        except TypeError:
+        payload = None
+        generated_by = "fallback"
+        max_attempts = _get_generation_attempts(provider)
+        last_error = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                payload = provider.generate_fortune(
+                    user_id=user_id,
+                    target_date=target_date,
+                    score=score,
+                    title_template=title_template,
+                    keywords=keywords,
+                    yiji_items=yiji_items,
+                )
+                generated_by = "provider"
+                last_error = None
+                break
+            except TypeError as exc:
+                last_error = exc
+                break
+            except Exception as exc:
+                last_error = exc
+                if attempt < max_attempts:
+                    _log_generation_retry("fortune", attempt, max_attempts, exc)
+
+        if generated_by != "provider":
+            if last_error is not None:
+                _log_generation_fallback("fortune", last_error)
             payload = _fallback_fortune(target_date)
-            generated_by = "fallback"
     else:
         profile_context = None
         try:
@@ -234,19 +346,32 @@ def generate_fortune(user_id, target_date):
         except Exception:
             profile_context = None
 
-        try:
+        payload = None
+        generated_by = "fallback"
+        max_attempts = _get_generation_attempts(provider)
+        last_error = None
+        for attempt in range(1, max_attempts + 1):
             try:
-                payload = provider.generate_fortune(
-                    user_id=user_id,
-                    target_date=target_date,
-                    profile_context=profile_context,
-                )
-            except TypeError:
-                payload = provider.generate_fortune(user_id=user_id, target_date=target_date)
-            generated_by = "provider"
-        except Exception:
+                try:
+                    payload = provider.generate_fortune(
+                        user_id=user_id,
+                        target_date=target_date,
+                        profile_context=profile_context,
+                    )
+                except TypeError:
+                    payload = provider.generate_fortune(user_id=user_id, target_date=target_date)
+                generated_by = "provider"
+                last_error = None
+                break
+            except Exception as exc:
+                last_error = exc
+                if attempt < max_attempts:
+                    _log_generation_retry("fortune", attempt, max_attempts, exc)
+
+        if generated_by != "provider":
+            if last_error is not None:
+                _log_generation_fallback("fortune", last_error)
             payload = _fallback_fortune(target_date)
-            generated_by = "fallback"
 
     normalized = _normalize_fortune_payload(payload)
     normalized["generatedBy"] = generated_by

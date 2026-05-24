@@ -1,5 +1,7 @@
 from datetime import date
+from io import BytesIO
 from pathlib import Path
+from urllib import error as urlerror
 
 from services.llm.providers.real_provider import FORTUNE_SCHEMA, RealProvider
 
@@ -38,6 +40,61 @@ def test_chat_json_schema_falls_back_when_response_format_unsupported(monkeypatc
     assert len(calls) == 2
     assert calls[0] is not None
     assert calls[1] is None
+
+
+class _Response:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self):
+        return self.payload
+
+
+def test_chat_retries_empty_output_then_succeeds(monkeypatch):
+    provider = _provider()
+    calls = []
+
+    def fake_urlopen(_req, timeout):
+        calls.append(timeout)
+        if len(calls) == 1:
+            return _Response(b'{"choices":[{"message":{"content":""}}]}')
+        return _Response(b'{"choices":[{"message":{"content":"ok"}}]}')
+
+    monkeypatch.setattr("services.llm.providers.real_provider.urlrequest.urlopen", fake_urlopen)
+
+    assert provider._chat([{"role": "user", "content": "hi"}]) == "ok"
+    assert len(calls) == 2
+
+
+def test_chat_does_not_retry_non_retryable_http(monkeypatch):
+    provider = _provider()
+    calls = []
+
+    def fake_urlopen(_req, timeout):
+        calls.append(timeout)
+        raise urlerror.HTTPError(
+            url="https://example.com",
+            code=401,
+            msg="unauthorized",
+            hdrs=None,
+            fp=BytesIO(b"bad key"),
+        )
+
+    monkeypatch.setattr("services.llm.providers.real_provider.urlrequest.urlopen", fake_urlopen)
+
+    try:
+        provider._chat([{"role": "user", "content": "hi"}])
+    except RuntimeError as exc:
+        assert "llm_http_401" in str(exc)
+    else:
+        raise AssertionError("expected RuntimeError")
+    assert len(calls) == 1
 
 
 def test_chat_json_schema_uses_deepseek_json_object(monkeypatch):

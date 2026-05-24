@@ -127,6 +127,43 @@ def test_ask_question_falls_back_when_ai_output_fails_review(monkeypatch):
     assert payload["answerText"] == "正常回复"
 
 
+def test_ask_question_uses_safe_text_when_ai_review_raises(monkeypatch):
+    session = _SessionSpy()
+    monkeypatch.setattr(answer_service.db, "session", session)
+    monkeypatch.setattr(
+        answer_service.content_generation_service,
+        "generate_answer",
+        lambda **_: {"answerText": "provider text"},
+    )
+    monkeypatch.setattr(
+        answer_service.content_review_service,
+        "review_user_generated_text",
+        lambda **_: answer_service.content_review_service.ReviewResult(
+            action=answer_service.content_review_service.ACTION_PASS,
+        ),
+    )
+
+    def raise_review(**_kwargs):
+        raise RuntimeError("review unavailable")
+
+    monkeypatch.setattr(answer_service.content_review_service, "review_ai_generated_text", raise_review)
+
+    class _AnswerRecord:
+        def __init__(self, user_id, question, answer_text):
+            self.id = "ans-3"
+            self.user_id = user_id
+            self.question = question
+            self.answer_text = answer_text
+            self.created_at = datetime(2026, 5, 7, 10, 0, 0)
+
+    monkeypatch.setattr(answer_service, "AnswerRecord", _AnswerRecord)
+
+    payload = answer_service.ask_question("u1", "hello")
+
+    assert payload["answerText"] == answer_service.SAFE_FALLBACK_ANSWER
+    assert session.commits == 1
+
+
 def test_list_history_marks_favorited_ids(monkeypatch):
     records = [
         SimpleNamespace(

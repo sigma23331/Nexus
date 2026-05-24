@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from extensions import db
 from models.fortune import FortuneRecord
 from services import content_generation_service
+from services import content_review_service
 
 
 def _resolve_gua_meaning(score, delta=0):
@@ -124,13 +125,59 @@ def _format_today_payload(record, delta=0, record_existed=False):
     }
 
 
+def _fortune_review_text(payload):
+    parts = [
+        payload.get("content_main"),
+        payload.get("content_sub"),
+        payload.get("love"),
+        payload.get("career"),
+        payload.get("health"),
+        payload.get("wealth"),
+    ]
+    parts.extend(payload.get("yi") or [])
+    parts.extend(payload.get("ji") or [])
+    parts.extend(payload.get("gua_meaning_lines") or [])
+    return "\n".join(str(item or "").strip() for item in parts if str(item or "").strip())
+
+
+def _review_fortune_payload(payload, user_id):
+    try:
+        return content_review_service.review_ai_generated_text(
+            scene="fortune_output",
+            text=_fortune_review_text(payload),
+            user_id=user_id,
+            target_type="fortune_output",
+        )
+    except Exception:
+        return content_review_service.ReviewResult(
+            action=content_review_service.ACTION_FALLBACK,
+            labels=["review_error"],
+            reason_code="AI_OUTPUT_REVIEW_UNAVAILABLE",
+            severity=content_review_service.SEVERITY_MEDIUM,
+        )
+
+
+def _generate_safe_fortune(user_id, target_date):
+    defaults = content_generation_service.generate_fortune(user_id=user_id, target_date=target_date)
+    review = _review_fortune_payload(defaults, user_id=user_id)
+    if review.action == content_review_service.ACTION_PASS:
+        return defaults
+
+    regenerated = content_generation_service.generate_fortune(user_id=user_id, target_date=target_date)
+    second_review = _review_fortune_payload(regenerated, user_id=user_id)
+    if second_review.action == content_review_service.ACTION_PASS:
+        return regenerated
+
+    return content_generation_service.generate_fallback_fortune(target_date)
+
+
 def get_today_fortune(user_id):
     today = date.today()
     record = FortuneRecord.query.filter_by(user_id=user_id, date=today).first()
     record_existed = bool(record)
 
     if not record:
-        defaults = content_generation_service.generate_fortune(user_id=user_id, target_date=today)
+        defaults = _generate_safe_fortune(user_id=user_id, target_date=today)
         record = FortuneRecord(
             user_id=user_id,
             date=today,

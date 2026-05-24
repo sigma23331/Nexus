@@ -1,4 +1,5 @@
 import json
+import socket
 from datetime import date
 from pathlib import Path
 from urllib import error as urlerror
@@ -125,6 +126,20 @@ class RealProvider(LLMProvider):
                 if key in self.prompt_versions and isinstance(value, str) and value.strip():
                     self.prompt_versions[key] = value.strip()
 
+    def _max_attempts(self):
+        try:
+            retries = int(self.max_retries or 0)
+        except Exception:
+            retries = 0
+        return max(1, retries + 1)
+
+    def _is_retryable_http_status(self, status_code):
+        try:
+            code = int(status_code)
+        except Exception:
+            return False
+        return code == 429 or code >= 500
+
     def _render_inline(self, template, variables):
         rendered = str(template or "")
         for key, value in (variables or {}).items():
@@ -173,12 +188,30 @@ class RealProvider(LLMProvider):
             },
         )
 
-        try:
-            with urlrequest.urlopen(req, timeout=self.timeout) as resp:
-                raw = resp.read().decode("utf-8")
-        except urlerror.HTTPError as err:
-            detail = err.read().decode("utf-8", errors="ignore")
-            raise RuntimeError(f"llm_http_{err.code}: {detail[:800]}") from err
+        last_error = None
+        for attempt in range(1, self._max_attempts() + 1):
+            try:
+                return self._chat_once(req)
+            except urlerror.HTTPError as err:
+                detail = err.read().decode("utf-8", errors="ignore")
+                wrapped = RuntimeError(f"llm_http_{err.code}: {detail[:800]}")
+                if not self._is_retryable_http_status(err.code) or attempt >= self._max_attempts():
+                    raise wrapped from err
+                last_error = wrapped
+            except (urlerror.URLError, TimeoutError, socket.timeout, json.JSONDecodeError, RuntimeError) as err:
+                if isinstance(err, RuntimeError) and str(err) != "empty model output":
+                    raise
+                if attempt >= self._max_attempts():
+                    raise
+                last_error = err
+
+        if last_error:
+            raise last_error
+        raise RuntimeError("llm request failed")
+
+    def _chat_once(self, req):
+        with urlrequest.urlopen(req, timeout=self.timeout) as resp:
+            raw = resp.read().decode("utf-8")
 
         data = json.loads(raw)
         text = (((data.get("choices") or [{}])[0].get("message") or {}).get("content") or "").strip()

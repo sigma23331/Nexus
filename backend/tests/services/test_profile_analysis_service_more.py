@@ -46,7 +46,7 @@ def test_need_analysis_respects_profile_updated_at(monkeypatch):
     monkeypatch.setattr("services.profile_analysis_service.UserProfile", _UserProfile)
     assert ProfileAnalysisService._need_analysis("u1") is False
 
-    _UserProfile.query = _Query(SimpleNamespace(updated_at=datetime.utcnow() - timedelta(hours=2)))
+    _UserProfile.query = _Query(SimpleNamespace(updated_at=datetime.utcnow() - timedelta(hours=25)))
     assert ProfileAnalysisService._need_analysis("u1") is True
 
 
@@ -149,3 +149,22 @@ def test_process_one_job_handles_success_and_failure(monkeypatch):
     assert out_fail.status == "failed_terminal"
     assert "boom" in out_fail.error_message
     assert commits
+
+
+def test_trigger_analysis_if_needed_swallows_generation_failure(monkeypatch):
+    calls = {"rollback": 0}
+
+    class _Session:
+        def rollback(self):
+            calls["rollback"] += 1
+
+    monkeypatch.setattr("services.profile_analysis_service.db.session", _Session())
+    monkeypatch.setattr(ProfileAnalysisService, "_need_analysis", staticmethod(lambda _user_id: True))
+
+    def _raise(*_args, **_kwargs):
+        raise RuntimeError("llm down")
+
+    monkeypatch.setattr(ProfileAnalysisService, "analyze_profile_with_llm", staticmethod(_raise))
+
+    assert ProfileAnalysisService.trigger_analysis_if_needed("u1") is None
+    assert calls["rollback"] == 1

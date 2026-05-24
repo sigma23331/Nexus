@@ -8,6 +8,15 @@ from services import content_review_service
 SAFE_FALLBACK_ANSWER = "先把心放稳一点，答案会慢慢清晰。"
 
 
+def _fallback_review_result(reason_code="AI_OUTPUT_REVIEW_UNAVAILABLE"):
+    return content_review_service.ReviewResult(
+        action=content_review_service.ACTION_FALLBACK,
+        labels=["review_error"],
+        reason_code=reason_code,
+        severity=content_review_service.SEVERITY_MEDIUM,
+    )
+
+
 def _review_question_or_raise(user_id, question):
     result = content_review_service.review_user_generated_text(
         scene="answer_question_input",
@@ -19,26 +28,28 @@ def _review_question_or_raise(user_id, question):
         raise ValueError("问题内容包含敏感或高风险信息，请调整后重试")
 
 
+def _review_ai_answer(text, user_id):
+    try:
+        return content_review_service.review_ai_generated_text(
+            scene="answer_output",
+            text=text,
+            user_id=user_id,
+            target_type="answer_output",
+        )
+    except Exception:
+        return _fallback_review_result()
+
+
 def _generate_safe_answer(question, user_id):
     generation = content_generation_service.generate_answer(question=question, user_id=user_id)
     answer_text = generation["answerText"]
-    review = content_review_service.review_ai_generated_text(
-        scene="answer_output",
-        text=answer_text,
-        user_id=user_id,
-        target_type="answer_output",
-    )
+    review = _review_ai_answer(answer_text, user_id)
     if review.action == content_review_service.ACTION_PASS:
         return answer_text
 
     regenerated = content_generation_service.generate_answer(question=question, user_id=user_id)
     regenerated_text = regenerated["answerText"]
-    second_review = content_review_service.review_ai_generated_text(
-        scene="answer_output",
-        text=regenerated_text,
-        user_id=user_id,
-        target_type="answer_output",
-    )
+    second_review = _review_ai_answer(regenerated_text, user_id)
     if second_review.action == content_review_service.ACTION_PASS:
         return regenerated_text
 

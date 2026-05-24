@@ -2,6 +2,8 @@ import json
 import uuid
 from datetime import datetime, timedelta
 
+from flask import current_app
+
 from extensions import db
 from models.answer import AnswerRecord
 from models.diary import DiaryEntry
@@ -81,8 +83,7 @@ class ProfileAnalysisService:
             AnswerRecord.created_at >= window_start,
         ).order_by(AnswerRecord.created_at.desc()).limit(20).all()
 
-        provider = content_generation_service.get_provider()
-        result = provider.analyze_user_profile(
+        result = content_generation_service.generate_profile(
             diary_entries=[{
                 "mood_tag": e.mood_tag.value if hasattr(e.mood_tag, 'value') else str(e.mood_tag),
                 "content": e.content or "",
@@ -128,10 +129,18 @@ class ProfileAnalysisService:
     def trigger_analysis_if_needed(user_id: str, window_days: int = 7):
         if not ProfileAnalysisService._need_analysis(user_id):
             return None
-        result = ProfileAnalysisService.analyze_profile_with_llm(user_id, window_days)
-        profile = ProfileAnalysisService.apply_ai_analysis_result(user_id, result)
-        db.session.commit()
-        return profile
+        try:
+            result = ProfileAnalysisService.analyze_profile_with_llm(user_id, window_days)
+            profile = ProfileAnalysisService.apply_ai_analysis_result(user_id, result)
+            db.session.commit()
+            return profile
+        except Exception:
+            db.session.rollback()
+            try:
+                current_app.logger.warning("profile analysis fallback failed for user %s", user_id, exc_info=True)
+            except RuntimeError:
+                pass
+            return None
 
     @staticmethod
     def process_one_job(now: datetime | None = None):

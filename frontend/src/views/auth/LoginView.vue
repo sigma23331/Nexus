@@ -3,7 +3,6 @@
     <div class="flex justify-center mb-4">
       <img src="/images/login_top2.png" alt="心运岛" class="w-1024 h-auto" />
     </div>
-    <!-- 头部：欢迎语 + 模式切换按钮 -->
     <div class="flex justify-between items-center pb-6">
       <h1 class="text-2xl font-bold">欢迎回来</h1>
       <button
@@ -112,6 +111,19 @@
         <p v-if="passwordError" class="text-xs text-red-500 mt-1">{{ passwordError }}</p>
       </div>
 
+      <!-- Turnstile 人机验证组件（仅在发送验证码时显示） -->
+      <div v-if="showTurnstile && loginMode === 'sms'" class="flex justify-center">
+        <VueTurnstile
+          ref="turnstileRef"
+          :site-key="turnstileSiteKey"
+          v-model="turnstileToken"
+          :size="'normal'"
+          :theme="'auto'"
+          @expired="onTurnstileExpired"
+          @error="onTurnstileError"
+        />
+      </div>
+
       <!-- 登录按钮 -->
       <button
         @click="handleLogin"
@@ -144,12 +156,19 @@ import { sendSmsCode, loginBySms, loginByPassword } from '@/api/auth'
 import { getUserProfile } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import ProfileCollectModal from '@/components/common/ProfileCollectModal.vue'
+import VueTurnstile from 'vue-turnstile'
 import type { LoginResponse } from '@/types/api'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const profileModalRef = ref<InstanceType<typeof ProfileCollectModal> | null>(null)
+
+// Turnstile 相关
+const turnstileRef = ref<InstanceType<typeof VueTurnstile> | null>(null)
+const showTurnstile = ref(false)
+const turnstileToken = ref<string>('')
+const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY
 
 // 登录模式
 const loginMode = ref<'sms' | 'password'>('sms')
@@ -191,12 +210,36 @@ const isFormValid = computed(() => {
   }
 })
 
-// 发送验证码
+// Turnstile 回调
+const onTurnstileExpired = () => {
+  turnstileToken.value = ''
+  console.log('Turnstile expired')
+}
+
+const onTurnstileError = () => {
+  turnstileToken.value = ''
+  console.log('Turnstile error')
+}
+
+// 发送验证码（携带 Turnstile token）
 const handleSendSmsCode = async () => {
   if (!isPhoneValid.value) return
   if (smsCountdown.value > 0) return
+
+  // 首次发送时显示 Turnstile 组件
+  if (!showTurnstile.value) {
+    showTurnstile.value = true
+    return
+  }
+
+  // 等待 Turnstile 完成验证
+  if (!turnstileToken.value) {
+    alert('请完成人机验证')
+    return
+  }
+
   try {
-    await sendSmsCode(phone.value)
+    await sendSmsCode(phone.value, turnstileToken.value)
     smsCountdown.value = 60
     if (timer) clearInterval(timer)
     timer = setInterval(() => {
@@ -206,9 +249,16 @@ const handleSendSmsCode = async () => {
         timer = null
       }
     }, 1000)
+    // 发送成功后重置 Turnstile 状态
+    turnstileRef.value?.reset()
+    turnstileToken.value = ''
+    showTurnstile.value = false
   } catch (err) {
     const message = err instanceof Error ? err.message : '验证码发送失败'
     alert(message)
+    // 发送失败，重置 Turnstile 让用户重试
+    turnstileRef.value?.reset()
+    turnstileToken.value = ''
   }
 }
 
@@ -223,17 +273,14 @@ const handleLogin = async () => {
     } else {
       response = await loginByPassword(phone.value, password.value)
     }
-    // 注意：request 拦截器已直接返回 data，所以 response 即为 { token, userInfo, isNewUser }
     const { token: newToken, userInfo: userData, isNewUser } = response
     userStore.setToken(newToken)
     userStore.setUserInfo(userData)
 
     if (isNewUser) {
-      // 首次登录：获取完整用户信息（包含 birthday、gender 等）后再弹窗
       await userStore.fetchUserInfo()
       profileModalRef.value?.open()
     } else {
-      // 非首次登录：原有逻辑，调用 getUserProfile 刷新用户信息（保持兼容）
       const profile = await getUserProfile()
       userStore.setUserInfo(profile.userInfo)
       const redirectPath = (route.query.redirect as string) || '/'
@@ -247,13 +294,12 @@ const handleLogin = async () => {
   }
 }
 
-// 弹窗完成（保存资料后）
+// 弹窗完成/跳过
 const onProfileCompleted = async () => {
   const redirectPath = (route.query.redirect as string) || '/'
   router.replace(redirectPath)
 }
 
-// 弹窗跳过
 const onProfileSkipped = () => {
   const redirectPath = (route.query.redirect as string) || '/'
   router.replace(redirectPath)
@@ -265,7 +311,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 隐藏浏览器原生密码显示/隐藏按钮（仅作用于本页面的密码输入框） */
 .login-password-input input[type='password']::-ms-reveal,
 .login-password-input input[type='password']::-ms-clear {
   display: none;

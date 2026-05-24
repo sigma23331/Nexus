@@ -16,6 +16,7 @@ except ImportError:  # pragma: no cover - optional dependency fallback for tests
 from models.user import User
 from extensions import db
 from services import sms_service
+from services.turnstile_service import verify_turnstile_token
 
 auth_bp = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
@@ -105,14 +106,22 @@ def send_sms():
         return jsonify(code=400, message="请求体必须是有效的JSON", data=None), 400
 
     phone = data.get('phone')
+    captcha_token = data.get('captchaToken')
+
     if not phone:
         return jsonify(code=400, message="phone 字段不能为空", data=None), 400
 
     if not re.match(r'^1[3-9]\d{9}$', phone):
         return jsonify(code=400, message="无效的手机号格式", data=None), 400
+    
+    client_ip = request.headers.get('CF-Connecting-IP') or request.remote_addr
+    verified, verify_msg = verify_turnstile_token(captcha_token, client_ip)
+    if not verified:
+        return jsonify(code=400, message=verify_msg, data=None), 400
 
     if not sms_service.can_send(phone):
         return jsonify(code=429, message="发送频率过高，请60秒后再试", data=None), 429
+    
 
     existing = User.query.filter_by(phone=phone).first()
     action = 'login' if existing else 'register'

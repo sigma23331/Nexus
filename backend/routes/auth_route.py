@@ -16,7 +16,11 @@ except ImportError:  # pragma: no cover - optional dependency fallback for tests
 from models.user import User
 from extensions import db
 from services import sms_service
-from services.turnstile_service import verify_turnstile_token
+from services.slider_captcha_service import (
+    create_slider_challenge,
+    verify_slider_captcha_token,
+    verify_slider_challenge,
+)
 
 auth_bp = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
@@ -98,6 +102,54 @@ def _extract_phone_number_from_response(response):
     return _find_phone_value(response)
 
 # ---------- 短信验证码发送 ----------
+@auth_bp.route('/captcha/slider/challenge', methods=['POST'])
+def slider_captcha_challenge():
+    """生成滑块验证挑战，绑定手机号后用于发送短信验证码。"""
+    data = request.get_json(silent=True) or {}
+    phone = data.get('phone')
+
+    if not phone:
+        return jsonify(code=400, message="phone 字段不能为空", data=None), 400
+
+    if not re.match(r'^1[3-9]\d{9}$', phone):
+        return jsonify(code=400, message="无效的手机号格式", data=None), 400
+
+    challenge = create_slider_challenge(phone)
+    return jsonify(code=200, message="滑块验证已生成", data=challenge), 200
+
+
+@auth_bp.route('/captcha/slider/verify', methods=['POST'])
+def slider_captcha_verify():
+    """校验滑块轨迹，成功后签发一次性短信验证码发送 token。"""
+    data = request.get_json(silent=True) or {}
+    phone = data.get('phone')
+
+    if not phone:
+        return jsonify(code=400, message="phone 字段不能为空", data=None), 400
+
+    if not re.match(r'^1[3-9]\d{9}$', phone):
+        return jsonify(code=400, message="无效的手机号格式", data=None), 400
+
+    success, message, captcha_token = verify_slider_challenge(
+        data.get('challengeToken'),
+        phone,
+        data.get('offsetX'),
+        data.get('durationMs'),
+        data.get('track'),
+    )
+    if not success:
+        return jsonify(code=400, message=message, data=None), 400
+
+    return jsonify(
+        code=200,
+        message=message,
+        data={
+            "captchaToken": captcha_token,
+            "expiresIn": 120,
+        },
+    ), 200
+
+
 @auth_bp.route('/sms/send', methods=['POST'])
 def send_sms():
     """发送短信验证码（自动判断登录/注册场景）"""
@@ -114,10 +166,14 @@ def send_sms():
     if not re.match(r'^1[3-9]\d{9}$', phone):
         return jsonify(code=400, message="无效的手机号格式", data=None), 400
     
-    client_ip = request.headers.get('CF-Connecting-IP') or request.remote_addr
-    verified, verify_msg = verify_turnstile_token(captcha_token, client_ip)
-    if not verified:
-        return jsonify(code=400, message=verify_msg, data=None), 400
+    captcha_required = current_app.config.get(
+        'SLIDER_CAPTCHA_REQUIRED',
+        not current_app.config.get('TESTING', False),
+    )
+    if captcha_required:
+        verified, verify_msg = verify_slider_captcha_token(captcha_token, phone)
+        if not verified:
+            return jsonify(code=400, message=verify_msg, data=None), 400
 
     if not sms_service.can_send(phone):
         return jsonify(code=429, message="发送频率过高，请60秒后再试", data=None), 429

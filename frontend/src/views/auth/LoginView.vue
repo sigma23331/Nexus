@@ -111,17 +111,9 @@
         <p v-if="passwordError" class="text-xs text-red-500 mt-1">{{ passwordError }}</p>
       </div>
 
-      <!-- Turnstile 人机验证组件（仅在发送验证码时显示） -->
-      <div v-if="showTurnstile && loginMode === 'sms'" class="flex justify-center">
-        <VueTurnstile
-          ref="turnstileRef"
-          :site-key="turnstileSiteKey"
-          v-model="turnstileToken"
-          :size="'normal'"
-          :theme="'auto'"
-          @expired="onTurnstileExpired"
-          @error="onTurnstileError"
-        />
+      <!-- 滑块验证（仅在发送验证码前显示） -->
+      <div v-if="showSliderCaptcha && loginMode === 'sms'">
+        <SliderCaptcha :key="captchaKey" :phone="phone" @verified="onSliderVerified" />
       </div>
 
       <!-- 登录按钮 -->
@@ -156,7 +148,7 @@ import { sendSmsCode, loginBySms, loginByPassword } from '@/api/auth'
 import { getUserProfile } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import ProfileCollectModal from '@/components/common/ProfileCollectModal.vue'
-import VueTurnstile from 'vue-turnstile'
+import SliderCaptcha from '@/components/common/SliderCaptcha.vue'
 import type { LoginResponse } from '@/types/api'
 
 const router = useRouter()
@@ -164,11 +156,10 @@ const route = useRoute()
 const userStore = useUserStore()
 const profileModalRef = ref<InstanceType<typeof ProfileCollectModal> | null>(null)
 
-// Turnstile 相关
-const turnstileRef = ref<InstanceType<typeof VueTurnstile> | null>(null)
-const showTurnstile = ref(false)
-const turnstileToken = ref<string>('')
-const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY
+// 滑块验证
+const showSliderCaptcha = ref(false)
+const sliderCaptchaToken = ref('')
+const captchaKey = ref(0)
 
 // 登录模式
 const loginMode = ref<'sms' | 'password'>('sms')
@@ -210,36 +201,24 @@ const isFormValid = computed(() => {
   }
 })
 
-// Turnstile 回调
-const onTurnstileExpired = () => {
-  turnstileToken.value = ''
-  console.log('Turnstile expired')
-}
-
-const onTurnstileError = () => {
-  turnstileToken.value = ''
-  console.log('Turnstile error')
-}
-
-// 发送验证码（携带 Turnstile token）
+// 发送验证码（携带滑块验证 token）
 const handleSendSmsCode = async () => {
   if (!isPhoneValid.value) return
   if (smsCountdown.value > 0) return
 
-  // 首次发送时显示 Turnstile 组件
-  if (!showTurnstile.value) {
-    showTurnstile.value = true
+  // 首次发送时先展示滑块，通过后会自动再次进入发送流程
+  if (!showSliderCaptcha.value) {
+    showSliderCaptcha.value = true
     return
   }
 
-  // 等待 Turnstile 完成验证
-  if (!turnstileToken.value) {
-    alert('请完成人机验证')
+  if (!sliderCaptchaToken.value) {
+    alert('请先完成滑块验证')
     return
   }
 
   try {
-    await sendSmsCode(phone.value, turnstileToken.value)
+    await sendSmsCode(phone.value, sliderCaptchaToken.value)
     smsCountdown.value = 60
     if (timer) clearInterval(timer)
     timer = setInterval(() => {
@@ -249,17 +228,20 @@ const handleSendSmsCode = async () => {
         timer = null
       }
     }, 1000)
-    // 发送成功后重置 Turnstile 状态
-    turnstileRef.value?.reset()
-    turnstileToken.value = ''
-    showTurnstile.value = false
+    sliderCaptchaToken.value = ''
+    showSliderCaptcha.value = false
+    captchaKey.value += 1
   } catch (err) {
     const message = err instanceof Error ? err.message : '验证码发送失败'
     alert(message)
-    // 发送失败，重置 Turnstile 让用户重试
-    turnstileRef.value?.reset()
-    turnstileToken.value = ''
+    sliderCaptchaToken.value = ''
+    captchaKey.value += 1
   }
+}
+
+const onSliderVerified = (token: string) => {
+  sliderCaptchaToken.value = token
+  handleSendSmsCode()
 }
 
 // 登录

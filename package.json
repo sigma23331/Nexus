@@ -5,5 +5,8 @@
     "build": "npm run build --prefix frontend",
     "dev": "npm run dev --prefix frontend",
     "preview": "npm run preview --prefix frontend"
+  },
+  "devDependencies": {
+    "vite-plugin-imagemin": "^0.6.1"
   }
 }

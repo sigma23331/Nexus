@@ -127,9 +127,18 @@
       </div>
       <p v-if="protocolError" class="text-xs text-red-500 -mt-2">{{ protocolError }}</p>
 
-      <!-- 滑块验证（仅在发送验证码前显示） -->
-      <div v-if="showSliderCaptcha">
-        <SliderCaptcha :key="captchaKey" :phone="phone" @verified="onSliderVerified" />
+      <div
+        v-if="showTurnstile"
+        class="rounded-2xl border border-purple-100 bg-purple-50/40 p-4 space-y-3"
+      >
+        <div>
+          <p class="text-sm font-medium text-slate-700">Cloudflare 人机验证</p>
+          <p class="text-xs text-slate-500 mt-1">
+            {{ turnstileMessage || '验证通过后将自动发送短信验证码' }}
+          </p>
+        </div>
+        <div ref="turnstileContainerRef" class="flex justify-center min-h-[65px]" />
+        <p v-if="turnstileError" class="text-xs text-red-500 text-center">{{ turnstileError }}</p>
       </div>
 
       <!-- 注册按钮 -->
@@ -162,15 +171,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { sendSmsCode, register } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 import UserAgreementModal from '@/components/common/UserAgreementModal.vue'
 import PrivacyPolicyModal from '@/components/common/PrivacyPolicyModal.vue'
 import ProfileCollectModal from '@/components/common/ProfileCollectModal.vue'
-import SliderCaptcha from '@/components/common/SliderCaptcha.vue'
 import type { LoginResponse } from '@/types/api'
+import { TURNSTILE_SITE_KEY } from '@/config/turnstile'
+import { renderVisibleTurnstile, type VisibleTurnstileWidget } from '@/utils/turnstile'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -182,10 +192,11 @@ const privacyPolicyModalRef = ref<InstanceType<typeof PrivacyPolicyModal> | null
 const openUserAgreement = () => userAgreementModalRef.value?.open()
 const openPrivacyPolicy = () => privacyPolicyModalRef.value?.open()
 
-// 滑块验证
-const showSliderCaptcha = ref(false)
-const sliderCaptchaToken = ref('')
-const captchaKey = ref(0)
+const turnstileContainerRef = ref<HTMLElement | null>(null)
+const turnstileWidget = ref<VisibleTurnstileWidget | null>(null)
+const showTurnstile = ref(false)
+const turnstileMessage = ref('')
+const turnstileError = ref('')
 
 // 表单数据
 const phone = ref('')
@@ -242,44 +253,79 @@ const startSmsCountdown = () => {
   }, 1000)
 }
 
-// 发送验证码（携带滑块验证 token）
-const handleSendCode = async () => {
-  if (!isPhoneValid.value) return
-  if (countdown.value > 0 || smsSending.value) return
+const clearTurnstile = () => {
+  turnstileWidget.value?.remove()
+  turnstileWidget.value = null
+  showTurnstile.value = false
+  turnstileMessage.value = ''
+  turnstileError.value = ''
+}
 
-  // 首次发送时先展示滑块，通过后会自动再次进入发送流程
-  if (!showSliderCaptcha.value) {
-    sliderCaptchaToken.value = ''
-    captchaKey.value += 1
-    showSliderCaptcha.value = true
-    return
-  }
-
-  if (!sliderCaptchaToken.value) {
-    alert('请先完成滑块验证')
-    return
-  }
+const submitSmsCode = async (turnstileToken: string) => {
+  if (smsSending.value || countdown.value > 0 || !isPhoneValid.value) return false
 
   smsSending.value = true
   try {
-    await sendSmsCode(phone.value, sliderCaptchaToken.value)
+    await sendSmsCode(phone.value, turnstileToken)
     startSmsCountdown()
-    sliderCaptchaToken.value = ''
-    showSliderCaptcha.value = false
-    captchaKey.value += 1
+    return true
   } catch (err) {
-    const message = err instanceof Error ? err.message : '验证码发送失败，请重试'
+    const message = err instanceof Error ? err.message : '验证码发送失败'
     alert(message)
-    sliderCaptchaToken.value = ''
-    captchaKey.value += 1
+    return false
   } finally {
     smsSending.value = false
   }
 }
 
-const onSliderVerified = (token: string) => {
-  sliderCaptchaToken.value = token
-  handleSendCode()
+// 发送验证码（携带 Cloudflare Turnstile token）
+const handleSendCode = async () => {
+  if (!isPhoneValid.value) return
+  if (countdown.value > 0 || smsSending.value) return
+
+  clearTurnstile()
+  showTurnstile.value = true
+  turnstileMessage.value = '请完成人机验证，验证通过后将自动发送短信验证码'
+  await nextTick()
+
+  try {
+    turnstileWidget.value = await renderVisibleTurnstile(
+      TURNSTILE_SITE_KEY,
+      turnstileContainerRef.value,
+      {
+        onVerified: async (turnstileToken) => {
+          turnstileMessage.value = '验证通过，正在发送验证码...'
+          const sent = await submitSmsCode(turnstileToken)
+          if (sent) {
+            clearTurnstile()
+            return
+          }
+
+          turnstileError.value = '验证码发送失败，请重新完成人机验证后重试'
+          turnstileMessage.value = ''
+          turnstileWidget.value?.reset()
+        },
+        onError: (errorCode) => {
+          turnstileMessage.value = ''
+          turnstileError.value = errorCode
+            ? `人机验证失败，请重试（错误码：${errorCode}）`
+            : '人机验证失败，请重试'
+        },
+        onExpired: () => {
+          turnstileMessage.value = ''
+          turnstileError.value = '人机验证已过期，请重新验证'
+        },
+        onTimeout: () => {
+          turnstileMessage.value = ''
+          turnstileError.value = '人机验证超时，请重新验证'
+        },
+      },
+    )
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '人机验证失败，请重试'
+    clearTurnstile()
+    alert(message)
+  }
 }
 
 // 注册
@@ -318,6 +364,7 @@ const onProfileSkipped = () => {
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
+  turnstileWidget.value?.remove()
 })
 </script>
 

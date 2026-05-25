@@ -1,11 +1,17 @@
 import os
 import logging
 import requests
+from flask import current_app, has_app_context
 
 logger = logging.getLogger(__name__)
 
 TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
-TURNSTILE_SECRET_KEY = os.environ.get("CLOUDFLARE_TURNSTILE_SECRET_KEY")
+
+
+def _get_turnstile_secret_key() -> str:
+    if has_app_context():
+        return current_app.config.get("CLOUDFLARE_TURNSTILE_SECRET_KEY") or ""
+    return os.environ.get("CLOUDFLARE_TURNSTILE_SECRET_KEY", "")
 
 
 def verify_turnstile_token(token: str, client_ip: str = None) -> tuple[bool, str]:
@@ -19,7 +25,8 @@ def verify_turnstile_token(token: str, client_ip: str = None) -> tuple[bool, str
     Returns:
         tuple: (是否验证成功, 错误信息)
     """
-    if not TURNSTILE_SECRET_KEY:
+    secret_key = _get_turnstile_secret_key()
+    if not secret_key:
         logger.error("TURNSTILE_SECRET_KEY 未配置")
         return False, "Turnstile 配置错误，请联系管理员"
 
@@ -27,7 +34,7 @@ def verify_turnstile_token(token: str, client_ip: str = None) -> tuple[bool, str
         return False, "人机验证失败，请重试"
 
     data = {
-        "secret": TURNSTILE_SECRET_KEY,
+        "secret": secret_key,
         "response": token,
     }
     if client_ip:

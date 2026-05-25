@@ -28,7 +28,8 @@ class Config:
     SMS_TEMPLATE_CODE = os.environ.get('SMS_TEMPLATE_CODE', '100001')
     SMS_CODE_LENGTH = int(os.environ.get('SMS_CODE_LENGTH', '6'))
     SMS_SEND_INTERVAL = int(os.environ.get('SMS_SEND_INTERVAL', '60'))
-    SLIDER_CAPTCHA_REQUIRED = os.environ.get('SLIDER_CAPTCHA_REQUIRED', 'true').lower() == 'true'
+    TURNSTILE_REQUIRED = os.environ.get('TURNSTILE_REQUIRED', 'true').lower() == 'true'
+    CLOUDFLARE_TURNSTILE_SECRET_KEY = os.environ.get('CLOUDFLARE_TURNSTILE_SECRET_KEY', '')
     DYPNS_API_ENDPOINT = os.environ.get('DYPNS_API_ENDPOINT', 'dypnsapi.aliyuncs.com')
     ALIYUN_GREEN_ENABLED = os.environ.get('ALIYUN_GREEN_ENABLED', 'false').lower() == 'true'
     ALIYUN_GREEN_REGION = os.environ.get('ALIYUN_GREEN_REGION', 'cn-shanghai')

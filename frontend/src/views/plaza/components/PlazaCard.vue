@@ -100,22 +100,41 @@
     </div>
 
     <!-- 底部按钮 -->
-    <div class="flex items-center justify-between px-4 pb-4 text-xs text-slate-500">
+    <div
+      class="flex items-center justify-between px-4 text-xs text-slate-500"
+      :class="showComments ? 'pb-2' : 'pb-4'"
+    >
       <div class="flex items-center gap-4">
         <button @click="toggleLike" class="flex items-center gap-1 transition">
           <span class="text-base">{{ card.stats.isLiked ? '❤️' : '🤍' }}</span>
           <span>{{ card.stats.likes }}</span>
+        </button>
+        <button
+          type="button"
+          class="flex items-center gap-1 transition hover:text-purple-600"
+          @click="toggleComments"
+        >
+          <span class="text-base">💬</span>
+          <span>{{ commentsCount }}</span>
         </button>
       </div>
       <span class="text-xs text-slate-400">{{
         card.type === 'fortune' ? '运势卡片' : '答案卡片'
       }}</span>
     </div>
+
+    <PlazaCommentPanel
+      v-if="showComments"
+      :card-id="card.cardId"
+      :comments-count="commentsCount"
+      @update:comments-count="onCommentsCountUpdate"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import PlazaCommentPanel from './PlazaCommentPanel.vue'
 
 export interface PlazaCardData {
   cardId: string
@@ -129,6 +148,7 @@ export interface PlazaCardData {
   content?: string
   stats: {
     likes: number
+    comments: number
     isLiked: boolean
   }
   createdAt: string
@@ -142,9 +162,28 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'like', cardId: string, isLiked: boolean): void
   (e: 'delete', cardId: string): void
+  (e: 'update-comments', cardId: string, count: number): void
 }>()
 
 const showMenu = ref(false)
+const showComments = ref(false)
+const commentsCount = ref(props.card.stats.comments ?? 0)
+
+watch(
+  () => props.card.stats.comments,
+  (value) => {
+    commentsCount.value = value ?? 0
+  },
+)
+
+const toggleComments = () => {
+  showComments.value = !showComments.value
+}
+
+const onCommentsCountUpdate = (count: number) => {
+  commentsCount.value = count
+  emit('update-comments', props.card.cardId, count)
+}
 
 // 格式化时间
 const formatTime = (isoString: string) => {

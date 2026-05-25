@@ -113,6 +113,7 @@
             :is-owner="card.owner.uid === currentUserId"
             @like="handleLike"
             @delete="handleDeleteCard"
+            @update-comments="handleUpdateComments"
           />
         </div>
 
@@ -243,6 +244,14 @@ const handleLike = async (cardId: string, isLiked: boolean) => {
     }
   } catch (err) {
     console.error('点赞操作失败', err)
+  }
+}
+
+// 更新评论数
+const handleUpdateComments = (cardId: string, count: number) => {
+  const card = cards.value.find((c) => c.cardId === cardId)
+  if (card) {
+    card.stats.comments = count
   }
 }
 

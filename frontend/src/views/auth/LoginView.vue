@@ -42,10 +42,12 @@
           />
           <button
             @click="handleSendSmsCode"
-            :disabled="smsCountdown > 0 || !isPhoneValid"
+            :disabled="smsCountdown > 0 || smsSending || !isPhoneValid"
             class="px-4 py-3 rounded-xl bg-purple-600 text-white text-sm font-medium whitespace-nowrap transition disabled:opacity-50"
           >
-            {{ smsCountdown > 0 ? `${smsCountdown}秒后重试` : '获取验证码' }}
+            {{
+              smsSending ? '发送中...' : smsCountdown > 0 ? `${smsCountdown}秒后重试` : '获取验证码'
+            }}
           </button>
         </div>
         <p v-if="smsCodeError" class="text-xs text-red-500 mt-1">{{ smsCodeError }}</p>
@@ -111,17 +113,18 @@
         <p v-if="passwordError" class="text-xs text-red-500 mt-1">{{ passwordError }}</p>
       </div>
 
-      <!-- Turnstile 人机验证组件（仅在发送验证码时显示） -->
-      <div v-if="showTurnstile && loginMode === 'sms'" class="flex justify-center">
-        <VueTurnstile
-          ref="turnstileRef"
-          :site-key="turnstileSiteKey"
-          v-model="turnstileToken"
-          :size="'normal'"
-          :theme="'auto'"
-          @expired="onTurnstileExpired"
-          @error="onTurnstileError"
-        />
+      <div
+        v-if="showTurnstile && loginMode === 'sms'"
+        class="rounded-2xl border border-purple-100 bg-purple-50/40 p-4 space-y-3"
+      >
+        <div>
+          <p class="text-sm font-medium text-slate-700">Cloudflare 人机验证</p>
+          <p class="text-xs text-slate-500 mt-1">
+            {{ turnstileMessage || '验证通过后将自动发送短信验证码' }}
+          </p>
+        </div>
+        <div ref="turnstileContainerRef" class="flex justify-center min-h-[65px]" />
+        <p v-if="turnstileError" class="text-xs text-red-500 text-center">{{ turnstileError }}</p>
       </div>
 
       <!-- 登录按钮 -->
@@ -150,25 +153,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { sendSmsCode, loginBySms, loginByPassword } from '@/api/auth'
 import { getUserProfile } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import ProfileCollectModal from '@/components/common/ProfileCollectModal.vue'
-import VueTurnstile from 'vue-turnstile'
 import type { LoginResponse } from '@/types/api'
+import { renderVisibleTurnstile, type VisibleTurnstileWidget } from '@/utils/turnstile'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const profileModalRef = ref<InstanceType<typeof ProfileCollectModal> | null>(null)
 
-// Turnstile 相关
-const turnstileRef = ref<InstanceType<typeof VueTurnstile> | null>(null)
-const showTurnstile = ref(false)
-const turnstileToken = ref<string>('')
+const turnstileContainerRef = ref<HTMLElement | null>(null)
+const turnstileWidget = ref<VisibleTurnstileWidget | null>(null)
 const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY
+const showTurnstile = ref(false)
+const turnstileMessage = ref('')
+const turnstileError = ref('')
 
 // 登录模式
 const loginMode = ref<'sms' | 'password'>('sms')
@@ -176,6 +180,7 @@ const phone = ref('')
 const smsCode = ref('')
 const password = ref('')
 const loginLoading = ref(false)
+const smsSending = ref(false)
 const showPassword = ref(false)
 
 // 倒计时
@@ -210,55 +215,90 @@ const isFormValid = computed(() => {
   }
 })
 
-// Turnstile 回调
-const onTurnstileExpired = () => {
-  turnstileToken.value = ''
-  console.log('Turnstile expired')
+const startSmsCountdown = () => {
+  smsCountdown.value = 60
+  if (timer) clearInterval(timer)
+  timer = setInterval(() => {
+    if (smsCountdown.value > 0) smsCountdown.value--
+    else {
+      if (timer) clearInterval(timer)
+      timer = null
+    }
+  }, 1000)
 }
 
-const onTurnstileError = () => {
-  turnstileToken.value = ''
-  console.log('Turnstile error')
+const clearTurnstile = () => {
+  turnstileWidget.value?.remove()
+  turnstileWidget.value = null
+  showTurnstile.value = false
+  turnstileMessage.value = ''
+  turnstileError.value = ''
+}
+
+const submitSmsCode = async (captchaToken: string) => {
+  if (smsSending.value || smsCountdown.value > 0 || !isPhoneValid.value) return false
+
+  smsSending.value = true
+  try {
+    await sendSmsCode(phone.value, captchaToken)
+    startSmsCountdown()
+    return true
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '验证码发送失败'
+    alert(message)
+    return false
+  } finally {
+    smsSending.value = false
+  }
 }
 
 // 发送验证码（携带 Turnstile token）
 const handleSendSmsCode = async () => {
   if (!isPhoneValid.value) return
-  if (smsCountdown.value > 0) return
+  if (smsCountdown.value > 0 || smsSending.value) return
 
-  // 首次发送时显示 Turnstile 组件
-  if (!showTurnstile.value) {
-    showTurnstile.value = true
-    return
-  }
-
-  // 等待 Turnstile 完成验证
-  if (!turnstileToken.value) {
-    alert('请完成人机验证')
-    return
-  }
+  clearTurnstile()
+  showTurnstile.value = true
+  turnstileMessage.value = '请完成人机验证，验证通过后将自动发送短信验证码'
+  await nextTick()
 
   try {
-    await sendSmsCode(phone.value, turnstileToken.value)
-    smsCountdown.value = 60
-    if (timer) clearInterval(timer)
-    timer = setInterval(() => {
-      if (smsCountdown.value > 0) smsCountdown.value--
-      else {
-        if (timer) clearInterval(timer)
-        timer = null
-      }
-    }, 1000)
-    // 发送成功后重置 Turnstile 状态
-    turnstileRef.value?.reset()
-    turnstileToken.value = ''
-    showTurnstile.value = false
+    turnstileWidget.value = await renderVisibleTurnstile(
+      turnstileSiteKey,
+      turnstileContainerRef.value,
+      {
+        onVerified: async (captchaToken) => {
+          turnstileMessage.value = '验证通过，正在发送验证码...'
+          const sent = await submitSmsCode(captchaToken)
+          if (sent) {
+            clearTurnstile()
+            return
+          }
+
+          turnstileError.value = '验证码发送失败，请重新完成人机验证后重试'
+          turnstileMessage.value = ''
+          turnstileWidget.value?.reset()
+        },
+        onError: (errorCode) => {
+          turnstileMessage.value = ''
+          turnstileError.value = errorCode
+            ? `人机验证失败，请重试（错误码：${errorCode}）`
+            : '人机验证失败，请重试'
+        },
+        onExpired: () => {
+          turnstileMessage.value = ''
+          turnstileError.value = '人机验证已过期，请重新验证'
+        },
+        onTimeout: () => {
+          turnstileMessage.value = ''
+          turnstileError.value = '人机验证超时，请重新验证'
+        },
+      },
+    )
   } catch (err) {
-    const message = err instanceof Error ? err.message : '验证码发送失败'
+    const message = err instanceof Error ? err.message : '人机验证失败，请重试'
+    clearTurnstile()
     alert(message)
-    // 发送失败，重置 Turnstile 让用户重试
-    turnstileRef.value?.reset()
-    turnstileToken.value = ''
   }
 }
 
@@ -307,6 +347,7 @@ const onProfileSkipped = () => {
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
+  turnstileWidget.value?.remove()
 })
 </script>
 

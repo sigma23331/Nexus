@@ -83,9 +83,36 @@ export interface PlazaCard {
   content?: string
   stats: {
     likes: number
+    comments: number
     isLiked: boolean
   }
   createdAt: string
+}
+
+export interface PlazaCommentOwner {
+  uid: string
+  nickname: string
+  avatar: string
+}
+
+export interface PlazaComment {
+  commentId: string
+  cardId: string
+  owner: PlazaCommentOwner
+  content: string
+  parentId: string | null
+  replyToUser: PlazaCommentOwner | null
+  status: string
+  createdAt: string
+  canDelete: boolean
+  replyCount: number
+  replies: PlazaComment[]
+}
+
+export interface PlazaCommentsResponse {
+  list: PlazaComment[]
+  nextCursor: string | null
+  hasMore: boolean
 }
 
 // 日记时间轴项（来自 API）

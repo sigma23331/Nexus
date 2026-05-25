@@ -1,6 +1,6 @@
 // src/api/plaza.ts
 import request from '@/utils/request'
-import type { PlazaCard } from '@/types/models'
+import type { PlazaCard, PlazaComment, PlazaCommentsResponse } from '@/types/models'
 
 export interface PlazaCardsResponse {
   list: PlazaCard[]
@@ -46,4 +46,46 @@ export const createPlazaCard = (params: CreatePlazaCardParams): Promise<PlazaCar
 
 export const deletePlazaCard = (cardId: string): Promise<{ success: boolean }> => {
   return request.delete(`/v1/plaza/card/${encodeURIComponent(cardId)}`)
+}
+
+export interface GetPlazaCommentsParams {
+  cursor?: string | null
+  limit?: number
+}
+
+export const getPlazaComments = (
+  cardId: string,
+  params: GetPlazaCommentsParams = {},
+): Promise<PlazaCommentsResponse> => {
+  const { cursor = null, limit = 20 } = params
+  return request.get(`/v1/plaza/cards/${encodeURIComponent(cardId)}/comments`, {
+    params: {
+      limit,
+      ...(cursor && { cursor }),
+    },
+  })
+}
+
+export const createPlazaComment = (
+  cardId: string,
+  payload: { content: string; parentId?: string },
+): Promise<PlazaComment> => {
+  return request.post(`/v1/plaza/cards/${encodeURIComponent(cardId)}/comments`, payload)
+}
+
+export const deletePlazaComment = (commentId: string): Promise<{ success: boolean }> => {
+  return request.delete(`/v1/plaza/comments/${encodeURIComponent(commentId)}`)
+}
+
+export const getPlazaCommentReplies = (
+  commentId: string,
+  params: GetPlazaCommentsParams = {},
+): Promise<PlazaCommentsResponse> => {
+  const { cursor = null, limit = 20 } = params
+  return request.get(`/v1/plaza/comments/${encodeURIComponent(commentId)}/replies`, {
+    params: {
+      limit,
+      ...(cursor && { cursor }),
+    },
+  })
 }

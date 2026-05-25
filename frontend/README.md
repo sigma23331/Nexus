@@ -108,7 +108,8 @@ frontend/
     │   │   ├── PromptModal.vue         # 自定义输入弹窗（修改昵称等）
     │   │   ├── ConfirmModal.vue        # 自定义确认弹窗（退出/切换/注销）
     │   │   ├── ProfileEditModal.vue    # 登录用户个人信息修改弹窗（昵称、头像、生日、性别）
-    │   │   └── ProfileCollectModal.vue # 首次登录信息收集弹窗（昵称、头像、生日、性别）
+    │   │   ├── ProfileCollectModal.vue # 首次登录信息收集弹窗（昵称、头像、生日、性别）
+    │   │   └── BirthdayPicker.vue      # 生日信息选择组件
     |   |
     │   ├── layout/                 # 布局组件（TabBar、Header、安全区容器）
     │   └── business/               # 业务组件（运势卡片、答案卡片、日记条目等）

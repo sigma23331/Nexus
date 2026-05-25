@@ -87,11 +87,7 @@
         <!-- 生日 -->
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">生日（选填）</label>
-          <input
-            v-model="birthday"
-            type="date"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/60"
-          />
+          <BirthdayPicker v-model="birthday" />
         </div>
 
         <!-- 性别 -->
@@ -139,6 +135,7 @@
 import { ref, computed } from 'vue'
 import { updateUserProfile } from '@/api/user'
 import { useUserStore } from '@/stores/user'
+import BirthdayPicker from '@/components/common/BirthdayPicker.vue'
 
 interface ProfilePayload {
   nickname: string

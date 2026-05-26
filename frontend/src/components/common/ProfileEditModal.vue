@@ -22,7 +22,6 @@
       </div>
 
       <div class="p-5 space-y-5">
-        <!-- 头像上传（仅文件选择） -->
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-2">头像</label>
           <div class="flex items-center gap-4">
@@ -68,7 +67,6 @@
           />
         </div>
 
-        <!-- 昵称（必填） -->
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">
             昵称 <span class="text-red-500">*</span>
@@ -84,13 +82,11 @@
           <p v-if="nicknameError" class="text-xs text-red-500 mt-1">{{ nicknameError }}</p>
         </div>
 
-        <!-- 生日 -->
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">生日（选填）</label>
           <BirthdayPicker v-model="birthday" />
         </div>
 
-        <!-- 性别 -->
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-2">性别（选填）</label>
           <div class="flex gap-6">
@@ -136,6 +132,7 @@ import { ref, computed } from 'vue'
 import { updateUserProfile } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import BirthdayPicker from '@/components/common/BirthdayPicker.vue'
+import { getValidAvatar } from '@/utils/avatar'
 
 interface ProfilePayload {
   nickname: string
@@ -153,7 +150,6 @@ const visible = ref(false)
 const submitting = ref(false)
 const errorMsg = ref('')
 
-// 表单数据
 const nickname = ref('')
 const avatarPreview = ref('')
 const birthday = ref('')
@@ -161,12 +157,10 @@ const gender = ref<'male' | 'female' | 'secret' | ''>('')
 let selectedFileBase64: string | null = null
 
 const fileInput = ref<HTMLInputElement | null>(null)
-const defaultAvatar = 'https://api.xinyundao.com/default_avatar.png'
+const defaultAvatar = '/images/avatar.png'
 
-// 当前用户头像（用于预览回显）
-const currentAvatar = computed(() => userStore.userInfo?.avatar || '')
+const currentAvatar = computed(() => getValidAvatar(userStore.userInfo?.avatar))
 
-// 昵称校验
 const nicknameError = computed(() => {
   if (!nickname.value.trim()) return '昵称不能为空'
   if (nickname.value.trim().length > 20) return '昵称不能超过20个字符'
@@ -209,7 +203,6 @@ const triggerFileInput = () => {
 }
 
 const open = () => {
-  // 预填当前用户信息
   nickname.value = userStore.userInfo?.nickname || ''
   avatarPreview.value = ''
   selectedFileBase64 = null
@@ -246,7 +239,7 @@ const submit = async () => {
   try {
     await updateUserProfile(payload)
     await userStore.fetchUserInfo()
-    close(true) // 更新成功，关闭并通知父组件
+    close(true)
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : '保存失败，请重试'
     errorMsg.value = message

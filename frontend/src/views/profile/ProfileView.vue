@@ -1,24 +1,17 @@
 <template>
   <div class="min-h-screen bg-white text-slate-900 pb-20">
-    <!-- 用户信息头部 -->
     <div class="relative bg-gradient-to-r from-purple-50 to-indigo-50 pt-8 pb-6 px-6">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
           <div
             class="w-16 h-16 rounded-full bg-purple-200 flex items-center justify-center overflow-hidden"
           >
-            <img
-              v-if="userStore.userInfo?.avatar"
-              :src="userStore.userInfo.avatar"
-              class="w-full h-full object-cover"
-            />
-            <span v-else class="text-3xl">👤</span>
+            <img :src="displayAvatar" class="w-full h-full object-cover" />
           </div>
           <div>
             <h2 class="text-xl font-bold text-slate-800">
               {{ userStore.userInfo?.nickname || '未登录' }}
             </h2>
-            <!-- 一行左右布局：生日 + 性别（带图标） -->
             <div class="flex justify-between items-center mt-1 gap-4">
               <span class="text-xs text-slate-500"> 🎂 {{ formattedBirthday }} </span>
               <span class="text-xs text-slate-500 flex items-center gap-1">
@@ -31,7 +24,6 @@
     </div>
 
     <main class="px-6 py-4 space-y-8">
-      <!-- 快捷入口 -->
       <section>
         <ul class="space-y-2">
           <li
@@ -48,7 +40,6 @@
             <span>📅 历史运势记录</span>
             <span class="text-sm text-slate-500">{{ historyCount }}</span>
           </li>
-          <!-- 新增：设置入口 -->
           <li
             class="flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 bg-white p-3"
             @click="router.push('/profile/settings')"
@@ -71,7 +62,6 @@
         </ul>
       </section>
 
-      <!-- 情绪日记本 -->
       <section>
         <h2 class="text-lg font-semibold mb-3">情绪日记本</h2>
         <router-link
@@ -109,6 +99,7 @@ import MoodDiaryModal from '@/components/business/MoodDiaryModal.vue'
 import { saveDiaryOfflineFirst } from '@/utils/diaryService'
 import type { MoodTag } from '@/utils/storage'
 import IconSettings from '@/components/icons/IconSettings.vue'
+import { getValidAvatar } from '@/utils/avatar'
 
 interface DiaryData {
   date: string
@@ -124,7 +115,8 @@ const historyCount = ref(0)
 const moodModalRef = ref<InstanceType<typeof MoodDiaryModal> | null>(null)
 const monthlyOverviewRef = ref<InstanceType<typeof MonthlyMoodOverview> | null>(null)
 
-// 性别图标和文字映射
+const displayAvatar = computed(() => getValidAvatar(userStore.userInfo?.avatar))
+
 const genderIcon = computed(() => {
   const gender = userStore.userInfo?.gender
   switch (gender) {
@@ -149,7 +141,6 @@ const genderText = computed(() => {
   }
 })
 
-// 生日格式化：YYYY-MM-DD → YYYY年MM月DD日，若无则返回“未填写”
 const formattedBirthday = computed(() => {
   const birthday = userStore.userInfo?.birthday
   if (!birthday) return '未填写'
@@ -168,7 +159,6 @@ const onDiarySubmitted = async (data: DiaryData) => {
   monthlyOverviewRef.value?.refresh()
 }
 
-// 获取收藏总数
 const fetchFavoriteCount = async () => {
   try {
     const res = await getFavoriteAnswers(1, 1)
@@ -178,7 +168,6 @@ const fetchFavoriteCount = async () => {
   }
 }
 
-// 获取历史运势总数
 const fetchHistoryCount = async () => {
   try {
     const res = await getHistoryFortune(1, 1)
@@ -188,18 +177,15 @@ const fetchHistoryCount = async () => {
   }
 }
 
-// 刷新所有数量
 const refreshCounts = async () => {
   await Promise.all([fetchFavoriteCount(), fetchHistoryCount()])
 }
 
-// 监听答案变化事件
 const handleAnswersUpdated = () => {
   fetchFavoriteCount()
 }
 
 onMounted(async () => {
-  // 获取用户信息（如果已登录但store中没有）
   if (localStorage.getItem('token') && !userStore.userInfo) {
     try {
       const profile = await getUserProfile()
@@ -213,7 +199,6 @@ onMounted(async () => {
 })
 
 onActivated(() => {
-  // 从 keep-alive 缓存激活时重新获取数据
   refreshCounts()
 })
 

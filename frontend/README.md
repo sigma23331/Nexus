@@ -156,7 +156,8 @@ frontend/
     │   ├── cardGenerator.ts        # 卡片生成核心逻辑
     │   ├── diaryService.ts         # 日记服务：本地存储 + 后台同步队列（离线优先）
     │   ├── networkSync.ts          # 网络监听与自动同步未上传日记
-    │   └── answerService.ts         # 答案历史缓存服务（新增）
+    │   ├── answerService.ts        # 答案历史缓存服务
+    │   └── avatar.ts               # 默认头像获取和兼容
     │
     ├── views/                      # 页面级组件（按路由划分）
     │   ├── fortune/                # 运势看板模块

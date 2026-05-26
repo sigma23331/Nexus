@@ -162,7 +162,7 @@ const gender = ref<'male' | 'female' | 'secret' | ''>('')
 let selectedFileBase64: string | null = null // 存储待提交的 base64
 
 const fileInput = ref<HTMLInputElement | null>(null)
-const defaultAvatar = 'https://api.xinyundao.com/default_avatar.png'
+const defaultAvatar = '/images/avatar.png'
 
 // 昵称校验
 const nicknameError = computed(() => {

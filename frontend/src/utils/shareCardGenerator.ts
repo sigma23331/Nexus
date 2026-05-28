@@ -43,7 +43,7 @@ const STYLE = {
   // 二维码配置
   qrSize: 140,
   qrMargin: 40,
-  qrImagePath: 'public/images/qrcode.png',
+  qrImagePath: '/images/qrcode.png',
   qrText: '扫码体验更多运势答案',
   qrTextSize: 20,
 }

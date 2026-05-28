@@ -28,15 +28,117 @@
       </section>
 
       <section
-        class="relative overflow-hidden rounded-3xl border border-amber-200 bg-white p-5 shadow-sm"
+        class="fortune-card relative overflow-hidden rounded-3xl border bg-white p-5 shadow-sm"
+        :class="
+          isDuanwu
+            ? 'fortune-card--duanwu border-red-300/70 bg-gradient-to-br from-[#fdf6e3] via-white to-[#f0efe4]'
+            : 'border-amber-200'
+        "
+        :data-festival="isDuanwu ? 'duanwu' : 'default'"
       >
-        <div class="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-amber-100"></div>
-        <div class="absolute -bottom-10 -left-10 h-24 w-24 rounded-full bg-rose-100"></div>
+        <template v-if="isDuanwu">
+          <!-- 右上角粽叶装饰 -->
+          <svg
+            class="pointer-events-none absolute -top-6 -right-6 h-28 w-28 opacity-90"
+            viewBox="0 0 100 100"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="duanwu-leaf-a" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#5e8c61" />
+                <stop offset="100%" stop-color="#2f6f4f" />
+              </linearGradient>
+              <linearGradient id="duanwu-leaf-b" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#82a884" />
+                <stop offset="100%" stop-color="#4a805e" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M82 14 Q44 22 22 60 Q34 74 60 70 Q82 64 88 36 Z"
+              fill="url(#duanwu-leaf-a)"
+              opacity="0.92"
+            />
+            <path
+              d="M86 20 Q56 30 38 58"
+              stroke="#244c3a"
+              stroke-width="1.2"
+              fill="none"
+              opacity="0.55"
+            />
+            <path
+              d="M70 12 Q42 14 28 46 Q40 56 58 50 Q74 44 78 24 Z"
+              fill="url(#duanwu-leaf-b)"
+              opacity="0.78"
+            />
+            <path
+              d="M74 18 Q52 26 36 46"
+              stroke="#1f3d2e"
+              stroke-width="1"
+              fill="none"
+              opacity="0.45"
+            />
+          </svg>
+          <!-- 左下角五彩绳 + 香囊装饰 -->
+          <svg
+            class="pointer-events-none absolute -bottom-2 -left-2 h-24 w-24 opacity-85"
+            viewBox="0 0 100 100"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="duanwu-sachet" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#d23b3b" />
+                <stop offset="100%" stop-color="#8d1414" />
+              </linearGradient>
+            </defs>
+            <path
+              d="M20 78 Q20 64 32 60 L48 60 Q60 64 60 78 Q60 90 48 92 L32 92 Q20 90 20 78 Z"
+              fill="url(#duanwu-sachet)"
+            />
+            <path d="M28 60 L28 50 Q28 44 40 44 Q52 44 52 50 L52 60 Z" fill="#b8202a" />
+            <path
+              d="M34 70 Q40 76 46 70"
+              stroke="#f4d35e"
+              stroke-width="1.4"
+              fill="none"
+              stroke-linecap="round"
+            />
+            <circle cx="40" cy="74" r="1.6" fill="#f4d35e" />
+            <line x1="30" y1="92" x2="30" y2="98" stroke="#f4d35e" stroke-width="1.4" />
+            <line x1="40" y1="92" x2="40" y2="98" stroke="#e76f51" stroke-width="1.4" />
+            <line x1="50" y1="92" x2="50" y2="98" stroke="#2a9d8f" stroke-width="1.4" />
+          </svg>
+          <!-- 右下角竹叶点缀 -->
+          <svg
+            class="pointer-events-none absolute bottom-2 right-3 h-10 w-10 opacity-70"
+            viewBox="0 0 60 60"
+            aria-hidden="true"
+          >
+            <path d="M10 50 Q18 30 50 14" stroke="#3e7b56" stroke-width="1.2" fill="none" />
+            <path d="M26 30 Q34 22 48 22 Q42 32 30 36 Z" fill="#5e8c61" opacity="0.85" />
+            <path d="M14 44 Q22 38 34 40 Q26 48 16 50 Z" fill="#82a884" opacity="0.8" />
+          </svg>
+        </template>
+        <template v-else>
+          <div class="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-amber-100"></div>
+          <div class="absolute -bottom-10 -left-10 h-24 w-24 rounded-full bg-rose-100"></div>
+        </template>
         <div class="relative space-y-4">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold tracking-wide text-amber-700">今日签文</span>
+            <span
+              class="text-xs font-semibold tracking-wide"
+              :class="isDuanwu ? 'text-red-700' : 'text-amber-700'"
+            >
+              今日签文
+            </span>
             <!-- 运势分展示（本示例忽略，全站统计需要） -->
-            <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+            <span
+              class="rounded-full px-3 py-1 text-xs font-semibold"
+              :class="
+                isDuanwu
+                  ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
+                  : 'bg-amber-50 text-amber-700'
+              "
+            >
               {{ isBoardUnlocked ? fortuneData.title : '待揭晓' }}
             </span>
           </div>
@@ -47,7 +149,12 @@
           />
           <div
             v-else
-            class="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-rose-50 px-4 py-5"
+            class="rounded-2xl border px-4 py-5"
+            :class="
+              isDuanwu
+                ? 'border-red-200 bg-gradient-to-br from-[#fdf6e3] via-white to-[#e8f1ea]'
+                : 'border-amber-200 bg-gradient-to-br from-amber-50 to-rose-50'
+            "
           >
             <div class="board-draw">
               <div class="board-draw__stage">
@@ -447,6 +554,9 @@ import { getFortuneToday, getFortuneTrend, getHistoryFortune } from '@/api/fortu
 import FortuneShareReveal from './components/FortuneShareReveal.vue'
 import TodayFortuneContent from './components/TodayFortuneContent.vue'
 import ShareToPlazaModal from '@/components/common/ShareToPlazaModal.vue'
+import { useFestivalTheme } from '@/composables/useFestivalTheme'
+
+const { isDuanwu } = useFestivalTheme()
 
 type FortuneViewData = {
   id: string

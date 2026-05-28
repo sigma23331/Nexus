@@ -53,6 +53,14 @@
           <span class="text-xl">📤</span>
           <span>分享到广场</span>
         </button>
+        <button
+          @click="downloadCard"
+          :disabled="cardGenerating"
+          class="flex items-center gap-2 text-sm text-slate-600 hover:text-purple-600 transition disabled:opacity-50"
+        >
+          <span class="text-xl">⬇️</span>
+          <span>{{ cardGenerating ? '生成卡片中...' : '下载答案卡片' }}</span>
+        </button>
       </div>
     </div>
   </div>
@@ -75,6 +83,7 @@ import dayjs from 'dayjs'
 import { favoriteAnswer, type AnswerHistoryItem } from '@/api/answer'
 import { updateLocalFavoriteStatus } from '@/utils/answerService'
 import ShareToPlazaModal from '@/components/common/ShareToPlazaModal.vue'
+import { useShareCard } from '@/composables/useShareCard'
 
 interface AnswerDetail extends AnswerHistoryItem {
   isFavorited: boolean
@@ -150,6 +159,17 @@ const openShareModal = () => {
     type: 'answer',
     sourceId: detailData.id,
     content: originalContent,
+  })
+}
+
+const { isGenerating: cardGenerating, generateAnswerCard } = useShareCard()
+
+const downloadCard = () => {
+  if (!detailData.question || !detailData.answerText) return
+  generateAnswerCard({
+    question: detailData.question,
+    answerText: detailData.answerText,
+    createdAt: detailData.createdAt,
   })
 }
 

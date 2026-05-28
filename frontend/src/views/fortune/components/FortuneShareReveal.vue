@@ -20,7 +20,7 @@
         :aria-hidden="phase === 'bucket' || phase === 'hiding' || phase === 'card'"
       >
         <div class="reveal__stick-inner">
-          <p class="reveal__stick-title">上上签</p>
+          <p class="reveal__stick-title">{{ revealStickTitle }}</p>
         </div>
       </div>
 
@@ -143,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import FortuneCardPreview from './FortuneCardPreview.vue'
 
 export type FortuneShareFortune = {
@@ -155,9 +155,23 @@ export type FortuneShareFortune = {
   ji: string[]
 }
 
-defineProps<{
+const props = defineProps<{
   fortune: FortuneShareFortune
 }>()
+
+const scoreToSign = (score: number) => {
+  if (score >= 85) return '上上签'
+  if (score >= 75) return '上吉'
+  if (score >= 65) return '中平'
+  if (score >= 55) return '小谨'
+  return '守静'
+}
+
+const revealStickTitle = computed(() => {
+  const title = props.fortune.title?.trim()
+  if (title && title !== '--') return title
+  return scoreToSign(Number(props.fortune.score || 0))
+})
 
 const phase = ref<'bucket' | 'stick' | 'hiding' | 'card'>('bucket')
 

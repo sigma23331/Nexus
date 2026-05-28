@@ -18,6 +18,7 @@
                 {{ genderIcon }} {{ genderText }}
               </span>
             </div>
+            <p class="mt-1 text-[11px] text-slate-400">位置：{{ locationDisplayText }}</p>
           </div>
         </div>
       </div>
@@ -146,6 +147,22 @@ const formattedBirthday = computed(() => {
   if (!birthday) return '未填写'
   const [year, month, day] = birthday.split('-')
   return `${year}年${month}月${day}日`
+})
+
+const locationDisplayText = computed(() => {
+  const latitude = userStore.userInfo?.latitude
+  const longitude = userStore.userInfo?.longitude
+  const updatedAt = userStore.userInfo?.locationUpdatedAt
+
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    return '未保存'
+  }
+
+  const coordinateText = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+  if (!updatedAt) return coordinateText
+
+  const timeText = updatedAt.replace('T', ' ').slice(0, 19)
+  return `${coordinateText}（${timeText}）`
 })
 
 const openMoodModal = () => moodModalRef.value?.open()

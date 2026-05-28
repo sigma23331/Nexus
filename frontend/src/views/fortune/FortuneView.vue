@@ -448,10 +448,11 @@
         <div class="flex gap-3 mt-4">
           <button
             type="button"
-            class="flex-1 bg-purple-600 hover:bg-purple-700 rounded-xl py-2 text-sm font-medium text-white"
-            @click="sharePreviewOpen = true"
+            class="flex-1 bg-purple-600 hover:bg-purple-700 rounded-xl py-2 text-sm font-medium text-white disabled:opacity-50"
+            :disabled="shareCardGenerating"
+            @click="handleDownloadFortuneCard"
           >
-            生成运势卡片
+            {{ shareCardGenerating ? '生成运势中...' : '下载运势卡片' }}
           </button>
           <button
             type="button"
@@ -554,6 +555,7 @@ import FortuneShareReveal from './components/FortuneShareReveal.vue'
 import TodayFortuneContent from './components/TodayFortuneContent.vue'
 import ShareToPlazaModal from '@/components/common/ShareToPlazaModal.vue'
 import { useFestivalTheme } from '@/composables/useFestivalTheme'
+import { useShareCard } from '@/composables/useShareCard'
 
 const { isDuanwu } = useFestivalTheme()
 
@@ -1222,6 +1224,25 @@ const openShareFortuneModal = () => {
       wealth: fortuneData.value.wealth,
     },
   })
+}
+
+// 分享卡片生成
+const { isGenerating: shareCardGenerating, generateFortuneCard } = useShareCard()
+
+const handleDownloadFortuneCard = () => {
+  if (!isBoardUnlocked.value) {
+    alert('请先解锁今日运势')
+    return
+  }
+  const cardData = {
+    title: fortuneData.value.title,
+    score: fortuneData.value.score,
+    content_main: fortuneData.value.content_main,
+    content_sub: fortuneData.value.content_sub,
+    yi: fortuneData.value.yi,
+    ji: fortuneData.value.ji,
+  }
+  generateFortuneCard(cardData)
 }
 </script>
 

@@ -548,8 +548,7 @@
 </template>
 
 <script setup lang="ts">
-import * as echarts from 'echarts'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onActivated, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getFortuneToday, getFortuneTrend, getHistoryFortune } from '@/api/fortune'
 import FortuneShareReveal from './components/FortuneShareReveal.vue'
 import TodayFortuneContent from './components/TodayFortuneContent.vue'
@@ -637,8 +636,20 @@ const historyFortunes = ref<
 const historyDetailOpen = ref(false)
 const selectedHistory = ref<(typeof historyFortunes.value)[number] | null>(null)
 const chartRef = ref<HTMLElement | null>(null)
-let chartInstance: echarts.ECharts | null = null
+type EchartsModule = typeof import('echarts')
+let echartsModule: EchartsModule | null = null
+let chartInstance: import('echarts').ECharts | null = null
 let chartInitRetryTimer: ReturnType<typeof setTimeout> | null = null
+let boardRequestToken = 0
+const FORTUNE_BOARD_CACHE_KEY = 'fortune-board-cache-v1'
+const FORTUNE_BOARD_CACHE_TTL_MS = 60 * 1000
+
+type FortuneBoardCachePayload = {
+  cachedAt: number
+  fortuneData: FortuneViewData
+  trendPoints: Array<{ date: string; value: number }>
+  historyFortunes: typeof historyFortunes.value
+}
 
 const normalizeMonthDay = (value: string) => {
   if (!value) return ''
@@ -876,6 +887,40 @@ const normalizeFortuneToday = (
   }
 }
 
+const readFortuneBoardCache = (): FortuneBoardCachePayload | null => {
+  try {
+    const raw = localStorage.getItem(FORTUNE_BOARD_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<FortuneBoardCachePayload>
+    if (!parsed || typeof parsed.cachedAt !== 'number' || !parsed.fortuneData) return null
+    return {
+      cachedAt: parsed.cachedAt,
+      fortuneData: parsed.fortuneData as FortuneViewData,
+      trendPoints: Array.isArray(parsed.trendPoints) ? parsed.trendPoints : [],
+      historyFortunes: Array.isArray(parsed.historyFortunes) ? parsed.historyFortunes : [],
+    }
+  } catch {
+    return null
+  }
+}
+
+const writeFortuneBoardCache = () => {
+  const payload: FortuneBoardCachePayload = {
+    cachedAt: Date.now(),
+    fortuneData: fortuneData.value,
+    trendPoints: trendPoints.value,
+    historyFortunes: historyFortunes.value,
+  }
+  localStorage.setItem(FORTUNE_BOARD_CACHE_KEY, JSON.stringify(payload))
+}
+
+const applyFortuneBoardCache = (cache: FortuneBoardCachePayload) => {
+  fortuneData.value = cache.fortuneData
+  trendPoints.value = cache.trendPoints
+  historyFortunes.value = cache.historyFortunes
+  initBoardDrawState(fortuneData.value.date, fortuneData.value.record_existed)
+}
+
 const formatMMDD = (dateStr: string) => {
   if (!dateStr) return '--'
   return dateStr.length >= 10 ? dateStr.slice(5, 10) : dateStr
@@ -916,25 +961,54 @@ const formatMMDD = (dateStr: string) => {
 //   fallbackCopy(shareText)
 // }
 
-const loadFortuneBoard = async () => {
-  loading.value = true
-  errorMessage.value = ''
-  try {
-    const [today, trend, history] = await Promise.all([
-      getFortuneToday(),
-      getFortuneTrend(),
-      getHistoryFortune(1, 3),
-    ])
+const loadFortuneBoardWithOptions = async (
+  options: { preferCache?: boolean; silent?: boolean } = {},
+) => {
+  const { preferCache = false, silent = false } = options
+  const requestToken = ++boardRequestToken
+  let hasFreshCache = false
+  if (preferCache) {
+    const cache = readFortuneBoardCache()
+    if (cache && Date.now() - cache.cachedAt <= FORTUNE_BOARD_CACHE_TTL_MS) {
+      hasFreshCache = true
+      applyFortuneBoardCache(cache)
+      loading.value = false
+      errorMessage.value = ''
+    }
+  }
 
+  const shouldShowLoading = !silent && !hasFreshCache
+  if (shouldShowLoading) {
+    loading.value = true
+  }
+  if (!hasFreshCache) {
+    errorMessage.value = ''
+  }
+  try {
+    // 先拉今日运势，确保首屏尽快可见，避免被历史/轨迹接口拖慢。
+    const today = await getFortuneToday()
+    if (requestToken !== boardRequestToken) return
     fortuneData.value = normalizeFortuneToday(today)
     initBoardDrawState(fortuneData.value.date, fortuneData.value.record_existed)
 
-    const points = Array.isArray(trend.trendPoints) ? trend.trendPoints : []
-    trendPoints.value = points.map((item) => ({
-      date: String(item.date ?? ''),
-      value: Number(item.value ?? 0),
-    }))
-    const historyList = Array.isArray(history.list) ? history.list : []
+    const [trendResult, historyResult] = await Promise.allSettled([
+      getFortuneTrend(),
+      getHistoryFortune(1, 3),
+    ])
+    if (requestToken !== boardRequestToken) return
+
+    if (trendResult.status === 'fulfilled') {
+      const points = Array.isArray(trendResult.value.trendPoints)
+        ? trendResult.value.trendPoints
+        : []
+      trendPoints.value = points.map((item) => ({
+        date: String(item.date ?? ''),
+        value: Number(item.value ?? 0),
+      }))
+    } else {
+      trendPoints.value = []
+    }
+
     if (!trendPoints.value.length) {
       trendPoints.value = [
         {
@@ -944,37 +1018,60 @@ const loadFortuneBoard = async () => {
       ]
     }
 
-    historyFortunes.value = historyList.map((item, index) => {
-      const current = Number(item.score ?? 0)
-      const next = Number(historyList[index + 1]?.score ?? current)
-      const deltaFromPrev = current - next
-      const relation = relationByDelta(deltaFromPrev)
-      return {
-        id: `${item.date || 'record'}_${index}`,
-        date: formatMMDD(item.date || ''),
-        score: current,
-        title: item.title || '--',
-        // 真实历史内容
-        content_main: item.content_main || '—',
-        content_sub: item.content_sub || '',
-        yi: item.yi || [],
-        ji: item.ji || [],
-        // 卡片摘要字段（保持原有风格）
-        summary: scoreSummary(current),
-        story: relation.story,
-        linkText: relation.text,
-        linkClass: relation.cls,
-      }
-    })
+    if (historyResult.status === 'fulfilled') {
+      const historyList = Array.isArray(historyResult.value.list) ? historyResult.value.list : []
+      historyFortunes.value = historyList.map((item, index) => {
+        const current = Number(item.score ?? 0)
+        const next = Number(historyList[index + 1]?.score ?? current)
+        const deltaFromPrev = current - next
+        const relation = relationByDelta(deltaFromPrev)
+        return {
+          id: `${item.date || 'record'}_${index}`,
+          date: formatMMDD(item.date || ''),
+          score: current,
+          title: item.title || '--',
+          // 真实历史内容
+          content_main: item.content_main || '—',
+          content_sub: item.content_sub || '',
+          yi: item.yi || [],
+          ji: item.ji || [],
+          // 卡片摘要字段（保持原有风格）
+          summary: scoreSummary(current),
+          story: relation.story,
+          linkText: relation.text,
+          linkClass: relation.cls,
+        }
+      })
+    } else {
+      historyFortunes.value = []
+    }
+    writeFortuneBoardCache()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '数据加载失败，请稍后重试'
+    if (requestToken !== boardRequestToken) return
+    if (!hasFreshCache) {
+      errorMessage.value = error instanceof Error ? error.message : '数据加载失败，请稍后重试'
+    }
   } finally {
-    loading.value = false
+    if (requestToken === boardRequestToken && shouldShowLoading) {
+      loading.value = false
+    }
   }
 }
 
-const initChart = () => {
+const loadFortuneBoard = async () => {
+  await loadFortuneBoardWithOptions()
+}
+
+const ensureEchartsModule = async () => {
+  if (!echartsModule) {
+    echartsModule = await import('echarts')
+  }
+  return echartsModule
+}
+
+const initChart = async () => {
   if (!chartRef.value) return
+  const echarts = await ensureEchartsModule()
   chartInstance?.dispose()
   chartInstance = echarts.init(chartRef.value)
 
@@ -1060,15 +1157,21 @@ const initChartWhenReady = (retry = 0) => {
     }, 120)
     return
   }
-  initChart()
-  chartInstance?.resize()
+  void initChart().then(() => {
+    chartInstance?.resize()
+  })
 }
 
 const handleResize = () => chartInstance?.resize()
 
 onMounted(() => {
-  void loadFortuneBoard()
+  void loadFortuneBoardWithOptions({ preferCache: true })
   window.addEventListener('resize', handleResize)
+})
+
+onActivated(() => {
+  // 回到页面时优先秒开缓存，同时后台静默刷新最新数据。
+  void loadFortuneBoardWithOptions({ preferCache: true, silent: true })
 })
 
 watch(

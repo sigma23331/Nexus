@@ -40,11 +40,11 @@ const STYLE = {
   // 加大内边距
   padding: 48,
   lineHeight: 1.6,
-  // 二维码配置（加大尺寸，增加下边距）
+  // 二维码配置
   qrSize: 140,
   qrMargin: 40,
   qrImagePath: 'public/images/qrcode.png',
-  qrText: '扫码体验更多运势答案',              // 引导文字
+  qrText: '扫码体验更多运势答案',
   qrTextSize: 20,
 }
 
@@ -63,9 +63,9 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 async function drawQRCode(ctx: CanvasRenderingContext2D, width: number, height: number) {
   const size = STYLE.qrSize
   const margin = STYLE.qrMargin
-  // 二维码左上角坐标（右下角定位）
-  const x = width - size - margin - 30
-  const y = height - size - margin - 40   // 向上偏移40px，留出引导文字空间
+  // 二维码左上角坐标（右下角定位，增加右侧额外偏移）
+  const x = width - size - margin - 20
+  const y = height - size - margin - 40
 
   try {
     const qrImg = await loadImage(STYLE.qrImagePath)
@@ -87,7 +87,7 @@ async function drawQRCode(ctx: CanvasRenderingContext2D, width: number, height: 
   ctx.font = `${STYLE.qrTextSize}px ${STYLE.fontFamily}`
   ctx.textAlign = 'center'
   ctx.fillText(STYLE.qrText, x + size / 2, y + size + STYLE.qrTextSize + 8)
-  ctx.textAlign = 'left'   // 恢复
+  ctx.textAlign = 'left' // 恢复
 }
 
 // 辅助函数：绘制圆角矩形
@@ -117,7 +117,7 @@ function roundRect(
 function wrapText(
   ctx: CanvasRenderingContext2D,
   text: string,
-  x: number,        // 参考 X 坐标（对齐方式由 textAlign 决定）
+  x: number, // 参考 X 坐标（对齐方式由 textAlign 决定）
   y: number,
   maxWidth: number,
   lineHeight: number,
@@ -168,7 +168,7 @@ export async function drawFortuneShareCard(
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT)
 
-  // 装饰圆点（按比例放大）
+  // 装饰圆点
   ctx.fillStyle = '#FDE68A'
   ctx.beginPath()
   ctx.arc(CARD_WIDTH - 80, 80, 80, 0, Math.PI * 2)
@@ -178,7 +178,6 @@ export async function drawFortuneShareCard(
   ctx.arc(80, CARD_HEIGHT - 140, 70, 0, Math.PI * 2)
   ctx.fill()
 
-  // 全局文字居中
   ctx.textAlign = 'center'
 
   // 标题
@@ -205,7 +204,7 @@ export async function drawFortuneShareCard(
     y,
     CARD_WIDTH - 2 * STYLE.padding,
     STYLE.mainSize * STYLE.lineHeight,
-    4,   // 最多4行
+    4,
   )
 
   // 副签文
@@ -248,12 +247,15 @@ export async function drawFortuneShareCard(
     2,
   )
 
-  // 底部标语（上移，为二维码留出更多空间）
+  // 底部标语
   ctx.font = `24px ${STYLE.fontFamily}`
   ctx.fillStyle = '#D97706'
   ctx.fillText('心运岛 · 每日指引', CARD_WIDTH / 2, CARD_HEIGHT - 140)
 
-  // 绘制二维码（已自动增加底部间距）
+  // 避免 ESLint 未使用变量警告
+  void y
+
+  // 绘制二维码
   await drawQRCode(ctx, CARD_WIDTH, CARD_HEIGHT)
 }
 
@@ -334,6 +336,9 @@ export async function drawAnswerShareCard(
   ctx.font = `24px ${STYLE.fontFamily}`
   ctx.fillStyle = '#6D28D9'
   ctx.fillText('心运岛 · 答案之书', CARD_WIDTH / 2, CARD_HEIGHT - 140)
+
+  // 避免 ESLint 未使用变量警告
+  void y
 
   // 绘制二维码
   await drawQRCode(ctx, CARD_WIDTH, CARD_HEIGHT)

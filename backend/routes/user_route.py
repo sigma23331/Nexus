@@ -35,6 +35,12 @@ def _serialize_user_info(user):
         "nickname": user.nickname,
         "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png",
         "birthday": user.birthday.isoformat() if getattr(user, 'birthday', None) else None,
+        "latitude": getattr(user, 'latitude', None),
+        "longitude": getattr(user, 'longitude', None),
+        "locationAccuracy": getattr(user, 'location_accuracy', None),
+        "locationUpdatedAt": (
+            user.location_updated_at.isoformat() if getattr(user, 'location_updated_at', None) else None
+        ),
         "gender": gender_value,
     }
 
@@ -94,10 +100,22 @@ def update_profile():
     if not payload or not isinstance(payload, dict):
         return jsonify(code=400, message="请求体必须是有效的JSON对象", data=None), 400
 
-    allowed_fields = {'nickname', 'avatar', 'birthday', 'gender'}
+    allowed_fields = {
+        'nickname',
+        'avatar',
+        'birthday',
+        'gender',
+        'latitude',
+        'longitude',
+        'locationAccuracy',
+    }
     provided_fields = {k for k in payload.keys() if k in allowed_fields}
     if not provided_fields:
-        return jsonify(code=400, message="仅支持更新 nickname、avatar、birthday 或 gender", data=None), 400
+        return jsonify(
+            code=400,
+            message="仅支持更新 nickname、avatar、birthday、gender 或地理位置字段",
+            data=None,
+        ), 400
 
     # 昵称更新：非空、长度限制、唯一性
     if 'nickname' in provided_fields:
@@ -144,6 +162,40 @@ def update_profile():
         if gender not in {item.value for item in Gender}:
             return jsonify(code=400, message="gender 必须为 male、female 或 secret", data=None), 400
         user.gender = Gender(gender)
+
+    if 'latitude' in provided_fields or 'longitude' in provided_fields or 'locationAccuracy' in provided_fields:
+        latitude = payload.get('latitude')
+        longitude = payload.get('longitude')
+        accuracy = payload.get('locationAccuracy')
+
+        if latitude is None or longitude is None:
+            return jsonify(code=400, message="latitude 和 longitude 不能为空", data=None), 400
+
+        try:
+            latitude = float(latitude)
+            longitude = float(longitude)
+        except (TypeError, ValueError):
+            return jsonify(code=400, message="latitude/longitude 必须是数字", data=None), 400
+
+        if not (-90 <= latitude <= 90):
+            return jsonify(code=400, message="latitude 超出范围", data=None), 400
+        if not (-180 <= longitude <= 180):
+            return jsonify(code=400, message="longitude 超出范围", data=None), 400
+
+        if accuracy is not None:
+            try:
+                accuracy = float(accuracy)
+            except (TypeError, ValueError):
+                return jsonify(code=400, message="locationAccuracy 必须是数字", data=None), 400
+            if accuracy < 0:
+                return jsonify(code=400, message="locationAccuracy 不能为负数", data=None), 400
+
+        from datetime import datetime
+
+        user.latitude = latitude
+        user.longitude = longitude
+        user.location_accuracy = accuracy
+        user.location_updated_at = datetime.utcnow()
 
     try:
         db.session.commit()

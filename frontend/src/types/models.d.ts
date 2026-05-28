@@ -6,6 +6,10 @@ export interface UserInfo {
   phone?: string | null
   birthday?: string | null // YYYY-MM-DD
   gender?: 'male' | 'female' | 'secret' | null
+  latitude?: number | null
+  longitude?: number | null
+  locationAccuracy?: number | null
+  locationUpdatedAt?: string | null
 }
 
 // 情绪标签（与后端 MoodType 枚举对齐）

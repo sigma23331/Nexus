@@ -24,6 +24,12 @@ export interface UpdatePasswordResponse {
   success: boolean
 }
 
+export interface UpdateLocationPayload {
+  latitude: number
+  longitude: number
+  locationAccuracy?: number
+}
+
 // ========== API 函数 ==========
 
 /**
@@ -40,6 +46,14 @@ export const getUserProfile = (): Promise<UserProfileResponse> => {
  * @param data 可包含 nickname, avatar
  */
 export const updateUserProfile = (data: Partial<UserInfo>): Promise<void> => {
+  return request.put('/v1/user/profile', data)
+}
+
+/**
+ * 更新用户地理位置
+ * PUT /v1/user/profile
+ */
+export const updateUserLocation = (data: UpdateLocationPayload): Promise<void> => {
   return request.put('/v1/user/profile', data)
 }
 

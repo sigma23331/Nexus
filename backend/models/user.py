@@ -2,7 +2,7 @@ import enum
 import re
 
 from flask import current_app
-from sqlalchemy import Column, Date, Enum, String, Text
+from sqlalchemy import Column, Date, DateTime, Enum, Float, String, Text
 from sqlalchemy.orm import relationship, validates
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -23,6 +23,10 @@ class User(BaseModel):
     nickname = Column(String(20), unique=True, nullable=False)
     avatar = Column(Text, default='')
     birthday = Column(Date, nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    location_accuracy = Column(Float, nullable=True)
+    location_updated_at = Column(DateTime, nullable=True)
     gender = Column(
         Enum(
             Gender,

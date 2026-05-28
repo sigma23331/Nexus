@@ -47,6 +47,10 @@
         <SettingItem label="隐私与权限" @click="goToPrivacySettings">
           <template #icon><IconLock /></template>
         </SettingItem>
+        <Divider />
+        <SettingItem label="获取并保存当前位置" @click="captureAndSaveLocation">
+          <template #icon><IconDeviceMobile /></template>
+        </SettingItem>
       </div>
 
       <!-- 其他板块 -->
@@ -93,6 +97,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { updateUserLocation } from '@/api/user'
 import UserAgreementModal from '@/components/common/UserAgreementModal.vue'
 import PrivacyPolicyModal from '@/components/common/PrivacyPolicyModal.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
@@ -127,6 +132,46 @@ const handleInstallToDesktop = () => window.dispatchEvent(new CustomEvent('manua
 // 临时弹窗提示（未实现页面）
 const goToPrivacySettings = () => {
   alert('隐私与权限设置正在开发中，敬请期待～')
+}
+
+const captureAndSaveLocation = async () => {
+  if (!window.isSecureContext && location.hostname !== 'localhost') {
+    alert('定位功能仅支持 HTTPS 或 localhost 环境')
+    return
+  }
+  if (!('geolocation' in navigator)) {
+    alert('当前浏览器不支持定位功能')
+    return
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      try {
+        await updateUserLocation({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          locationAccuracy: position.coords.accuracy,
+        })
+        await userStore.fetchUserInfo()
+        alert('位置已保存')
+      } catch (err: unknown) {
+        alert(err instanceof Error ? err.message : '位置保存失败，请稍后重试')
+      }
+    },
+    (error) => {
+      const messageMap: Record<number, string> = {
+        1: '未授予定位权限，请在浏览器设置中允许定位',
+        2: '无法获取位置信息，请检查 GPS 或网络',
+        3: '定位超时，请重试',
+      }
+      alert(messageMap[error.code] || '定位失败，请稍后重试')
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+    },
+  )
 }
 const goToHelp = () => {
   router.push('/profile/settings/help')

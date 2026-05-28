@@ -1,37 +1,20 @@
 <template>
   <div class="min-h-screen bg-white text-slate-900 pb-20">
     <header class="flex items-center gap-2 px-6 pt-6 pb-2">
-      <span class="text-2xl">📖</span>
+      <img src="/images/answericon.png" alt="答案之书图标" class="w-8 h-8 object-contain" />
       <h1 class="text-2xl font-bold">答案之书</h1>
     </header>
 
     <main class="px-6 py-4 space-y-8">
-      <p class="text-slate-400 text-sm text-center">闭上眼，在心里默念你的问题</p>
-
-      <div class="flex gap-2 justify-center">
-        <button
-          class="px-4 py-1 bg-blue-50 border border-blue-200 rounded-full text-xs text-blue-700"
-        >
-          焦虑
-        </button>
-        <button
-          class="px-4 py-1 bg-purple-50 border border-purple-200 rounded-full text-xs text-purple-700"
-        >
-          迷茫
-        </button>
-        <button
-          class="px-4 py-1 bg-pink-50 border border-pink-200 rounded-full text-xs text-pink-700"
-        >
-          期待
-        </button>
-      </div>
-
       <section>
-        <h2 class="text-lg font-semibold mb-3">你的问题</h2>
         <textarea
           v-model="question"
           rows="3"
-          class="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-purple-500"
+          class="w-full bg-white border rounded-2xl p-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-purple-500 transition-all"
+          :class="{
+            'border-red-500 animate-shake': inputError,
+            'border-slate-200': !inputError,
+          }"
           placeholder="午饭吃啥？要不要回那条消息？..."
         ></textarea>
         <div class="mt-3 flex items-center justify-between gap-3">
@@ -57,13 +40,12 @@
             <div class="book-front">
               <p class="text-xs tracking-[0.2em] text-indigo-100">BOOK OF ANSWERS</p>
               <p class="mt-3 text-xl font-bold text-white">答案之书</p>
-              <p class="mt-2 text-[11px] text-indigo-100/90">轻触抽一条宇宙提示</p>
+              <p class="mt-2 text-[11px] text-indigo-100/90">轻触书籍，抽一句指引</p>
             </div>
             <div class="book-spine"></div>
             <div class="book-glow"></div>
           </div>
         </div>
-        <p class="text-xs text-slate-500 mt-3">轻触书籍，抽一句指引</p>
       </section>
 
       <section>
@@ -107,7 +89,7 @@
       </section>
     </main>
 
-    <!-- 答案弹窗 -->
+    <!-- 答案弹窗（居中样式） -->
     <Transition name="answer-modal">
       <div
         v-if="modalVisible"
@@ -119,7 +101,9 @@
         >
           <span class="text-4xl">✨</span>
           <p class="mt-3 text-xs text-slate-500">你问：{{ currentQuestion }}</p>
-          <p class="my-6 text-xl font-bold leading-relaxed text-slate-900">{{ currentAnswer }}</p>
+          <p class="my-6 text-xl font-bold leading-relaxed text-slate-900">
+            {{ currentAnswer }}
+          </p>
           <button
             @click="hideAnswer"
             class="w-full rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 py-4 font-bold text-white"
@@ -159,6 +143,7 @@ import {
 } from '@/utils/answerService'
 import AnswerDetailModal from './components/AnswerDetailModal.vue'
 
+// ---------- 数据 ----------
 const question = ref('')
 const modalVisible = ref(false)
 const currentAnswer = ref('')
@@ -171,20 +156,33 @@ const recentAnswers = ref<AnswerHistoryItem[]>([])
 const loadingHistory = ref(false)
 const answerDetailModalRef = ref<InstanceType<typeof AnswerDetailModal> | null>(null)
 
+// 输入框错误状态（用于抖动和红框）
+const inputError = ref(false)
+let errorTimer: ReturnType<typeof setTimeout> | null = null
+
+// 是否可提交
 const canSubmit = computed(() => question.value.trim().length > 0 && !isDrawing.value)
+
+// 触发输入框错误效果
+function triggerInputError() {
+  if (errorTimer) clearTimeout(errorTimer)
+  inputError.value = true
+  errorTimer = setTimeout(() => {
+    inputError.value = false
+    errorTimer = null
+  }, 400) // 与动画时长一致
+}
 
 function formatDate(iso: string) {
   return dayjs(iso).format('MM月DD日')
 }
 
-// 加载最近5条历史记录（本地优先，异步拉取远程）
+// 加载最近5条历史记录
 async function loadRecentHistory() {
   loadingHistory.value = true
   try {
-    // 先从本地读取
     const local = getLocalAnswerList()
     recentAnswers.value = local.slice(0, 5)
-    // 异步拉取远程最新数据并更新本地
     await fetchAndSyncHistory(1, 5)
     const updated = getLocalAnswerList()
     recentAnswers.value = updated.slice(0, 5)
@@ -197,7 +195,10 @@ async function loadRecentHistory() {
 
 // 提交问题并获取答案
 async function drawAnswer() {
-  if (!canSubmit.value) return
+  if (!canSubmit.value) {
+    triggerInputError()
+    return
+  }
   if (!navigator.onLine) {
     alert('当前网络不可用，请检查网络后重试')
     return
@@ -213,7 +214,6 @@ async function drawAnswer() {
     currentIsFavorited.value = false
     modalVisible.value = true
 
-    // 添加到本地历史记录
     const newItem: AnswerHistoryItem = {
       id: res.id,
       question: res.question,
@@ -222,7 +222,6 @@ async function drawAnswer() {
       isFavorited: false,
     }
     addLocalAnswer(newItem)
-    // 更新最近显示
     recentAnswers.value = [newItem, ...recentAnswers.value.slice(0, 4)]
     question.value = ''
   } catch (err) {
@@ -245,9 +244,7 @@ async function toggleFavorite(answerId: string) {
     await favoriteAnswer(answerId, action)
     const newStatus = !currentIsFavorited.value
     currentIsFavorited.value = newStatus
-    // 更新本地缓存中的收藏状态，并触发全局事件
     updateLocalFavoriteStatus(answerId, newStatus)
-    // 同时更新最近显示列表中的状态
     const recentItem = recentAnswers.value.find((a) => a.id === answerId)
     if (recentItem) recentItem.isFavorited = newStatus
   } catch (err) {
@@ -265,13 +262,19 @@ function openDetail(item: AnswerHistoryItem) {
   answerDetailModalRef.value?.open(item)
 }
 
+// 分享功能（弹窗中的分享卡片按钮调用）
+// function openShareModal() {
+//   // 暂时仅输出，后续可接入分享弹窗
+//   console.log('分享卡片', currentQuestion.value, currentAnswer.value)
+// }
+
 onMounted(() => {
   loadRecentHistory()
 })
 </script>
 
 <style scoped>
-/* 保持原有样式不变 */
+/* 书籍原有样式保持不变 */
 .book-wrap {
   width: 192px;
   height: 256px;
@@ -389,31 +392,51 @@ onMounted(() => {
   }
 }
 
+/* 输入框抖动动画 */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-4px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+.animate-shake {
+  animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* 答案弹窗过渡动画 */
 .answer-modal-enter-active,
 .answer-modal-leave-active {
   transition: background-color 260ms ease;
 }
-
 .answer-modal-enter-active .answer-modal-panel,
 .answer-modal-leave-active .answer-modal-panel {
   transition:
     transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
     opacity 300ms ease;
 }
-
 .answer-modal-enter-from {
   background-color: rgba(0, 0, 0, 0);
 }
-
 .answer-modal-enter-from .answer-modal-panel {
   opacity: 0;
   transform: translateY(18px) scale(0.96);
 }
-
 .answer-modal-leave-to {
   background-color: rgba(0, 0, 0, 0);
 }
-
 .answer-modal-leave-to .answer-modal-panel {
   opacity: 0;
   transform: translateY(14px) scale(0.98);

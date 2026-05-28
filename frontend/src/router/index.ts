@@ -86,6 +86,12 @@ const router = createRouter({
       component: () => import('@/views/profile/HelpFeedback.vue'),
       meta: { title: '帮助与反馈', requiresAuth: true },
     },
+    {
+      path: '/profile/settings/privacy',
+      name: 'PrivacySettings',
+      component: () => import('@/views/profile/PrivacySettings.vue'),
+      meta: { title: '隐私与权限', requiresAuth: true },
+    },
   ],
 })
 

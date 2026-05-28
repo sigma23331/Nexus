@@ -131,7 +131,7 @@ const handleInstallToDesktop = () => window.dispatchEvent(new CustomEvent('manua
 
 // 临时弹窗提示（未实现页面）
 const goToPrivacySettings = () => {
-  alert('隐私与权限设置正在开发中，敬请期待～')
+  router.push('/profile/settings/privacy')
 }
 
 const captureAndSaveLocation = async () => {

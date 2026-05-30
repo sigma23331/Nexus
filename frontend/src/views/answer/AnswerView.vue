@@ -121,6 +121,15 @@
             >
               🔖 {{ currentIsFavorited ? '取消收藏' : '存入收藏' }}
             </button>
+            <!-- 调试预览按钮（仅开发环境） -->
+            <!-- <button
+              v-if="isDev"
+              type="button"
+              class="flex items-center gap-1 text-xs text-slate-500"
+              @click="debugPreviewAnswerCard"
+            >
+              🖼️ 调试预览
+            </button> -->
           </div>
         </div>
       </div>
@@ -271,6 +280,18 @@ function openDetail(item: AnswerHistoryItem) {
 onMounted(() => {
   loadRecentHistory()
 })
+
+// import { previewAnswerCard } from '@/utils/shareCardGenerator'
+// const isDev = import.meta.env.DEV
+
+// // 调试预览当前答案卡片
+// const debugPreviewAnswerCard = async () => {
+//   await previewAnswerCard({
+//     question: currentQuestion.value,
+//     answerText: currentAnswer.value.replace('宇宙说：', ''),
+//     createdAt: new Date().toISOString(),
+//   })
+// }
 </script>
 
 <style scoped>
@@ -343,18 +364,6 @@ onMounted(() => {
   background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.36), transparent 70%);
   transform: translateX(-50%);
   filter: blur(4px);
-}
-
-.book-front::after {
-  content: '';
-  position: absolute;
-  right: -9px;
-  top: 10px;
-  width: 12px;
-  height: calc(100% - 20px);
-  border-radius: 8px;
-  background: linear-gradient(180deg, #eef2ff 0%, #dbeafe 40%, #c7d2fe 100%);
-  opacity: 0.92;
 }
 
 .shaking .book-3d {

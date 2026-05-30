@@ -461,6 +461,14 @@
           >
             分享
           </button>
+          <!-- <button
+            v-if="isDev"
+            type="button"
+            class="flex-1 bg-gray-200 text-gray-700 rounded-xl py-2 text-sm font-medium"
+            @click="debugPreviewCard"
+          >
+            调试预览
+          </button> -->
         </div>
       </section>
     </main>
@@ -556,6 +564,7 @@ import TodayFortuneContent from './components/TodayFortuneContent.vue'
 import ShareToPlazaModal from '@/components/common/ShareToPlazaModal.vue'
 import { useFestivalTheme } from '@/composables/useFestivalTheme'
 import { useShareCard } from '@/composables/useShareCard'
+// import { previewFortuneCard } from '@/utils/shareCardGenerator'
 
 const { isDuanwu } = useFestivalTheme()
 
@@ -645,6 +654,23 @@ let chartInitRetryTimer: ReturnType<typeof setTimeout> | null = null
 let boardRequestToken = 0
 const FORTUNE_BOARD_CACHE_KEY = 'fortune-board-cache-v1'
 const FORTUNE_BOARD_CACHE_TTL_MS = 60 * 1000
+// const isDev = import.meta.env.DEV
+// // 调试预览（不下载，直接弹窗查看卡片效果）
+// const debugPreviewCard = async () => {
+//   if (!isBoardUnlocked.value) {
+//     alert('请先解锁今日运势')
+//     return
+//   }
+//   const cardData = {
+//     title: fortuneData.value.title,
+//     score: fortuneData.value.score,
+//     content_main: fortuneData.value.content_main,
+//     content_sub: fortuneData.value.content_sub,
+//     yi: fortuneData.value.yi,
+//     ji: fortuneData.value.ji,
+//   }
+//   await previewFortuneCard(cardData)
+// }
 
 type FortuneBoardCachePayload = {
   cachedAt: number

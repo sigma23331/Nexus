@@ -33,7 +33,8 @@ class Config:
     DYPNS_API_ENDPOINT = os.environ.get('DYPNS_API_ENDPOINT', 'dypnsapi.aliyuncs.com')
     ALIYUN_GREEN_ENABLED = os.environ.get('ALIYUN_GREEN_ENABLED', 'false').lower() == 'true'
     ALIYUN_GREEN_REGION = os.environ.get('ALIYUN_GREEN_REGION', 'cn-shanghai')
-    ALIYUN_GREEN_ENDPOINT = os.environ.get('ALIYUN_GREEN_ENDPOINT', 'green.cn-shanghai.aliyuncs.com')
+    ALIYUN_GREEN_ENDPOINT = os.environ.get('ALIYUN_GREEN_ENDPOINT', 'green-cip.cn-shanghai.aliyuncs.com')
+    ALIYUN_GREEN_SERVICE_CODE = os.environ.get('ALIYUN_GREEN_SERVICE_CODE', 'comment_detection')
     ALIYUN_GREEN_TIMEOUT = int(os.environ.get('ALIYUN_GREEN_TIMEOUT', '3'))
     ALIYUN_GREEN_FAIL_OPEN = os.environ.get('ALIYUN_GREEN_FAIL_OPEN', 'false').lower() == 'true'
 

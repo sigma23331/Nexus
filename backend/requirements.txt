@@ -21,5 +21,4 @@ alibabacloud-tea-openapi>=0.3.0
 alibabacloud-tea-util>=0.3.0
 alibabacloud_dysmsapi20170525>=2.0.0
 alibabacloud_dypnsapi20170525>=2.0.0
-aliyun-python-sdk-core>=2.16.0
-aliyun-python-sdk-green>=3.6.6
+alibabacloud_green20220302>=3.2.3

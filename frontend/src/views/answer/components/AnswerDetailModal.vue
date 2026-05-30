@@ -61,6 +61,15 @@
           <span class="text-xl">⬇️</span>
           <span>{{ cardGenerating ? '生成卡片中...' : '下载答案卡片' }}</span>
         </button>
+        <!-- 调试预览按钮（仅开发环境） -->
+        <!-- <button
+          v-if="isDev"
+          @click="debugPreviewCard"
+          class="flex items-center gap-2 text-sm text-slate-600 hover:text-purple-600 transition"
+        >
+          <span class="text-xl">🖼️</span>
+          <span>调试预览</span>
+        </button> -->
       </div>
     </div>
   </div>
@@ -174,4 +183,14 @@ const downloadCard = () => {
 }
 
 defineExpose({ open, close })
+// import { previewAnswerCard } from '@/utils/shareCardGenerator'
+// const isDev = import.meta.env.DEV
+
+// const debugPreviewCard = async () => {
+//   await previewAnswerCard({
+//     question: detailData.question,
+//     answerText: detailData.answerText,
+//     createdAt: detailData.createdAt,
+//   })
+// }
 </script>

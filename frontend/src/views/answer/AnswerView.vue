@@ -121,6 +121,15 @@
             >
               🔖 {{ currentIsFavorited ? '取消收藏' : '存入收藏' }}
             </button>
+            <!-- 调试预览按钮（仅开发环境） -->
+            <!-- <button
+              v-if="isDev"
+              type="button"
+              class="flex items-center gap-1 text-xs text-slate-500"
+              @click="debugPreviewAnswerCard"
+            >
+              🖼️ 调试预览
+            </button> -->
           </div>
         </div>
       </div>
@@ -271,6 +280,18 @@ function openDetail(item: AnswerHistoryItem) {
 onMounted(() => {
   loadRecentHistory()
 })
+
+// import { previewAnswerCard } from '@/utils/shareCardGenerator'
+// const isDev = import.meta.env.DEV
+
+// // 调试预览当前答案卡片
+// const debugPreviewAnswerCard = async () => {
+//   await previewAnswerCard({
+//     question: currentQuestion.value,
+//     answerText: currentAnswer.value.replace('宇宙说：', ''),
+//     createdAt: new Date().toISOString(),
+//   })
+// }
 </script>
 
 <style scoped>
@@ -286,7 +307,7 @@ onMounted(() => {
   position: relative;
   width: 100%;
   height: 100%;
-  border-radius: 18px;
+  border-radius: 12px;
   transform-style: preserve-3d;
   transform: rotateY(-18deg) rotateX(9deg) translateY(0);
   transition: transform 220ms ease;
@@ -300,9 +321,9 @@ onMounted(() => {
 .book-front {
   position: absolute;
   inset: 0;
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid #a5b4fc;
-  background: linear-gradient(145deg, #6366f1 0%, #8b5cf6 62%, #a855f7 100%);
+  background: linear-gradient(100deg, #0d5bbbc4 0%, #5a8fc7db 62%, #48aed9e1 100%);
   box-shadow: 0 18px 36px rgba(99, 102, 241, 0.34);
   display: flex;
   align-items: center;
@@ -311,14 +332,29 @@ onMounted(() => {
   padding: 18px 14px;
 }
 
+.book-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.1) 0px,
+    rgba(255, 255, 255, 0.1) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+
 .book-spine {
   position: absolute;
   left: -14px;
   top: 10px;
   width: 16px;
   height: calc(100% - 20px);
-  border-radius: 10px;
-  background: linear-gradient(180deg, #4338ca 0%, #312e81 70%, #1e1b4b 100%);
+  border-radius: 0;
+  background: linear-gradient(180deg, #2c5a7a 0%, #1e3f58 70%, #142e42 100%);
   transform: rotateY(90deg);
   transform-origin: left center;
 }
@@ -330,8 +366,8 @@ onMounted(() => {
   top: 12px;
   width: 10px;
   height: calc(100% - 24px);
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(199, 210, 254, 0.7), rgba(165, 180, 252, 0.2));
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(100, 150, 180, 0.6), rgba(64, 113, 172, 0.15));
 }
 
 .book-glow {
@@ -343,18 +379,6 @@ onMounted(() => {
   background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.36), transparent 70%);
   transform: translateX(-50%);
   filter: blur(4px);
-}
-
-.book-front::after {
-  content: '';
-  position: absolute;
-  right: -9px;
-  top: 10px;
-  width: 12px;
-  height: calc(100% - 20px);
-  border-radius: 8px;
-  background: linear-gradient(180deg, #eef2ff 0%, #dbeafe 40%, #c7d2fe 100%);
-  opacity: 0.92;
 }
 
 .shaking .book-3d {

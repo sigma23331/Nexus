@@ -37,7 +37,7 @@ const STYLE = {
   mainSize: 32,
   subSize: 28,
   answerSize: 44,
-  questionSize: 32,
+  questionSize: 38,
   yiJiSize: 32,
   // 加大内边距
   padding: 70,
@@ -239,29 +239,86 @@ export async function drawFortuneShareCard(
     1,
   )
 
-  ctx.textAlign = 'left'
-  const leftX = 260
-  let currentY = 743
-  // 宜 / 忌 —— 使用 auxiliary 字体
-  ctx.font = FONTS.auxiliary
-  ctx.fillStyle = STYLE.yiColor
-  const yiFullText = `${data.yi.join('、') || '无'}`
-  ctx.fillText(yiFullText, leftX, currentY)
-
-  // 绘制忌（另起一行）
-  currentY += STYLE.yiJiSize * STYLE.lineHeight + 60
-  ctx.fillStyle = STYLE.jiColor
-  const jiFullText = `${data.ji.join('、') || '无'}`
-  ctx.fillText(jiFullText, leftX, currentY)
-
-  // 避免 ESLint 未使用变量警告
   void y
 
+  //ctx.textAlign = 'left'
+  // ========== 宜 / 忌（精确垂直居中，支持单行/两行，单行向上微调） ==========
+  const yiRect = { left: 260, top: 700, bottom: 780, right: 640 } // 宽度 380
+  const jiRect = { left: 260, top: 813, bottom: 890, right: 640 } // 宽度 380
+
+  const YIJI_LINE_HEIGHT_RATIO = 1.25 // 行高系数，可调
+  const SINGLE_LINE_OFFSET_RATIO = 0.12 // 单行向上移动比例（相对于字号）
+
+  function splitYiJiText(items: string[]): string[] {
+    if (!items.length) return ['无']
+    const totalChars = items.reduce((sum, item) => sum + item.length, 0)
+    if (totalChars <= 14) {
+      return [items.join('、')]
+    } else {
+      if (items.length === 2) return [items[0], items[1]]
+      return [items.slice(0, 2).join('、'), items[2]]
+    }
+  }
+
+  function drawCenteredTextBlock(
+    ctx: CanvasRenderingContext2D,
+    lines: string[],
+    rect: { left: number; top: number; bottom: number },
+    font: string,
+    color: string,
+    fontSize: number,
+    lineHeightRatio: number = YIJI_LINE_HEIGHT_RATIO,
+  ) {
+    if (!lines.length) return
+    ctx.save()
+    ctx.font = font
+    ctx.fillStyle = color
+    ctx.textBaseline = 'top'
+    ctx.textAlign = 'left'
+
+    const lineHeight = fontSize * lineHeightRatio
+    const blockHeight = lines.length * lineHeight
+    const rectHeight = rect.bottom - rect.top
+    let startY = rect.top + (rectHeight - blockHeight) / 2
+    startY = Math.max(rect.top, Math.min(startY, rect.bottom - blockHeight))
+
+    // 单行时向上微调，让视觉重心居中
+    if (lines.length === 1) {
+      startY -= fontSize * SINGLE_LINE_OFFSET_RATIO
+    }
+
+    let currentY = startY
+    for (const line of lines) {
+      ctx.fillText(line, rect.left, currentY)
+      currentY += lineHeight
+    }
+    ctx.restore()
+  }
+
+  // 矩形区域（左、上、下）
+
+  // 准备行
+  const yiLines = splitYiJiText(data.yi)
+  const jiLines = splitYiJiText(data.ji)
+
+  // 绘制宜
+  drawCenteredTextBlock(ctx, yiLines, yiRect, FONTS.auxiliary, STYLE.yiColor, STYLE.yiJiSize)
+  // 绘制忌
+  drawCenteredTextBlock(ctx, jiLines, jiRect, FONTS.auxiliary, STYLE.jiColor, STYLE.yiJiSize)
+
+  // 调试红线（仅开发）
+  // if (import.meta.env.DEV) {
+  //   ctx.save()
+  //   ctx.strokeStyle = 'red'
+  //   ctx.lineWidth = 2
+  //   ctx.strokeRect(yiRect.left, yiRect.top, 380, yiRect.bottom - yiRect.top)
+  //   ctx.strokeRect(jiRect.left, jiRect.top, 380, jiRect.bottom - jiRect.top)
+  //   ctx.restore()
+  // }
   // 绘制二维码
   await drawQRCode(ctx, CARD_WIDTH, CARD_HEIGHT)
 }
 
-// ========== 答案卡片（精确垂直居中版） ==========
 // ========== 答案卡片（精确垂直居中版） ==========
 export async function drawAnswerShareCard(
   canvas: HTMLCanvasElement,

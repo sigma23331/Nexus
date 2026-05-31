@@ -211,35 +211,146 @@ export async function drawFortuneShareCard(
   ctx.fillStyle = STYLE.textSecondary
   ctx.fillText(`运势得分 ${data.score}分`, titleX, 360)
 
-  // 主签文 —— 使用 main 字体
-  ctx.font = FONTS.main
+  // ========== 主签文（动态字号，两行内完整显示，矩形居中，middle基线） ==========
+  const mainRect = { left: 103, right: 814, top: 523, bottom: 613 }
+  const mainMaxWidth = mainRect.right - mainRect.left
+  const MIN_MAIN_FONT_SIZE = 20
+  let mainFontSize = STYLE.mainSize
+
+  // 计算给定字号下的行数（不实际绘制）
+  function getLinesForMain(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    maxWidth: number,
+    fontSize: number,
+  ): number {
+    const font = `${fontSize}px 'Noto Serif SC', 'Times New Roman', serif`
+    ctx.save()
+    ctx.font = font
+    const chars = [...text]
+    let line = ''
+    let lines = 1
+    for (let i = 0; i < chars.length; i++) {
+      const testLine = line + chars[i]
+      const metrics = ctx.measureText(testLine)
+      if (metrics.width > maxWidth && line.length > 0) {
+        line = chars[i]
+        lines++
+      } else {
+        line = testLine
+      }
+    }
+    ctx.restore()
+    return lines
+  }
+
+  // 动态缩小字号，确保行数 <= 2
+  while (mainFontSize >= MIN_MAIN_FONT_SIZE) {
+    const lines = getLinesForMain(ctx, data.content_main, mainMaxWidth, mainFontSize)
+    if (lines <= 2) break
+    mainFontSize -= 2
+  }
+  if (mainFontSize < MIN_MAIN_FONT_SIZE) mainFontSize = MIN_MAIN_FONT_SIZE
+
+  const mainFont = `${mainFontSize}px 'Noto Serif SC', 'Times New Roman', serif`
+  ctx.font = mainFont
   ctx.fillStyle = STYLE.textPrimary
-  let y = 585
-  y = wrapText(
-    ctx,
-    data.content_main,
-    CARD_WIDTH / 2,
-    y,
-    CARD_WIDTH - 2 * STYLE.padding,
-    STYLE.mainSize * STYLE.lineHeight,
-    2,
+  ctx.textBaseline = 'middle'
+  ctx.textAlign = 'center'
+
+  const mainLineHeight = mainFontSize * STYLE.lineHeight
+  const mainRequiredLines = getLinesForMain(ctx, data.content_main, mainMaxWidth, mainFontSize)
+  const blockHeight = mainRequiredLines * mainLineHeight
+  const rectHeight = mainRect.bottom - mainRect.top
+  // 整个文本块的中心点
+  const blockCenterY = mainRect.top + rectHeight / 2
+  // 第一行文字的中心点 Y
+  let firstLineCenterY = blockCenterY - blockHeight / 2 + mainLineHeight / 2
+  firstLineCenterY = Math.max(
+    mainRect.top + mainLineHeight / 2,
+    Math.min(firstLineCenterY, mainRect.bottom - mainLineHeight / 2),
   )
 
-  // 副签文 —— 使用 sub 字体
-  ctx.font = FONTS.sub
+  // 手动分行并绘制（确保每行使用 middle 基线，且不丢失字符）
+  const centerX = (mainRect.left + mainRect.right) / 2
+  let remaining = data.content_main
+  const lines: string[] = []
+  for (let i = 0; i < mainRequiredLines; i++) {
+    if (i === mainRequiredLines - 1) {
+      // 最后一行，尝试截断
+      let testLine = remaining
+      while (ctx.measureText(testLine).width > mainMaxWidth && testLine.length > 1) {
+        testLine = testLine.slice(0, -1)
+      }
+      if (testLine !== remaining) testLine += '…'
+      lines.push(testLine)
+      break
+    } else {
+      // 找到合适的分行点（从后往前找）
+      let splitIndex = remaining.length
+      for (let j = 1; j <= remaining.length; j++) {
+        const sub = remaining.slice(0, j)
+        if (ctx.measureText(sub).width > mainMaxWidth) {
+          splitIndex = j - 1
+          break
+        }
+      }
+      if (splitIndex <= 0) splitIndex = 1
+      lines.push(remaining.slice(0, splitIndex))
+      remaining = remaining.slice(splitIndex)
+    }
+  }
+
+  let currentY = firstLineCenterY
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], centerX, currentY)
+    currentY += mainLineHeight
+  }
+  // ========== 副签文（单行，固定位置，宽度限制，动态缩小字号或截断） ==========
+  const subRect = { left: 103, right: 814, top: 626, bottom: 670 } // 可调整Y
+  const subMaxWidth = subRect.right - subRect.left
+  let subFontSize = STYLE.subSize
+  const MIN_SUB_FONT_SIZE = 18
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  while (subFontSize >= MIN_SUB_FONT_SIZE) {
+    const font = `${subFontSize}px 'Noto Serif SC', 'Times New Roman', serif`
+    ctx.font = font
+    const metrics = ctx.measureText(data.content_sub)
+    if (metrics.width <= subMaxWidth) break
+    subFontSize -= 2
+  }
+  if (subFontSize < MIN_SUB_FONT_SIZE) subFontSize = MIN_SUB_FONT_SIZE
+  const subFont = `${subFontSize}px 'Noto Serif SC', 'Times New Roman', serif`
+  ctx.font = subFont
   ctx.fillStyle = STYLE.textSecondary
-  y += 15
-  y = wrapText(
-    ctx,
-    data.content_sub,
-    CARD_WIDTH / 2,
-    y,
-    CARD_WIDTH - 2 * STYLE.padding,
-    STYLE.subSize * STYLE.lineHeight,
-    1,
-  )
+  const subCenterX = (subRect.left + subRect.right) / 2
+  const subCenterY = (subRect.top + subRect.bottom) / 2
+  ctx.fillText(data.content_sub, subCenterX, subCenterY)
 
-  void y
+  // 恢复 textAlign 为 center（后续宜忌会自己设置左对齐）
+  ctx.textAlign = 'center'
+
+  // if (import.meta.env.DEV) {
+  //   ctx.save()
+  //   ctx.strokeStyle = 'red'
+  //   ctx.lineWidth = 2
+  //   // 主签文矩形
+  //   ctx.strokeRect(
+  //     mainRect.left,
+  //     mainRect.top,
+  //     mainRect.right - mainRect.left,
+  //     mainRect.bottom - mainRect.top,
+  //   )
+  //   // 副签文矩形
+  //   ctx.strokeRect(
+  //     subRect.left,
+  //     subRect.top,
+  //     subRect.right - subRect.left,
+  //     subRect.bottom - subRect.top,
+  //   )
+  //   ctx.restore()
+  // }
 
   //ctx.textAlign = 'left'
   // ========== 宜 / 忌（精确垂直居中，支持单行/两行，单行向上微调） ==========
@@ -315,6 +426,7 @@ export async function drawFortuneShareCard(
   //   ctx.strokeRect(jiRect.left, jiRect.top, 380, jiRect.bottom - jiRect.top)
   //   ctx.restore()
   // }
+
   // 绘制二维码
   await drawQRCode(ctx, CARD_WIDTH, CARD_HEIGHT)
 }

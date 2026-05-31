@@ -101,6 +101,8 @@ def get_or_join_pk(token, current_user_id=None):
     if not defender:
         raise LookupError("User not found")
 
+    defender_score = _get_today_score(current_user_id)
+
     locked_record = (
         FortunePKRecord.query.filter_by(token=token)
         .with_for_update()
@@ -117,7 +119,7 @@ def get_or_join_pk(token, current_user_id=None):
     if current_user_id == locked_record.challenger_id:
         return _format_pk(locked_record)
 
-    locked_record.complete(defender_id=current_user_id, defender_score=_get_today_score(current_user_id))
+    locked_record.complete(defender_id=current_user_id, defender_score=defender_score)
     db.session.commit()
     db.session.refresh(locked_record)
     locked_record.defender = defender

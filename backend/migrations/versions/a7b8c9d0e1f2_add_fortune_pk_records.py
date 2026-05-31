@@ -1,7 +1,7 @@
 """add fortune pk records
 
 Revision ID: a7b8c9d0e1f2
-Revises: f6c2e3d4b5a6
+Revises: a1b2c3d4e5f6
 Create Date: 2026-05-31 14:30:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 
 revision = "a7b8c9d0e1f2"
-down_revision = "f6c2e3d4b5a6"
+down_revision = "a1b2c3d4e5f6"
 branch_labels = None
 depends_on = None
 

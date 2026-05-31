@@ -564,7 +564,6 @@ import TodayFortuneContent from './components/TodayFortuneContent.vue'
 import ShareToPlazaModal from '@/components/common/ShareToPlazaModal.vue'
 import { useFestivalTheme } from '@/composables/useFestivalTheme'
 import { useShareCard } from '@/composables/useShareCard'
-// import { previewFortuneCard } from '@/utils/shareCardGenerator'
 
 const { isDuanwu } = useFestivalTheme()
 
@@ -654,6 +653,8 @@ let chartInitRetryTimer: ReturnType<typeof setTimeout> | null = null
 let boardRequestToken = 0
 const FORTUNE_BOARD_CACHE_KEY = 'fortune-board-cache-v1'
 const FORTUNE_BOARD_CACHE_TTL_MS = 60 * 1000
+
+// import { previewFortuneCard } from '@/utils/shareCardGenerator'
 // const isDev = import.meta.env.DEV
 // // 调试预览（不下载，直接弹窗查看卡片效果）
 // const debugPreviewCard = async () => {
@@ -669,6 +670,14 @@ const FORTUNE_BOARD_CACHE_TTL_MS = 60 * 1000
 //     yi: fortuneData.value.yi,
 //     ji: fortuneData.value.ji,
 //   }
+//   // const testData = {
+//   //   title: fortuneData.value.title,
+//   //   score: fortuneData.value.score,
+//   //   content_main: '这是一段非常长的测试文本，目的是为了验证主签文在超过一行时能否自动缩小字号并在两行内完整显示。如果仍然超出，字号会继续减小直到适合。',
+//   //   content_sub: fortuneData.value.content_sub,
+//   //   yi: fortuneData.value.yi,
+//   //   ji: fortuneData.value.ji,
+//   // }
 //   await previewFortuneCard(cardData)
 // }
 

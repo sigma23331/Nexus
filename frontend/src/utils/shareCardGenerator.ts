@@ -37,7 +37,7 @@ const STYLE = {
   mainSize: 32,
   subSize: 28,
   answerSize: 44,
-  questionSize: 32,
+  questionSize: 38,
   yiJiSize: 32,
   // 加大内边距
   padding: 70,
@@ -211,57 +211,226 @@ export async function drawFortuneShareCard(
   ctx.fillStyle = STYLE.textSecondary
   ctx.fillText(`运势得分 ${data.score}分`, titleX, 360)
 
-  // 主签文 —— 使用 main 字体
-  ctx.font = FONTS.main
+  // ========== 主签文（动态字号，两行内完整显示，矩形居中，middle基线） ==========
+  const mainRect = { left: 103, right: 814, top: 523, bottom: 613 }
+  const mainMaxWidth = mainRect.right - mainRect.left
+  const MIN_MAIN_FONT_SIZE = 20
+  let mainFontSize = STYLE.mainSize
+
+  // 计算给定字号下的行数（不实际绘制）
+  function getLinesForMain(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    maxWidth: number,
+    fontSize: number,
+  ): number {
+    const font = `${fontSize}px 'Noto Serif SC', 'Times New Roman', serif`
+    ctx.save()
+    ctx.font = font
+    const chars = [...text]
+    let line = ''
+    let lines = 1
+    for (let i = 0; i < chars.length; i++) {
+      const testLine = line + chars[i]
+      const metrics = ctx.measureText(testLine)
+      if (metrics.width > maxWidth && line.length > 0) {
+        line = chars[i]
+        lines++
+      } else {
+        line = testLine
+      }
+    }
+    ctx.restore()
+    return lines
+  }
+
+  // 动态缩小字号，确保行数 <= 2
+  while (mainFontSize >= MIN_MAIN_FONT_SIZE) {
+    const lines = getLinesForMain(ctx, data.content_main, mainMaxWidth, mainFontSize)
+    if (lines <= 2) break
+    mainFontSize -= 2
+  }
+  if (mainFontSize < MIN_MAIN_FONT_SIZE) mainFontSize = MIN_MAIN_FONT_SIZE
+
+  const mainFont = `${mainFontSize}px 'Noto Serif SC', 'Times New Roman', serif`
+  ctx.font = mainFont
   ctx.fillStyle = STYLE.textPrimary
-  let y = 585
-  y = wrapText(
-    ctx,
-    data.content_main,
-    CARD_WIDTH / 2,
-    y,
-    CARD_WIDTH - 2 * STYLE.padding,
-    STYLE.mainSize * STYLE.lineHeight,
-    2,
+  ctx.textBaseline = 'middle'
+  ctx.textAlign = 'center'
+
+  const mainLineHeight = mainFontSize * STYLE.lineHeight
+  const mainRequiredLines = getLinesForMain(ctx, data.content_main, mainMaxWidth, mainFontSize)
+  const blockHeight = mainRequiredLines * mainLineHeight
+  const rectHeight = mainRect.bottom - mainRect.top
+  // 整个文本块的中心点
+  const blockCenterY = mainRect.top + rectHeight / 2
+  // 第一行文字的中心点 Y
+  let firstLineCenterY = blockCenterY - blockHeight / 2 + mainLineHeight / 2
+  firstLineCenterY = Math.max(
+    mainRect.top + mainLineHeight / 2,
+    Math.min(firstLineCenterY, mainRect.bottom - mainLineHeight / 2),
   )
 
-  // 副签文 —— 使用 sub 字体
-  ctx.font = FONTS.sub
+  // 手动分行并绘制（确保每行使用 middle 基线，且不丢失字符）
+  const centerX = (mainRect.left + mainRect.right) / 2
+  let remaining = data.content_main
+  const lines: string[] = []
+  for (let i = 0; i < mainRequiredLines; i++) {
+    if (i === mainRequiredLines - 1) {
+      // 最后一行，尝试截断
+      let testLine = remaining
+      while (ctx.measureText(testLine).width > mainMaxWidth && testLine.length > 1) {
+        testLine = testLine.slice(0, -1)
+      }
+      if (testLine !== remaining) testLine += '…'
+      lines.push(testLine)
+      break
+    } else {
+      // 找到合适的分行点（从后往前找）
+      let splitIndex = remaining.length
+      for (let j = 1; j <= remaining.length; j++) {
+        const sub = remaining.slice(0, j)
+        if (ctx.measureText(sub).width > mainMaxWidth) {
+          splitIndex = j - 1
+          break
+        }
+      }
+      if (splitIndex <= 0) splitIndex = 1
+      lines.push(remaining.slice(0, splitIndex))
+      remaining = remaining.slice(splitIndex)
+    }
+  }
+
+  let currentY = firstLineCenterY
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], centerX, currentY)
+    currentY += mainLineHeight
+  }
+  // ========== 副签文（单行，固定位置，宽度限制，动态缩小字号或截断） ==========
+  const subRect = { left: 103, right: 814, top: 626, bottom: 670 } // 可调整Y
+  const subMaxWidth = subRect.right - subRect.left
+  let subFontSize = STYLE.subSize
+  const MIN_SUB_FONT_SIZE = 18
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  while (subFontSize >= MIN_SUB_FONT_SIZE) {
+    const font = `${subFontSize}px 'Noto Serif SC', 'Times New Roman', serif`
+    ctx.font = font
+    const metrics = ctx.measureText(data.content_sub)
+    if (metrics.width <= subMaxWidth) break
+    subFontSize -= 2
+  }
+  if (subFontSize < MIN_SUB_FONT_SIZE) subFontSize = MIN_SUB_FONT_SIZE
+  const subFont = `${subFontSize}px 'Noto Serif SC', 'Times New Roman', serif`
+  ctx.font = subFont
   ctx.fillStyle = STYLE.textSecondary
-  y += 15
-  y = wrapText(
-    ctx,
-    data.content_sub,
-    CARD_WIDTH / 2,
-    y,
-    CARD_WIDTH - 2 * STYLE.padding,
-    STYLE.subSize * STYLE.lineHeight,
-    1,
-  )
+  const subCenterX = (subRect.left + subRect.right) / 2
+  const subCenterY = (subRect.top + subRect.bottom) / 2
+  ctx.fillText(data.content_sub, subCenterX, subCenterY)
 
-  ctx.textAlign = 'left'
-  const leftX = 260
-  let currentY = 743
-  // 宜 / 忌 —— 使用 auxiliary 字体
-  ctx.font = FONTS.auxiliary
-  ctx.fillStyle = STYLE.yiColor
-  const yiFullText = `${data.yi.join('、') || '无'}`
-  ctx.fillText(yiFullText, leftX, currentY)
+  // 恢复 textAlign 为 center（后续宜忌会自己设置左对齐）
+  ctx.textAlign = 'center'
 
-  // 绘制忌（另起一行）
-  currentY += STYLE.yiJiSize * STYLE.lineHeight + 60
-  ctx.fillStyle = STYLE.jiColor
-  const jiFullText = `${data.ji.join('、') || '无'}`
-  ctx.fillText(jiFullText, leftX, currentY)
+  // if (import.meta.env.DEV) {
+  //   ctx.save()
+  //   ctx.strokeStyle = 'red'
+  //   ctx.lineWidth = 2
+  //   // 主签文矩形
+  //   ctx.strokeRect(
+  //     mainRect.left,
+  //     mainRect.top,
+  //     mainRect.right - mainRect.left,
+  //     mainRect.bottom - mainRect.top,
+  //   )
+  //   // 副签文矩形
+  //   ctx.strokeRect(
+  //     subRect.left,
+  //     subRect.top,
+  //     subRect.right - subRect.left,
+  //     subRect.bottom - subRect.top,
+  //   )
+  //   ctx.restore()
+  // }
 
-  // 避免 ESLint 未使用变量警告
-  void y
+  //ctx.textAlign = 'left'
+  // ========== 宜 / 忌（精确垂直居中，支持单行/两行，单行向上微调） ==========
+  const yiRect = { left: 260, top: 700, bottom: 780, right: 640 } // 宽度 380
+  const jiRect = { left: 260, top: 813, bottom: 890, right: 640 } // 宽度 380
+
+  const YIJI_LINE_HEIGHT_RATIO = 1.25 // 行高系数，可调
+  const SINGLE_LINE_OFFSET_RATIO = 0.12 // 单行向上移动比例（相对于字号）
+
+  function splitYiJiText(items: string[]): string[] {
+    if (!items.length) return ['无']
+    const totalChars = items.reduce((sum, item) => sum + item.length, 0)
+    if (totalChars <= 14) {
+      return [items.join('、')]
+    } else {
+      if (items.length === 2) return [items[0], items[1]]
+      return [items.slice(0, 2).join('、'), items[2]]
+    }
+  }
+
+  function drawCenteredTextBlock(
+    ctx: CanvasRenderingContext2D,
+    lines: string[],
+    rect: { left: number; top: number; bottom: number },
+    font: string,
+    color: string,
+    fontSize: number,
+    lineHeightRatio: number = YIJI_LINE_HEIGHT_RATIO,
+  ) {
+    if (!lines.length) return
+    ctx.save()
+    ctx.font = font
+    ctx.fillStyle = color
+    ctx.textBaseline = 'top'
+    ctx.textAlign = 'left'
+
+    const lineHeight = fontSize * lineHeightRatio
+    const blockHeight = lines.length * lineHeight
+    const rectHeight = rect.bottom - rect.top
+    let startY = rect.top + (rectHeight - blockHeight) / 2
+    startY = Math.max(rect.top, Math.min(startY, rect.bottom - blockHeight))
+
+    // 单行时向上微调，让视觉重心居中
+    if (lines.length === 1) {
+      startY -= fontSize * SINGLE_LINE_OFFSET_RATIO
+    }
+
+    let currentY = startY
+    for (const line of lines) {
+      ctx.fillText(line, rect.left, currentY)
+      currentY += lineHeight
+    }
+    ctx.restore()
+  }
+
+  // 矩形区域（左、上、下）
+
+  // 准备行
+  const yiLines = splitYiJiText(data.yi)
+  const jiLines = splitYiJiText(data.ji)
+
+  // 绘制宜
+  drawCenteredTextBlock(ctx, yiLines, yiRect, FONTS.auxiliary, STYLE.yiColor, STYLE.yiJiSize)
+  // 绘制忌
+  drawCenteredTextBlock(ctx, jiLines, jiRect, FONTS.auxiliary, STYLE.jiColor, STYLE.yiJiSize)
+
+  // 调试红线（仅开发）
+  // if (import.meta.env.DEV) {
+  //   ctx.save()
+  //   ctx.strokeStyle = 'red'
+  //   ctx.lineWidth = 2
+  //   ctx.strokeRect(yiRect.left, yiRect.top, 380, yiRect.bottom - yiRect.top)
+  //   ctx.strokeRect(jiRect.left, jiRect.top, 380, jiRect.bottom - jiRect.top)
+  //   ctx.restore()
+  // }
 
   // 绘制二维码
   await drawQRCode(ctx, CARD_WIDTH, CARD_HEIGHT)
 }
 
-// ========== 答案卡片（精确垂直居中版） ==========
 // ========== 答案卡片（精确垂直居中版） ==========
 export async function drawAnswerShareCard(
   canvas: HTMLCanvasElement,

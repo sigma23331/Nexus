@@ -8,6 +8,7 @@ Create Date: 2026-05-31 14:30:00.000000
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 revision = "a7b8c9d0e1f2"
@@ -16,17 +17,19 @@ branch_labels = None
 depends_on = None
 
 
-pk_result_enum = sa.Enum(
+pk_result_enum = postgresql.ENUM(
     "challenger_win",
     "defender_win",
     "draw",
     name="fortune_pk_result",
+    create_type=False,
 )
-pk_status_enum = sa.Enum(
+pk_status_enum = postgresql.ENUM(
     "pending",
     "completed",
     "expired",
     name="fortune_pk_status",
+    create_type=False,
 )
 
 

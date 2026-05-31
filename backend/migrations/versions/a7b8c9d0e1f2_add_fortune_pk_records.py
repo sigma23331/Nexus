@@ -7,8 +7,6 @@ Create Date: 2026-05-31 14:30:00.000000
 """
 
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 
 revision = "a7b8c9d0e1f2"
@@ -17,43 +15,46 @@ branch_labels = None
 depends_on = None
 
 
-pk_result_enum = postgresql.ENUM(
-    "challenger_win",
-    "defender_win",
-    "draw",
-    name="fortune_pk_result",
-    create_type=False,
-)
-pk_status_enum = postgresql.ENUM(
-    "pending",
-    "completed",
-    "expired",
-    name="fortune_pk_status",
-    create_type=False,
-)
-
-
 def upgrade():
-    bind = op.get_bind()
-    pk_result_enum.create(bind, checkfirst=True)
-    pk_status_enum.create(bind, checkfirst=True)
-
-    op.create_table(
-        "fortune_pk_records",
-        sa.Column("id", sa.String(length=64), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
-        sa.Column("token", sa.String(length=32), nullable=False),
-        sa.Column("challenger_id", sa.String(length=64), nullable=False),
-        sa.Column("challenger_score", sa.Integer(), nullable=False),
-        sa.Column("defender_id", sa.String(length=64), nullable=True),
-        sa.Column("defender_score", sa.Integer(), nullable=True),
-        sa.Column("result", pk_result_enum, nullable=True),
-        sa.Column("status", pk_status_enum, nullable=False, server_default="pending"),
-        sa.Column("date", sa.Date(), nullable=False),
-        sa.Column("completed_at", sa.DateTime(), nullable=True),
-        sa.ForeignKeyConstraint(["challenger_id"], ["users.id"]),
-        sa.ForeignKeyConstraint(["defender_id"], ["users.id"]),
-        sa.PrimaryKeyConstraint("id"),
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            CREATE TYPE fortune_pk_result AS ENUM ('challenger_win', 'defender_win', 'draw');
+        EXCEPTION WHEN duplicate_object THEN
+            NULL;
+        END $$;
+        """
+    )
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            CREATE TYPE fortune_pk_status AS ENUM ('pending', 'completed', 'expired');
+        EXCEPTION WHEN duplicate_object THEN
+            NULL;
+        END $$;
+        """
+    )
+    op.execute(
+        """
+        CREATE TABLE fortune_pk_records (
+            id VARCHAR(64) NOT NULL,
+            created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
+            token VARCHAR(32) NOT NULL,
+            challenger_id VARCHAR(64) NOT NULL,
+            challenger_score INTEGER NOT NULL,
+            defender_id VARCHAR(64),
+            defender_score INTEGER,
+            result fortune_pk_result,
+            status fortune_pk_status DEFAULT 'pending' NOT NULL,
+            date DATE NOT NULL,
+            completed_at TIMESTAMP WITHOUT TIME ZONE,
+            FOREIGN KEY(challenger_id) REFERENCES users (id),
+            FOREIGN KEY(defender_id) REFERENCES users (id),
+            PRIMARY KEY (id)
+        )
+        """
     )
     with op.batch_alter_table("fortune_pk_records", schema=None) as batch_op:
         batch_op.create_index(batch_op.f("ix_fortune_pk_records_token"), ["token"], unique=True)
@@ -70,8 +71,6 @@ def downgrade():
         batch_op.drop_index(batch_op.f("ix_fortune_pk_records_defender_id"))
         batch_op.drop_index(batch_op.f("ix_fortune_pk_records_challenger_id"))
         batch_op.drop_index(batch_op.f("ix_fortune_pk_records_token"))
-    op.drop_table("fortune_pk_records")
-
-    bind = op.get_bind()
-    pk_status_enum.drop(bind, checkfirst=True)
-    pk_result_enum.drop(bind, checkfirst=True)
+    op.execute("DROP TABLE fortune_pk_records")
+    op.execute("DROP TYPE IF EXISTS fortune_pk_status")
+    op.execute("DROP TYPE IF EXISTS fortune_pk_result")

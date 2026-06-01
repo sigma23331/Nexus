@@ -804,7 +804,7 @@ const relationByDelta = (deltaValue: number) => {
     return {
       type: 'up',
       text: `↑ 比昨日提升 ${deltaValue} 分`,
-      cls: 'bg-emerald-50 text-emerald-700',
+      cls: 'bg-amber-50 text-emerald-700',
       story: '昨日积累开始显效，今日气势顺承而上。',
     }
   }
@@ -812,7 +812,7 @@ const relationByDelta = (deltaValue: number) => {
     return {
       type: 'down',
       text: `↓ 比昨日回落 ${Math.abs(deltaValue)} 分`,
-      cls: 'bg-rose-50 text-rose-700',
+      cls: 'bg-amber-50 text-rose-700',
       story: '昨日外扰余波未消，今日宜先稳住节奏。',
     }
   }

@@ -181,14 +181,16 @@ const isDefenderWaiting = computed(() => {
 // 结果颜色和文字
 const resultColor = computed(() => {
   if (!pkRecord.value?.result) return 'text-slate-600'
-  if (pkRecord.value.result === 'challenger') return 'text-emerald-600'
-  if (pkRecord.value.result === 'defender') return 'text-blue-600'
+  if (pkRecord.value.result === 'challenger_win') return 'text-emerald-600'
+  if (pkRecord.value.result === 'defender_win') return 'text-blue-600'
   return 'text-amber-600'
 })
+
 const resultText = computed(() => {
   if (!pkRecord.value?.result) return '未知'
-  if (pkRecord.value.result === 'challenger') return `${pkRecord.value.challenger?.nickname} 获胜！`
-  if (pkRecord.value.result === 'defender') return `${pkRecord.value.defender?.nickname} 获胜！`
+  if (pkRecord.value.result === 'challenger_win')
+    return `${pkRecord.value.challenger?.nickname} 获胜！`
+  if (pkRecord.value.result === 'defender_win') return `${pkRecord.value.defender?.nickname} 获胜！`
   return '平局！'
 })
 

@@ -1,5 +1,8 @@
 <template>
-  <div class="egg-fx pointer-events-none absolute inset-0 overflow-hidden rounded-3xl" :data-anim="animation">
+  <div
+    class="egg-fx pointer-events-none absolute inset-0 overflow-hidden rounded-3xl"
+    :data-anim="animation"
+  >
     <template v-if="animation === 'rain'">
       <span v-for="i in 18" :key="`rain-${i}`" class="egg-fx__rain" :style="rainStyle(i)" />
     </template>
@@ -41,13 +44,13 @@ const snowStyle = (i: number) => ({
 })
 
 const starStyle = (i: number) => ({
-  left: `${(i * 19) % 92 + 4}%`,
-  top: `${(i * 23) % 70 + 8}%`,
+  left: `${((i * 19) % 92) + 4}%`,
+  top: `${((i * 23) % 70) + 8}%`,
   animationDelay: `${(i % 5) * 0.25}s`,
 })
 
 const leafStyle = (i: number) => ({
-  left: `${(i * 21) % 90 + 5}%`,
+  left: `${((i * 21) % 90) + 5}%`,
   animationDelay: `${(i % 4) * 0.3}s`,
 })
 </script>

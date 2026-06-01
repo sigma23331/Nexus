@@ -203,7 +203,8 @@ function detectWeatherEgg(snapshot: WeatherSnapshot | null): AnswerEasterEgg | n
   if (!snapshot) return null
   const { weatherCode, isDay } = snapshot
 
-  const isRain = (weatherCode >= 51 && weatherCode <= 67) || (weatherCode >= 80 && weatherCode <= 82)
+  const isRain =
+    (weatherCode >= 51 && weatherCode <= 67) || (weatherCode >= 80 && weatherCode <= 82)
   const isSnow = weatherCode >= 71 && weatherCode <= 77
 
   if (isSnow) {

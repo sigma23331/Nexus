@@ -37,9 +37,19 @@ export function useFortunePK() {
 
   // 生成分享链接
   const getShareLink = (token: string) => {
-    // 假设部署后的域名，开发环境可配置环境变量
-    const baseUrl = import.meta.env.VITE_BASE_URL || window.location.origin
-    return `${baseUrl}/fortune/pk/${token}`
+    let baseUrl = import.meta.env.VITE_BASE_URL || window.location.origin
+
+    // 强制使用 https（除了 localhost 开发环境）
+    if (
+      baseUrl.startsWith('http://') &&
+      !baseUrl.includes('localhost') &&
+      !baseUrl.includes('127.0.0.1')
+    ) {
+      baseUrl = baseUrl.replace('http://', 'https://')
+    }
+
+    const cleanBase = baseUrl.replace(/\/$/, '')
+    return `${cleanBase}/fortune/pk/${token}`
   }
 
   // 分享挑战（使用 Web Share API 或复制链接）

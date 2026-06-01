@@ -15,6 +15,12 @@ const router = createRouter({
       meta: { title: '运势看板', tabBar: true, requiresAuth: true },
     },
     {
+      path: '/fortune/pk/:token',
+      name: 'fortune-pk',
+      component: () => import('@/views/fortune/FortunePKView.vue'),
+      meta: { title: '运势挑战', tabBar: false, requiresAuth: true },
+    },
+    {
       path: '/answer',
       name: 'answer',
       component: () => import('@/views/answer/AnswerView.vue'),

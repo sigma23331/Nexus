@@ -35,7 +35,15 @@
       </section>
 
       <section class="text-center">
-        <div class="book-wrap mx-auto" :class="{ shaking: isShaking }" @click="drawAnswer">
+        <div
+          class="book-wrap mx-auto"
+          :class="{
+            shaking: isShaking,
+            'book-wrap--egg': !!activeEasterEgg,
+            [`book-wrap--egg-${activeEasterEgg?.animation}`]: !!activeEasterEgg,
+          }"
+          @click="drawAnswer"
+        >
           <div class="book-3d">
             <div class="book-front">
               <p class="text-xs tracking-[0.2em] text-indigo-100">BOOK OF ANSWERS</p>
@@ -97,20 +105,34 @@
         @click.self="hideAnswer"
       >
         <div
-          class="answer-modal-panel bg-white border border-slate-200 rounded-3xl w-full max-w-sm p-8 text-center"
+          class="answer-modal-panel relative overflow-hidden border rounded-3xl w-full max-w-sm p-8 text-center"
+          :class="
+            activeEasterEgg
+              ? `answer-modal-panel--egg answer-modal-panel--egg-${activeEasterEgg.animation}`
+              : 'bg-white border-slate-200'
+          "
         >
-          <span class="text-4xl">✨</span>
-          <p class="mt-3 text-xs text-slate-500">你问：{{ currentQuestion }}</p>
-          <p class="my-6 text-xl font-bold leading-relaxed text-slate-900">
-            {{ currentAnswer }}
-          </p>
+          <AnswerEasterEggEffects v-if="activeEasterEgg" :animation="activeEasterEgg.animation" />
+          <div class="relative z-10">
+            <span v-if="activeEasterEgg" class="egg-badge">{{ activeEasterEgg.badge }}彩蛋</span>
+            <span v-else class="text-4xl">✨</span>
+            <p class="mt-3 text-xs text-slate-500">你问：{{ currentQuestion }}</p>
+            <p class="my-6 text-xl font-bold leading-relaxed text-slate-900">
+              {{ currentAnswer }}
+            </p>
+          </div>
           <button
             @click="hideAnswer"
-            class="w-full rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 py-4 font-bold text-white"
+            class="relative z-10 w-full rounded-2xl py-4 font-bold text-white"
+            :class="
+              activeEasterEgg
+                ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600'
+                : 'bg-gradient-to-r from-purple-600 to-pink-600'
+            "
           >
             我明白了
           </button>
-          <div class="mt-6 flex justify-center gap-4">
+          <div class="relative z-10 mt-6 flex justify-center gap-4">
             <button type="button" class="flex items-center gap-1 text-xs text-slate-500">
               📤 分享卡片
             </button>
@@ -151,6 +173,12 @@ import {
   updateLocalFavoriteStatus,
 } from '@/utils/answerService'
 import AnswerDetailModal from './components/AnswerDetailModal.vue'
+import AnswerEasterEggEffects from './components/AnswerEasterEggEffects.vue'
+import {
+  detectAnswerEasterEgg,
+  recordEasterEggTrigger,
+  type AnswerEasterEgg,
+} from '@/composables/useAnswerEasterEgg'
 
 // ---------- 数据 ----------
 const question = ref('')
@@ -164,6 +192,7 @@ const isDrawing = ref(false)
 const recentAnswers = ref<AnswerHistoryItem[]>([])
 const loadingHistory = ref(false)
 const answerDetailModalRef = ref<InstanceType<typeof AnswerDetailModal> | null>(null)
+const activeEasterEgg = ref<AnswerEasterEgg | null>(null)
 
 // 输入框错误状态（用于抖动和红框）
 const inputError = ref(false)
@@ -214,13 +243,25 @@ async function drawAnswer() {
   }
   isDrawing.value = true
   isShaking.value = true
+  activeEasterEgg.value = null
 
   try {
-    const res = await askQuestion(question.value.trim())
+    const [egg, res] = await Promise.all([
+      detectAnswerEasterEgg(),
+      askQuestion(question.value.trim()),
+    ])
     currentQuestion.value = res.question
-    currentAnswer.value = `宇宙说：${res.answerText}`
     currentAnswerId.value = res.id
     currentIsFavorited.value = false
+
+    if (egg) {
+      activeEasterEgg.value = egg
+      currentAnswer.value = `${egg.prefix}${egg.answerText}`
+      recordEasterEggTrigger(egg.id)
+    } else {
+      currentAnswer.value = `宇宙说：${res.answerText}`
+    }
+
     modalVisible.value = true
 
     const newItem: AnswerHistoryItem = {
@@ -264,6 +305,7 @@ async function toggleFavorite(answerId: string) {
 
 function hideAnswer() {
   modalVisible.value = false
+  activeEasterEgg.value = null
 }
 
 // 打开详情弹窗
@@ -464,5 +506,93 @@ onMounted(() => {
 .answer-modal-leave-to .answer-modal-panel {
   opacity: 0;
   transform: translateY(14px) scale(0.98);
+}
+
+.egg-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #6d28d9;
+  background: rgba(237, 233, 254, 0.95);
+  border: 1px solid rgba(167, 139, 250, 0.45);
+}
+
+.answer-modal-panel--egg {
+  border-color: rgba(167, 139, 250, 0.45);
+  background: linear-gradient(180deg, #faf5ff 0%, #ffffff 58%, #fff7ed 100%);
+  box-shadow: 0 18px 40px rgba(109, 40, 217, 0.18);
+}
+
+.answer-modal-panel--egg-midnight {
+  background: linear-gradient(180deg, #1e1b4b 0%, #312e81 42%, #ffffff 100%);
+}
+.answer-modal-panel--egg-midnight .egg-badge,
+.answer-modal-panel--egg-midnight p {
+  color: #e0e7ff;
+}
+.answer-modal-panel--egg-midnight .text-slate-500 {
+  color: #c7d2fe;
+}
+.answer-modal-panel--egg-midnight .text-slate-900 {
+  color: #f8fafc;
+}
+
+.answer-modal-panel--egg-rain {
+  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+}
+
+.answer-modal-panel--egg-snow {
+  background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%);
+}
+
+.answer-modal-panel--egg-dawn {
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+}
+
+.answer-modal-panel--egg-solar,
+.answer-modal-panel--egg-festival {
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+}
+
+.book-wrap--egg .book-glow {
+  width: 90%;
+  height: 24px;
+  filter: blur(6px);
+  animation: egg-glow-pulse 1.2s ease-in-out infinite;
+}
+
+.book-wrap--egg-rain .book-glow {
+  background: radial-gradient(ellipse at center, rgba(59, 130, 246, 0.45), transparent 70%);
+}
+
+.book-wrap--egg-midnight .book-glow {
+  background: radial-gradient(ellipse at center, rgba(129, 140, 248, 0.55), transparent 70%);
+}
+
+.book-wrap--egg-dawn .book-glow,
+.book-wrap--egg-solar .book-glow,
+.book-wrap--egg-festival .book-glow {
+  background: radial-gradient(ellipse at center, rgba(251, 191, 36, 0.5), transparent 70%);
+}
+
+.book-wrap--egg-snow .book-glow {
+  background: radial-gradient(ellipse at center, rgba(186, 230, 253, 0.55), transparent 70%);
+}
+
+@keyframes egg-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: translateX(-50%) scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.05);
+  }
 }
 </style>

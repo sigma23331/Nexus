@@ -3,6 +3,7 @@
 """
 from .user import Gender, User
 from .fortune import FortuneRecord
+from .fortune_pk import FortunePKRecord, FortunePKResult, FortunePKStatus
 from .answer import AnswerRecord
 from .diary import DiaryEntry, MoodType
 from .plaza import PlazaCard, CardType
@@ -17,6 +18,9 @@ __all__ = [
     'User',
     'Gender',
     'FortuneRecord',
+    'FortunePKRecord',
+    'FortunePKResult',
+    'FortunePKStatus',
     'AnswerRecord',
     'DiaryEntry',
     'MoodType',

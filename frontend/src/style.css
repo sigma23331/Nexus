@@ -14,3 +14,50 @@ body {
 }
 
 /* 注意：.app-container 的空规则集已移除，其样式已在 App.vue 中通过 Tailwind 类定义 */
+
+/* ========== 移动端触摸体验优化（全局，不依赖具体页面） ========== */
+html {
+  /* 防止 iOS 横竖屏切换时自动放大字号破坏布局 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+html,
+body {
+  /* 阻止滚动链与下拉刷新触发的整页橡皮筋/串滚 */
+  overscroll-behavior-y: contain;
+}
+* {
+  /* 去除移动端点击时的灰色高亮块 */
+  -webkit-tap-highlight-color: transparent;
+}
+a,
+button,
+[role='button'],
+input[type='button'],
+input[type='submit'] {
+  /* 消除移动端 300ms 点击延迟与双击缩放 */
+  touch-action: manipulation;
+}
+
+/* ========== 页面切换过渡（预置样式类） ==========
+   接入方式（由前端在 App.vue 包裹 router-view 时启用，避免与页面构建冲突）：
+   <router-view v-slot="{ Component }">
+     <transition name="page" mode="out-in">
+       <keep-alive><component :is="Component" /></keep-alive>
+     </transition>
+   </router-view>
+*/
+.page-enter-active,
+.page-leave-active {
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+.page-enter-from {
+  opacity: 0;
+  transform: translateX(16px);
+}
+.page-leave-to {
+  opacity: 0;
+  transform: translateX(-16px);
+}

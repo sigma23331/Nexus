@@ -28,18 +28,64 @@ export default defineConfig({
 
     // 3. PWA 插件保持在你原本的配置不变
     VitePWA({
-      registerType: 'autoUpdate',
+      // 使用 prompt 模式：新版本就绪后由 PwaUpdateBanner 提示用户主动刷新，
+      // 避免 autoUpdate 在用户操作（登录/写日记）过程中被动刷新导致数据丢失
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'offline.html', 'icons/*.png'],
       manifest: false, // 使用 public/manifest.json
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // 仅预缓存应用壳与小体积资源；图片改为运行时按需缓存，避免预缓存体积过大
+        globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
         maximumFileSizeToCacheInBytes: 3145728,
         // Vue SPA：离线时回退到已预缓存的 index.html
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/, /^\/v1/],
         runtimeCaching: [
           {
-            // 生产环境 API 走同源 /api，开发走 Vite 代理
+            // 图片：CacheFirst 按需缓存，避免把大图全部塞进预缓存撑大安装体积
+            urlPattern: ({ request, url }) =>
+              request.destination === 'image' ||
+              /\.(?:png|jpe?g|gif|webp|svg)$/i.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'image-cache',
+              expiration: {
+                maxEntries: 80,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // 广场 / 日记：实时性高，优先网络、弱网回退缓存，缓存时效短（30 分钟）
+            urlPattern: ({ url }) => /^\/(?:api\/)?v1\/(?:plaza|diary)\//.test(url.pathname),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-realtime-cache',
+              networkTimeoutSeconds: 8,
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 30,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // 运势 / 答案：每日内容，优先网络、离线可读当天结果，缓存时效长（7 天）
+            urlPattern: ({ url }) => /^\/(?:api\/)?v1\/(?:fortune|answer)\//.test(url.pathname),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-daily-cache',
+              networkTimeoutSeconds: 10,
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 7,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // 其余 API 兜底：生产同源 /api，开发走 Vite 代理
             urlPattern: ({ url }) =>
               url.pathname.startsWith('/api') || url.pathname.startsWith('/v1'),
             handler: 'NetworkFirst',
@@ -50,9 +96,7 @@ export default defineConfig({
                 maxEntries: 50,
                 maxAgeSeconds: 60 * 60 * 24,
               },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
         ],

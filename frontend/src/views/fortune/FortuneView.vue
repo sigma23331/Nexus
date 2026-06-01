@@ -461,6 +461,14 @@
           >
             分享
           </button>
+          <button
+            type="button"
+            class="flex-1 bg-amber-500 hover:bg-amber-600 rounded-xl py-2 text-sm font-medium text-white"
+            :disabled="pkCreating"
+            @click="handleCreatePKChallenge"
+          >
+            {{ pkCreating ? '创建中...' : '发起运势挑战' }}
+          </button>
           <!-- <button
             v-if="isDev"
             type="button"
@@ -564,7 +572,8 @@ import TodayFortuneContent from './components/TodayFortuneContent.vue'
 import ShareToPlazaModal from '@/components/common/ShareToPlazaModal.vue'
 import { useFestivalTheme } from '@/composables/useFestivalTheme'
 import { useShareCard } from '@/composables/useShareCard'
-// import { previewFortuneCard } from '@/utils/shareCardGenerator'
+import { useFortunePK } from '@/composables/useFortunePK'
+import { useUserStore } from '@/stores/user'
 
 const { isDuanwu } = useFestivalTheme()
 
@@ -654,6 +663,8 @@ let chartInitRetryTimer: ReturnType<typeof setTimeout> | null = null
 let boardRequestToken = 0
 const FORTUNE_BOARD_CACHE_KEY = 'fortune-board-cache-v1'
 const FORTUNE_BOARD_CACHE_TTL_MS = 60 * 1000
+
+// import { previewFortuneCard } from '@/utils/shareCardGenerator'
 // const isDev = import.meta.env.DEV
 // // 调试预览（不下载，直接弹窗查看卡片效果）
 // const debugPreviewCard = async () => {
@@ -669,6 +680,14 @@ const FORTUNE_BOARD_CACHE_TTL_MS = 60 * 1000
 //     yi: fortuneData.value.yi,
 //     ji: fortuneData.value.ji,
 //   }
+//   // const testData = {
+//   //   title: fortuneData.value.title,
+//   //   score: fortuneData.value.score,
+//   //   content_main: '这是一段非常长的测试文本，目的是为了验证主签文在超过一行时能否自动缩小字号并在两行内完整显示。如果仍然超出，字号会继续减小直到适合。',
+//   //   content_sub: fortuneData.value.content_sub,
+//   //   yi: fortuneData.value.yi,
+//   //   ji: fortuneData.value.ji,
+//   // }
 //   await previewFortuneCard(cardData)
 // }
 
@@ -1269,6 +1288,25 @@ const handleDownloadFortuneCard = () => {
     ji: fortuneData.value.ji,
   }
   generateFortuneCard(cardData)
+}
+
+const { createChallenge, shareChallenge, loading: pkCreating } = useFortunePK()
+const userStore = useUserStore()
+
+// 发起挑战
+const handleCreatePKChallenge = async () => {
+  if (!isBoardUnlocked.value) {
+    alert('请先解锁今日运势再发起挑战')
+    return
+  }
+  try {
+    const { token } = await createChallenge()
+    // 分享挑战链接
+    await shareChallenge(token, userStore.userInfo?.nickname || '我')
+    // 可选：提示成功
+  } catch (err: unknown) {
+    alert(err instanceof Error ? err.message : '创建挑战失败，请稍后重试')
+  }
 }
 </script>
 

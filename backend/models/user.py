@@ -42,6 +42,19 @@ class User(BaseModel):
     wechat_unionid = Column(String(128), unique=True, nullable=True)
 
     fortunes = relationship('FortuneRecord', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
+    fortune_pk_challenges = relationship(
+        'FortunePKRecord',
+        foreign_keys='FortunePKRecord.challenger_id',
+        back_populates='challenger',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+    )
+    fortune_pk_defenses = relationship(
+        'FortunePKRecord',
+        foreign_keys='FortunePKRecord.defender_id',
+        back_populates='defender',
+        lazy='dynamic',
+    )
     answers = relationship('AnswerRecord', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
     diaries = relationship('DiaryEntry', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
     plaza_cards = relationship('PlazaCard', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')

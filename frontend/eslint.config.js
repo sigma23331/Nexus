@@ -9,7 +9,7 @@ import prettierPlugin from 'eslint-plugin-prettier'
 
 export default tseslint.config(
   {
-    ignores: ['node_modules', 'dist', 'dev-dist', '*.config.js', '.husky'],
+    ignores: ['node_modules', 'dist', 'dev-dist', '*.config.js', '.husky', 'scripts/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

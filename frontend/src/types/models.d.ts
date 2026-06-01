@@ -46,7 +46,7 @@ export interface UserBrief {
 }
 
 export type FortunePKStatus = 'pending' | 'completed' | 'expired'
-export type FortunePKResult = 'challenger' | 'defender' | 'draw'
+export type FortunePKResult = 'challenger_win' | 'defender_win' | 'draw'
 
 export interface FortunePKRecord {
   id: string

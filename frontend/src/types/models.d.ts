@@ -39,6 +39,31 @@ export interface FortuneTrend {
   trendPoints: Array<{ date: string; value: number }>
 }
 
+export interface UserBrief {
+  uid: string
+  nickname: string
+  avatar: string
+}
+
+export type FortunePKStatus = 'pending' | 'completed' | 'expired'
+export type FortunePKResult = 'challenger' | 'defender' | 'draw'
+
+export interface FortunePKRecord {
+  id: string
+  token: string
+  status: FortunePKStatus
+  date: string // YYYY-MM-DD
+  challengerId: string
+  challengerScore: number
+  challenger: UserBrief | null
+  defenderId: string | null
+  defenderScore: number | null
+  defender: UserBrief | null
+  result: FortunePKResult | null
+  createdAt: string
+  completedAt: string | null
+}
+
 // 全站统计
 export interface FortuneGlobalStats {
   date: string

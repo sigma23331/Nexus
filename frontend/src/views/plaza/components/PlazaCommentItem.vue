@@ -4,12 +4,11 @@
       class="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-purple-200 to-pink-200 flex items-center justify-center overflow-hidden text-sm"
     >
       <img
-        v-if="isValidAvatar"
-        :src="comment.owner.avatar"
+        :src="getValidAvatar(comment.owner.avatar)"
         class="w-full h-full object-cover"
         alt=""
+        @error="handleAvatarError"
       />
-      <span v-else>{{ avatarFallback }}</span>
     </div>
     <div class="min-w-0 flex-1">
       <div class="flex items-baseline gap-2 flex-wrap">
@@ -45,10 +44,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { getValidAvatar } from '@/utils/avatar'
 import type { PlazaComment } from '@/types/models'
 
-const props = defineProps<{
+const fallbackAvatar = 'https://placehold.co/100x100/FDE68A/8B5CF6?text=U'
+
+const handleAvatarError = (e: Event) => {
+  const img = e.target as HTMLImageElement
+  if (img.src !== fallbackAvatar) {
+    img.src = fallbackAvatar
+  }
+}
+
+defineProps<{
   comment: PlazaComment
   isReply?: boolean
 }>()
@@ -57,16 +65,6 @@ const emit = defineEmits<{
   (e: 'reply', comment: PlazaComment): void
   (e: 'delete', comment: PlazaComment): void
 }>()
-
-const isValidAvatar = computed(() => {
-  const avatar = props.comment.owner.avatar
-  return avatar && (avatar.startsWith('http') || avatar.startsWith('data:image'))
-})
-
-const avatarFallback = computed(() => {
-  const name = props.comment.owner.nickname
-  return name?.charAt(0)?.toUpperCase() || '👤'
-})
 
 const formatTime = (iso: string) => {
   const d = new Date(iso)

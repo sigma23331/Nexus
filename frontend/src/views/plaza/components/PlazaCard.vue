@@ -9,12 +9,11 @@
           class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-200 to-pink-200 flex items-center justify-center overflow-hidden"
         >
           <img
-            v-if="isValidAvatarUrl"
-            :src="card.owner.avatar"
+            :src="getValidAvatar(card.owner.avatar)"
             class="w-full h-full object-cover"
             alt="头像"
+            @error="handleAvatarError"
           />
-          <span v-else class="text-lg">{{ defaultAvatar }}</span>
         </div>
         <div>
           <p class="text-sm font-semibold text-slate-800">{{ card.owner.nickname }}</p>
@@ -135,6 +134,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import PlazaCommentPanel from './PlazaCommentPanel.vue'
+import { getValidAvatar } from '@/utils/avatar'
 
 export interface PlazaCardData {
   cardId: string
@@ -208,19 +208,14 @@ const confirmDelete = () => {
   }
 }
 
-// 头像相关
-const isValidAvatarUrl = computed(() => {
-  const avatar = props.card.owner.avatar
-  return avatar && (avatar.startsWith('http') || avatar.startsWith('data:image'))
-})
+const fallbackAvatar = 'https://placehold.co/100x100/FDE68A/8B5CF6?text=U'
 
-const defaultAvatar = computed(() => {
-  const nickname = props.card.owner.nickname
-  if (nickname && nickname.length) {
-    return nickname.charAt(0).toUpperCase()
+const handleAvatarError = (e: Event) => {
+  const img = e.target as HTMLImageElement
+  if (img.src !== fallbackAvatar) {
+    img.src = fallbackAvatar
   }
-  return '👤'
-})
+}
 
 // 图片有效性
 const hasValidImage = computed(() => {

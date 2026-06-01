@@ -461,6 +461,14 @@
           >
             分享
           </button>
+          <button
+            type="button"
+            class="flex-1 bg-amber-500 hover:bg-amber-600 rounded-xl py-2 text-sm font-medium text-white"
+            :disabled="pkCreating"
+            @click="handleCreatePKChallenge"
+          >
+            {{ pkCreating ? '创建中...' : '发起运势挑战' }}
+          </button>
           <!-- <button
             v-if="isDev"
             type="button"
@@ -564,6 +572,8 @@ import TodayFortuneContent from './components/TodayFortuneContent.vue'
 import ShareToPlazaModal from '@/components/common/ShareToPlazaModal.vue'
 import { useFestivalTheme } from '@/composables/useFestivalTheme'
 import { useShareCard } from '@/composables/useShareCard'
+import { useFortunePK } from '@/composables/useFortunePK'
+import { useUserStore } from '@/stores/user'
 
 const { isDuanwu } = useFestivalTheme()
 
@@ -1278,6 +1288,25 @@ const handleDownloadFortuneCard = () => {
     ji: fortuneData.value.ji,
   }
   generateFortuneCard(cardData)
+}
+
+const { createChallenge, shareChallenge, loading: pkCreating } = useFortunePK()
+const userStore = useUserStore()
+
+// 发起挑战
+const handleCreatePKChallenge = async () => {
+  if (!isBoardUnlocked.value) {
+    alert('请先解锁今日运势再发起挑战')
+    return
+  }
+  try {
+    const { token } = await createChallenge()
+    // 分享挑战链接
+    await shareChallenge(token, userStore.userInfo?.nickname || '我')
+    // 可选：提示成功
+  } catch (err: unknown) {
+    alert(err instanceof Error ? err.message : '创建挑战失败，请稍后重试')
+  }
 }
 </script>
 

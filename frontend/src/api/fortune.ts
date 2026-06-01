@@ -1,4 +1,5 @@
 // src/api/fortune.ts
+import { FortunePKRecord } from '@/types/models'
 import request from '@/utils/request'
 
 // 今日运势响应类型
@@ -66,4 +67,19 @@ export const getHistoryFortune = (
   list: HistoryFortuneItem[]
 }> => {
   return request.get('/v1/user/history/fortune', { params: { page, limit } })
+}
+
+export interface CreatePKResponse {
+  token: string
+  pk: FortunePKRecord
+}
+
+//创建运势挑战（发起者调用）
+export const createFortunePK = (): Promise<CreatePKResponse> => {
+  return request.post('/v1/fortune/pk')
+}
+
+//获取或参与运势挑战
+export const getFortunePK = (token: string): Promise<FortunePKRecord> => {
+  return request.get('/v1/fortune/pk', { params: { token } })
 }

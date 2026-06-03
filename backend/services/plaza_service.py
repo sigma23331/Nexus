@@ -169,6 +169,8 @@ def create_card(user_id, payload):
     db.session.add(card)
     db.session.commit()
     db.session.refresh(card)
+    from services import badge_service
+    badge_service.evaluate_after_event(user_id=user_id, trigger="plaza_card_created")
 
     user = User.query.filter_by(id=user_id).first()
     if not user:
@@ -193,12 +195,16 @@ def toggle_like(user_id, card_id, action):
             db.session.add(Like(user_id=user_id, card_id=card_id))
             card.likes_count += 1
             db.session.commit()
+            from services import badge_service
+            badge_service.evaluate_after_event(user_id=user_id, trigger="plaza_interaction_changed")
         return {"cardId": card_id, "likes": card.likes_count, "isLiked": True}
 
     if relation:
         db.session.delete(relation)
         card.likes_count = max(0, card.likes_count - 1)
         db.session.commit()
+        from services import badge_service
+        badge_service.evaluate_after_event(user_id=user_id, trigger="plaza_interaction_changed")
 
     return {"cardId": card_id, "likes": card.likes_count, "isLiked": False}
 

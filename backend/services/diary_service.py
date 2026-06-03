@@ -22,6 +22,8 @@ def _format_entry(entry):
 
 def create_entry(user_id, mood_tag, content, is_public=False):
     text = (content or "").strip()
+    if not text:
+        raise ValueError("content 不能为空")
     if len(text) > 2000:
         raise ValueError("content 长度不能超过2000")
 
@@ -35,6 +37,8 @@ def create_entry(user_id, mood_tag, content, is_public=False):
     db.session.add(entry)
     db.session.commit()
     db.session.refresh(entry)
+    from services import badge_service
+    badge_service.evaluate_after_event(user_id=user_id, trigger="diary_created")
 
     return {
         "id": entry.id,

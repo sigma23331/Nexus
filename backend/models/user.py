@@ -72,6 +72,8 @@ class User(BaseModel):
         lazy='dynamic',
         cascade='all, delete-orphan',
     )
+    badges = relationship('UserBadge', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
+    login_days = relationship('UserLoginDay', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
     favorites = relationship('Favorite', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
     likes = relationship('Like', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
     profile = relationship('UserProfile', back_populates='user', uselist=False, cascade='all, delete-orphan')

@@ -215,6 +215,8 @@ def create_comment(user_id, card_id, content, parent_id=None):
         _bump_comment_count(card_id=card_id, delta=1)
     db.session.commit()
     db.session.refresh(comment)
+    from services import badge_service
+    badge_service.evaluate_after_event(user_id=user_id, trigger="plaza_interaction_changed")
 
     if not comment.user:
         comment.user = User.query.filter_by(id=user_id).first()
@@ -239,6 +241,8 @@ def delete_comment(user_id, comment_id):
     comment.deleted_at = datetime.utcnow()
     comment.updated_at = datetime.utcnow()
     db.session.commit()
+    from services import badge_service
+    badge_service.evaluate_after_event(user_id=user_id, trigger="plaza_interaction_changed")
     return {"success": True}
 
 

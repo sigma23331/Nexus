@@ -69,6 +69,8 @@ def ask_question(user_id, question):
     db.session.add(record)
     db.session.commit()
     db.session.refresh(record)
+    from services import badge_service
+    badge_service.evaluate_after_event(user_id=user_id, trigger="answer_created")
 
     return {
         "id": record.id,
@@ -119,10 +121,14 @@ def toggle_favorite(user_id, answer_id, action):
         if not favorite:
             db.session.add(Favorite(user_id=user_id, answer_id=answer_id))
             db.session.commit()
+            from services import badge_service
+            badge_service.evaluate_after_event(user_id=user_id, trigger="favorite_changed")
         return {"answerId": answer_id, "isFavorited": True}
 
     if favorite:
         db.session.delete(favorite)
         db.session.commit()
+        from services import badge_service
+        badge_service.evaluate_after_event(user_id=user_id, trigger="favorite_changed")
 
     return {"answerId": answer_id, "isFavorited": False}

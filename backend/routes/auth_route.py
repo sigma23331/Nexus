@@ -97,6 +97,18 @@ def _extract_phone_number_from_response(response):
 
     return _find_phone_value(response)
 
+
+def _record_login_badges(user_id):
+    try:
+        from services import badge_service
+        badge_service.record_login_and_evaluate(user_id=user_id)
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        current_app.logger.warning("badge login evaluation failed", exc_info=True)
+
 # ---------- 短信验证码发送 ----------
 @auth_bp.route('/sms/send', methods=['POST'])
 def send_sms():
@@ -177,6 +189,7 @@ def sms_login():
         is_new = True
 
     token = create_access_token(identity=user.id)
+    _record_login_badges(user.id)
     return jsonify(code=200, message="登录成功", data={
         "token": token,
         "userInfo": {
@@ -234,6 +247,7 @@ def register():
         return jsonify(code=500, message="注册失败，请稍后重试", data=None), 500
 
     token = create_access_token(identity=user.id)
+    _record_login_badges(user.id)
     return jsonify(code=200, message="注册成功", data={
         "token": token,
         "userInfo": {
@@ -280,6 +294,7 @@ def register_nickname():
         return jsonify(code=500, message="注册失败，请稍后重试", data=None), 500
 
     token = create_access_token(identity=user.id)
+    _record_login_badges(user.id)
     return jsonify(code=200, message="注册成功", data={
         "token": token,
         "userInfo": {
@@ -338,6 +353,7 @@ def password_login():
         return jsonify(code=400, message="账号或密码错误", data=None), 400
 
     token = create_access_token(identity=user.id)
+    _record_login_badges(user.id)
     return jsonify(code=200, message="登录成功", data={
         "token": token,
         "userInfo": {
@@ -457,6 +473,7 @@ def verify_mobile():
         is_new = True
 
     token = create_access_token(identity=user.id)
+    _record_login_badges(user.id)
     return jsonify(code=200, message="认证成功", data={
         "token": token,
         "userInfo": {

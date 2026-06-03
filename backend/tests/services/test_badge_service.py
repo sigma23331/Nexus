@@ -228,6 +228,35 @@ def test_evaluate_user_badges_never_downgrades_existing_level(monkeypatch):
 
     assert existing.level == 3
     assert existing.current_progress == 0
-    assert existing.target == 1
+    assert existing.target == 200
     assert result == {"newUnlocks": [], "upgrades": []}
+    assert session.committed is True
+
+
+def test_evaluate_user_badges_sets_target_from_upgraded_level(monkeypatch):
+    session = FakeSession()
+    existing = SimpleNamespace(
+        user_id="u1",
+        badge_code="share_station",
+        level=2,
+        current_progress=10,
+        target=50,
+        unlocked_at=None,
+        last_evaluated_at=None,
+    )
+    FakeUserBadge.query = FakeUserBadgeQuery([existing])
+
+    monkeypatch.setattr(badge_service, "_active_definitions", lambda badge_codes=None: [_definition()])
+    monkeypatch.setattr(badge_service, "collect_metrics", lambda user_id, metric_keys: {"plaza_card_count": 75})
+    monkeypatch.setattr(badge_service, "UserBadge", FakeUserBadge)
+    monkeypatch.setattr(badge_service.db, "session", session)
+
+    result = badge_service.evaluate_user_badges(user_id="u1")
+
+    assert existing.level == 3
+    assert existing.current_progress == 75
+    assert existing.target == 200
+    assert result["newUnlocks"] == []
+    assert result["upgrades"][0]["level"] == 3
+    assert result["upgrades"][0]["target"] == 200
     assert session.committed is True

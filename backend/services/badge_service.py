@@ -270,11 +270,19 @@ def _evaluate_definition(definition, metrics):
     return {"level": achieved_level, "progress": progress, "target": int(target_level["threshold"])}
 
 
+def _target_for_retained_level(definition, retained_level):
+    levels = sorted(definition["levels"], key=lambda item: item["level"])
+    next_level = next((level for level in levels if level["level"] > retained_level), None)
+    target_level = next_level or levels[-1]
+    return int(target_level["threshold"])
+
+
 def _upsert_user_badge(user_id, definition, result, existing=None):
     now = datetime.utcnow()
     if existing:
+        retained_level = max(existing.level, result["level"])
         existing.current_progress = result["progress"]
-        existing.target = result["target"]
+        existing.target = _target_for_retained_level(definition, retained_level)
         existing.last_evaluated_at = now
         if result["level"] > existing.level:
             existing.level = result["level"]

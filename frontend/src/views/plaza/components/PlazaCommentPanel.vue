@@ -13,7 +13,7 @@
       <button
         type="button"
         :disabled="submitting || !draft.trim()"
-        class="shrink-0 rounded-xl bg-purple-600 px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
+        class="shrink-0 rounded-xl bg-indigo-400 px-3 py-2 text-xs font-medium text-white disabled:opacity-40"
         @click="submitDraft"
       >
         {{ submitting ? '发送中' : '发送' }}

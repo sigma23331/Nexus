@@ -84,7 +84,7 @@
           </div>
         </div>
 
-        <!-- 主签文（居中，字号+1，加粗） -->
+        <!-- 主签文（居中，加粗） -->
         <div class="mt-4 text-center">
           <p class="text-lg font-bold text-slate-900">{{ fortuneMainContent }}</p>
         </div>

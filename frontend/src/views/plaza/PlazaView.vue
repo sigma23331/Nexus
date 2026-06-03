@@ -1,31 +1,6 @@
 <template>
   <div class="min-h-screen bg-white text-slate-900 pb-20">
-    <main class="px-6 py-4 space-y-8">
-      <!--
-      测试卡片生成区域（临时注释）
-      <section class="bg-slate-50 rounded-xl p-4 border border-slate-200">
-        <h3 class="text-md font-semibold mb-3">🎴 测试生成卡片（点击下载）</h3>
-        <div class="flex gap-3">
-          <button
-            @click="testFortuneCard"
-            :disabled="isLoading"
-            class="px-4 py-2 bg-purple-600 rounded-lg text-white text-sm"
-          >
-            {{ isLoading ? '生成中...' : '生成运势卡片' }}
-          </button>
-          <button
-            @click="testAnswerCard"
-            :disabled="isLoading"
-            class="px-4 py-2 bg-indigo-600 rounded-lg text-white text-sm"
-          >
-            {{ isLoading ? '生成中...' : '生成答案卡片' }}
-          </button>
-        </div>
-        <p class="text-xs text-slate-500 mt-2">图片将自动下载，可查看效果。</p>
-        <canvas ref="cardCanvas" style="display: none"></canvas>
-      </section>
-      -->
-
+    <main class="px-6 py-4 space-y-6">
       <!-- ========== 今日树洞入口（新增） ========== -->
       <section>
         <div

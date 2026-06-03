@@ -1,83 +1,112 @@
 <template>
-  <div
-    v-if="visible"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-    @click.self="close"
-  >
-    <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-xl relative">
-      <!-- 头部 -->
-      <div class="relative px-6 py-4 border-b border-slate-100">
-        <h3 class="text-lg font-bold text-slate-800 text-center">答案详情</h3>
-        <button
-          @click="close"
-          class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-2xl leading-none"
-          aria-label="关闭"
-        >
-          &times;
-        </button>
-      </div>
+  <Transition name="answer-modal">
+    <div
+      v-if="visible"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      @click.self="close"
+    >
+      <div
+        class="w-full max-w-md overflow-hidden shadow-xl rounded-2xl bg-gradient-to-br from-purple-100 via-white to-indigo-100 border border-purple-200"
+      >
+        <!-- 头部 -->
+        <div class="relative px-5 py-4 border-b border-purple-200">
+          <h3 class="text-lg font-semibold text-slate-800 text-center">答案详情</h3>
+          <button
+            @click="close"
+            class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+            aria-label="关闭"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
 
-      <!-- 内容区域 -->
-      <div class="px-6 py-4 space-y-5">
-        <div>
-          <div class="text-xs text-slate-500 mb-1">你的问题</div>
-          <p class="text-base font-medium text-slate-800 leading-relaxed">
-            {{ detailData.question }}
-          </p>
-        </div>
-        <div>
-          <div class="text-xs text-slate-500 mb-1">✨ 宇宙的回答</div>
-          <p class="text-lg font-bold text-purple-700 leading-relaxed">
-            {{ detailData.answerText }}
-          </p>
-        </div>
-        <div class="flex justify-end">
-          <span class="text-[11px] text-slate-400">{{ formatDate(detailData.createdAt) }}</span>
-        </div>
-      </div>
+        <!-- 内容区域 -->
+        <div class="px-5 py-4 space-y-4">
+          <!-- 你的问题 -->
+          <div class="rounded-xl bg-slate-50/80 p-4 border border-slate-300">
+            <div class="text-sm text-slate-700 mb-1 flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              你的问题
+            </div>
+            <p class="text-base font-medium text-slate-800 leading-relaxed font-lxgw">
+              {{ detailData.question }}
+            </p>
+          </div>
 
-      <!-- 底部按钮 -->
-      <div class="px-6 py-4 border-t border-slate-100 flex justify-center gap-6">
-        <button
-          @click="toggleFavorite"
-          :disabled="favoriteLoading"
-          class="flex items-center gap-2 text-sm text-slate-600 hover:text-purple-600 transition disabled:opacity-50"
-        >
-          <span class="text-xl">{{ detailData.isFavorited ? '❤️' : '🤍' }}</span>
-          <span>{{ detailData.isFavorited ? '已收藏' : '收藏' }}</span>
-        </button>
-        <button
-          @click="openShareModal"
-          class="flex items-center gap-2 text-sm text-slate-600 hover:text-purple-600 transition"
-        >
-          <span class="text-xl">📤</span>
-          <span>分享到广场</span>
-        </button>
-        <button
-          @click="downloadCard"
-          :disabled="cardGenerating"
-          class="flex items-center gap-2 text-sm text-slate-600 hover:text-purple-600 transition disabled:opacity-50"
-        >
-          <span class="text-xl">⬇️</span>
-          <span>{{ cardGenerating ? '生成卡片中...' : '下载答案卡片' }}</span>
-        </button>
-        <!-- 调试预览按钮（仅开发环境） -->
-        <!-- <button
-          v-if="isDev"
-          @click="debugPreviewCard"
-          class="flex items-center gap-2 text-sm text-slate-600 hover:text-purple-600 transition"
-        >
-          <span class="text-xl">🖼️</span>
-          <span>调试预览</span>
-        </button> -->
+          <!-- 宇宙的回答 -->
+          <div class="rounded-xl bg-purple-100/50 p-4 border border-purple-200">
+            <div class="text-sm text-purple-700 mb-1 flex items-center gap-1.5">
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+              >
+                <path
+                  d="M12 2v3m0 14v3M2 12h3m14 0h3M5.5 5.5l2 2m9 9l2 2M5.5 18.5l2-2m9-9l2-2"
+                  stroke-linecap="round"
+                />
+                <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+              </svg>
+              宇宙的回答
+            </div>
+            <p class="text-lg font-bold text-purple-800 leading-relaxed font-lxgw">
+              {{ detailData.answerText }}
+            </p>
+          </div>
+
+          <div class="flex justify-end">
+            <span class="text-[11px] text-slate-400">{{ formatDate(detailData.createdAt) }}</span>
+          </div>
+        </div>
+
+        <!-- 底部按钮 -->
+        <div class="px-5 py-4 border-t border-purple-200 flex justify-center gap-3">
+          <button
+            @click="toggleFavorite"
+            :disabled="favoriteLoading"
+            class="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white/60 py-2 text-sm text-slate-700 transition hover:bg-white disabled:opacity-50"
+          >
+            <span class="text-base">{{ detailData.isFavorited ? '❤️' : '🤍' }}</span>
+            <span>{{ detailData.isFavorited ? '已收藏' : '收藏' }}</span>
+          </button>
+          <button
+            @click="openShareModal"
+            class="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white/60 py-2 text-sm text-slate-700 transition hover:bg-white"
+          >
+            <span class="text-base">📤</span>
+            <span>分享到广场</span>
+          </button>
+          <button
+            @click="downloadCard"
+            :disabled="cardGenerating"
+            class="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white/60 py-2 text-sm text-slate-700 transition hover:bg-white disabled:opacity-50"
+          >
+            <span class="text-base">⬇️</span>
+            <span>{{ cardGenerating ? '生成卡片中...' : '下载卡片' }}</span>
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+  </Transition>
 
-  <!-- 通用分享弹窗 -->
   <ShareToPlazaModal ref="shareModalRef" />
 
-  <!-- Toast 提示 -->
   <div
     v-if="toastMessage"
     class="fixed bottom-20 left-4 right-4 bg-black/70 text-white text-sm text-center py-2 rounded-lg z-50"
@@ -161,7 +190,6 @@ const toggleFavorite = async () => {
   }
 }
 
-// 打开分享编辑弹窗
 const openShareModal = () => {
   const originalContent = `问：${detailData.question}\n答：${detailData.answerText}`
   shareModalRef.value?.open({
@@ -183,14 +211,35 @@ const downloadCard = () => {
 }
 
 defineExpose({ open, close })
-// import { previewAnswerCard } from '@/utils/shareCardGenerator'
-// const isDev = import.meta.env.DEV
-
-// const debugPreviewCard = async () => {
-//   await previewAnswerCard({
-//     question: detailData.question,
-//     answerText: detailData.answerText,
-//     createdAt: detailData.createdAt,
-//   })
-// }
 </script>
+
+<style scoped>
+.font-lxgw {
+  font-family: 'LXGW WenKai', '霞鹜文楷', 'KaiTi', '楷体', cursive;
+}
+
+.answer-modal-enter-active,
+.answer-modal-leave-active {
+  transition: background-color 0.22s ease;
+}
+.answer-modal-enter-active .answer-modal-panel,
+.answer-modal-leave-active .answer-modal-panel {
+  transition:
+    transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.28s ease;
+}
+.answer-modal-enter-from {
+  background-color: rgba(0, 0, 0, 0);
+}
+.answer-modal-enter-from .answer-modal-panel {
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+}
+.answer-modal-leave-to {
+  background-color: rgba(0, 0, 0, 0);
+}
+.answer-modal-leave-to .answer-modal-panel {
+  opacity: 0;
+  transform: translateY(8px) scale(0.99);
+}
+</style>

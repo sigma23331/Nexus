@@ -57,7 +57,7 @@
               :class="[
                 'px-3 py-1 text-sm rounded-full transition-colors',
                 filterType === 'all'
-                  ? 'bg-purple-600 text-white'
+                  ? 'bg-indigo-400 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
               ]"
             >
@@ -68,7 +68,7 @@
               :class="[
                 'px-3 py-1 text-sm rounded-full transition-colors',
                 filterType === 'fortune'
-                  ? 'bg-purple-600 text-white'
+                  ? 'bg-indigo-400 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
               ]"
             >
@@ -79,7 +79,7 @@
               :class="[
                 'px-3 py-1 text-sm rounded-full transition-colors',
                 filterType === 'answer'
-                  ? 'bg-purple-600 text-white'
+                  ? 'bg-indigo-400 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
               ]"
             >
@@ -91,7 +91,7 @@
             :class="[
               'px-3 py-1 text-sm rounded-full transition-colors',
               showOnlyMine
-                ? 'bg-purple-600 text-white'
+                ? 'bg-indigo-400 text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
             ]"
           >

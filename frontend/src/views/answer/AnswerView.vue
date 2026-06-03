@@ -23,7 +23,7 @@
             class="rounded-full px-4 py-1.5 text-xs font-semibold transition"
             :class="
               canSubmit
-                ? 'bg-purple-500 text-white hover:bg-purple-700'
+                ? 'bg-indigo-400 text-white'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed'
             "
             :disabled="!canSubmit"

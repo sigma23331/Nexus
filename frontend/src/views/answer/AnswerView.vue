@@ -23,7 +23,7 @@
             class="rounded-full px-4 py-1.5 text-xs font-semibold transition"
             :class="
               canSubmit
-                ? 'bg-purple-600 text-white hover:bg-purple-700'
+                ? 'bg-purple-500 text-white hover:bg-purple-700'
                 : 'bg-slate-100 text-slate-400 cursor-not-allowed'
             "
             :disabled="!canSubmit"
@@ -61,7 +61,7 @@
           <h2 class="text-lg font-semibold">回溯复盘</h2>
           <router-link
             :to="{ name: 'answer-history' }"
-            class="text-xs font-medium text-purple-600 hover:text-purple-700"
+            class="text-xs font-medium text-purple-500 hover:text-purple-700"
           >
             查看更多
           </router-link>
@@ -70,21 +70,38 @@
           <div
             v-for="item in recentAnswers"
             :key="item.id"
-            class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 cursor-pointer hover:bg-slate-50 transition"
+            class="rounded-2xl bg-gradient-to-br from-indigo-100/80 via-white to-purple-100/80 p-3 shadow-sm cursor-pointer transition hover:shadow-md hover:from-indigo-200/80 hover:to-purple-200/80 border border-purple-200"
             @click="openDetail(item)"
           >
-            <div
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-pink-500/20"
-            >
-              ✨
+            <!-- 顶部：日期（左） + 星标（右） -->
+            <div class="flex justify-between items-start mb-1">
+              <span class="text-[11px] text-slate-500">{{ formatDateTime(item.createdAt) }}</span>
+              <button
+                @click.stop="toggleItemFavorite(item)"
+                class="shrink-0 p-1 transition hover:scale-110"
+                :class="item.isFavorited ? 'text-amber-500' : 'text-slate-400'"
+                aria-label="收藏"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-5 h-5"
+                  :fill="item.isFavorited ? 'currentColor' : 'none'"
+                  :stroke="item.isFavorited ? 'none' : 'currentColor'"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polygon
+                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                  />
+                </svg>
+              </button>
             </div>
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-xs font-medium">问：{{ item.question }}</p>
-              <p class="line-clamp-1 text-[10px] text-slate-500">「{{ item.answerText }}」</p>
-            </div>
-            <span class="shrink-0 text-[10px] text-slate-500">{{
-              formatDate(item.createdAt)
-            }}</span>
+            <!-- 问题 -->
+            <p class="text-sm font-medium text-slate-800 line-clamp-2">问：{{ item.question }}</p>
+            <!-- 点击查看回答（右下角） -->
+            <p class="mt-2 text-xs text-slate-500 text-right">点击查看回答</p>
           </div>
           <div
             v-if="recentAnswers.length === 0 && !loadingHistory"
@@ -211,8 +228,14 @@ function triggerInputError() {
   }, 400) // 与动画时长一致
 }
 
-function formatDate(iso: string) {
-  return dayjs(iso).format('MM月DD日')
+// 格式化日期（仅日期）
+// function formatDate(iso: string) {
+//   return dayjs(iso).format('MM月DD日')
+// }
+
+// 格式化日期时间（带时分秒）
+function formatDateTime(iso: string) {
+  return dayjs(iso).format('MM月DD日 HH:mm:ss')
 }
 
 // 加载最近5条历史记录
@@ -283,7 +306,7 @@ async function drawAnswer() {
   }
 }
 
-// 收藏/取消收藏
+// 收藏/取消收藏（用于当前答案弹窗）
 async function toggleFavorite(answerId: string) {
   if (!navigator.onLine) {
     alert('网络不可用')
@@ -297,6 +320,25 @@ async function toggleFavorite(answerId: string) {
     updateLocalFavoriteStatus(answerId, newStatus)
     const recentItem = recentAnswers.value.find((a) => a.id === answerId)
     if (recentItem) recentItem.isFavorited = newStatus
+  } catch (err) {
+    console.error('操作失败', err)
+    alert('操作失败')
+  }
+}
+
+// 列表项收藏/取消收藏
+const toggleItemFavorite = async (item: AnswerHistoryItem) => {
+  if (!navigator.onLine) {
+    alert('网络不可用')
+    return
+  }
+  const action = item.isFavorited ? 'unfavorite' : 'favorite'
+  try {
+    await favoriteAnswer(item.id, action)
+    const newStatus = !item.isFavorited
+    updateLocalFavoriteStatus(item.id, newStatus)
+    const target = recentAnswers.value.find((a) => a.id === item.id)
+    if (target) target.isFavorited = newStatus
   } catch (err) {
     console.error('操作失败', err)
     alert('操作失败')

@@ -441,7 +441,17 @@
             class="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition"
             @click="debugPreviewCard"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
               <circle cx="12" cy="12" r="10" />
               <path d="M12 8v4M12 16h.01" />
             </svg>
@@ -775,14 +785,23 @@ const FORTUNE_BOARD_CACHE_TTL_MS = 60 * 1000
 //     content_sub: fortuneData.value.content_sub,
 //     yi: fortuneData.value.yi,
 //     ji: fortuneData.value.ji,
+//     love: fortuneData.value.love,
+//     career: fortuneData.value.career,
+//     health: fortuneData.value.health,
+//     wealth: fortuneData.value.wealth,
 //   }
 //   // const testData = {
 //   //   title: fortuneData.value.title,
 //   //   score: fortuneData.value.score,
-//   //   content_main: '这是一段非常长的测试文本，目的是为了验证主签文在超过一行时能否自动缩小字号并在两行内完整显示。如果仍然超出，字号会继续减小直到适合。',
+//   //   content_main:
+//   //     '这是一段非常长的测试文本，目的是为了验证主签文在超过一行时能否自动缩小字号并在两行内完整显示。',
 //   //   content_sub: fortuneData.value.content_sub,
-//   //   yi: fortuneData.value.yi,
-//   //   ji: fortuneData.value.ji,
+//   //   yi: ['第一项很长很长', '第二项也很长', '第三项也很长的'],
+//   //   ji: ['第一项很长很长', '第二项也很长', '第三项也很长的'],
+//   //   love: '主动表达，才有机会',
+//   //   career: '稳扎稳打，步步为营',
+//   //   health: '轻运动唤醒身体',
+//   //   wealth: '谨慎理财，避免冲动',
 //   // }
 //   await previewFortuneCard(cardData)
 // }
@@ -1391,6 +1410,10 @@ const handleDownloadFortuneCard = () => {
     content_sub: fortuneData.value.content_sub,
     yi: fortuneData.value.yi,
     ji: fortuneData.value.ji,
+    love: fortuneData.value.love,
+    career: fortuneData.value.career,
+    health: fortuneData.value.health,
+    wealth: fortuneData.value.wealth,
   }
   generateFortuneCard(cardData)
 }

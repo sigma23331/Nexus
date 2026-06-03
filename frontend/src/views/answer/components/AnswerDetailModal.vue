@@ -77,14 +77,31 @@
 
         <!-- 底部按钮 -->
         <div class="px-5 py-4 border-t border-purple-200 flex justify-center gap-3">
+          <!-- 收藏按钮（五角星） -->
           <button
             @click="toggleFavorite"
             :disabled="favoriteLoading"
             class="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white/60 py-2 text-sm text-slate-700 transition hover:bg-white disabled:opacity-50"
           >
-            <span class="text-base">{{ detailData.isFavorited ? '❤️' : '🤍' }}</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-5 h-5"
+              :class="detailData.isFavorited ? 'text-amber-500' : 'text-slate-400'"
+              :fill="detailData.isFavorited ? 'currentColor' : 'none'"
+              :stroke="detailData.isFavorited ? 'none' : 'currentColor'"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polygon
+                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+              />
+            </svg>
             <span>{{ detailData.isFavorited ? '已收藏' : '收藏' }}</span>
           </button>
+
+          <!-- 分享按钮 -->
           <button
             @click="openShareModal"
             class="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white/60 py-2 text-sm text-slate-700 transition hover:bg-white"
@@ -92,6 +109,8 @@
             <span class="text-base">📤</span>
             <span>分享到广场</span>
           </button>
+
+          <!-- 下载卡片按钮 -->
           <button
             @click="downloadCard"
             :disabled="cardGenerating"

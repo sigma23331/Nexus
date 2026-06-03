@@ -5,14 +5,14 @@
     >
       <button
         type="button"
-        class="rounded-full p-2 text-slate-600 hover:bg-purple-200"
+        class="rounded-full p-2 text-slate-600"
         aria-label="返回"
         @click="goBack"
       >
         <span class="text-lg">←</span>
       </button>
       <div class="min-w-0 flex-1">
-        <h1 class="text-base font-bold text-slate-900">过往答案</h1>
+        <h1 class="text-lg font-bold text-slate-900">过往答案</h1>
       </div>
     </header>
 
@@ -24,7 +24,7 @@
           :class="[
             'rounded-full px-4 py-1.5 text-xs font-medium transition',
             selectedMonth === ''
-              ? 'bg-purple-600 text-white'
+              ? 'bg-indigo-400 text-white'
               : 'bg-white border border-purple-300 text-slate-700 hover:bg-purple-100',
           ]"
         >
@@ -36,7 +36,7 @@
             :class="[
               'rounded-full px-4 py-1.5 text-xs font-medium transition flex items-center gap-1',
               selectedMonth !== ''
-                ? 'bg-purple-600 text-white'
+                ? 'bg-indigo-400 text-white'
                 : 'bg-white border border-purple-300 text-slate-700 hover:bg-purple-100',
             ]"
           >

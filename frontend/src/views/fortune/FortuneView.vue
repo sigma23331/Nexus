@@ -292,7 +292,7 @@
             <h2 class="text-sm font-semibold text-slate-700">今日概览</h2>
             <div class="grid grid-cols-2 gap-3 text-sm">
               <div
-                class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
               >
                 <span class="text-slate-500 w-7 flex-shrink-0">爱情</span>
                 <span class="font-semibold text-pink-500 flex-1 break-words">{{
@@ -300,7 +300,7 @@
                 }}</span>
               </div>
               <div
-                class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
               >
                 <span class="text-slate-500 w-7 flex-shrink-0">事业</span>
                 <span class="font-semibold text-blue-500 flex-1 break-words">{{
@@ -308,7 +308,7 @@
                 }}</span>
               </div>
               <div
-                class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
               >
                 <span class="text-slate-500 w-7 flex-shrink-0">健康</span>
                 <span class="font-semibold text-green-600 flex-1 break-words">{{
@@ -316,7 +316,7 @@
                 }}</span>
               </div>
               <div
-                class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
               >
                 <span class="text-slate-500 w-7 flex-shrink-0">财富</span>
                 <span class="font-semibold text-yellow-600 flex-1 break-words">{{
@@ -610,7 +610,7 @@
             <!-- 爱情、事业、健康、财富四项 -->
             <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div
-                class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
               >
                 <span class="text-slate-500 w-8 flex-shrink-0">爱情</span>
                 <span class="font-semibold text-pink-500 flex-1 break-words">{{
@@ -618,7 +618,7 @@
                 }}</span>
               </div>
               <div
-                class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
               >
                 <span class="text-slate-500 w-8 flex-shrink-0">事业</span>
                 <span class="font-semibold text-blue-500 flex-1 break-words">{{
@@ -626,7 +626,7 @@
                 }}</span>
               </div>
               <div
-                class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
               >
                 <span class="text-slate-500 w-8 flex-shrink-0">健康</span>
                 <span class="font-semibold text-green-600 flex-1 break-words">{{
@@ -634,7 +634,7 @@
                 }}</span>
               </div>
               <div
-                class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
               >
                 <span class="text-slate-500 w-8 flex-shrink-0">财富</span>
                 <span class="font-semibold text-yellow-600 flex-1 break-words">{{

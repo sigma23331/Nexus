@@ -75,20 +75,19 @@
       <div class="text-purple-600">加载中...</div>
     </div>
 
-    <!-- 数据列表（采用潮流卡片样式） -->
+    <!-- 数据列表（采用与运势看板一致的卡片样式） -->
     <div v-else-if="filteredList.length > 0" class="space-y-3 p-4">
       <article
         v-for="item in filteredList"
-        :key="item.date"
-        class="cursor-pointer rounded-2xl border border-amber-100 bg-gradient-to-r from-amber-50/60 to-white p-4 shadow-sm transition hover:shadow-md"
+        :key="item.id"
+        class="cursor-pointer rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50/60 to-white p-4 shadow-sm transition hover:shadow-md"
         @click="openDetail(item)"
       >
-        <div class="mb-3 flex items-center justify-between">
+        <div class="mb-2 flex items-center justify-between">
           <div>
-            <p class="text-sm font-semibold text-slate-900">
-              {{ formatDate(item.date) }} · {{ item.title }}
-            </p>
-            <p class="text-xs text-slate-500">{{ summaryText(item) }}</p>
+            <span class="text-sm font-semibold text-slate-700">{{ formatDate(item.date) }}</span>
+            <span class="text-sm font-bold text-slate-700"> · </span>
+            <span class="text-lg font-bold font-lxgw text-slate-900">{{ item.title }}</span>
           </div>
           <span
             class="rounded-full px-2.5 py-1 text-xs font-semibold"
@@ -97,20 +96,27 @@
             {{ item.score }} 分
           </span>
         </div>
+        <!-- 合并后的运势对比与摘要 -->
+        <div class="mb-2 text-sm">
+          <span class="rounded-full px-2 py-1" :class="item.linkClass">
+            {{ item.linkText }}
+          </span>
+          <span class="ml-4 text-slate-600"> {{ item.summary }}</span>
+        </div>
+        <!-- 宜忌（简化显示） -->
         <div class="flex gap-2 text-xs">
           <span
-            class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-1 text-emerald-700"
+            class="inline-flex max-w-[48%] items-center rounded-full bg-emerald-50 px-2 py-1 text-emerald-700"
           >
             宜：{{ item.yi?.[0] || '--' }}
           </span>
-          <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-1 text-rose-700">
+          <span
+            class="inline-flex max-w-[48%] items-center rounded-full bg-rose-50 px-2 py-1 text-rose-700"
+          >
             忌：{{ item.ji?.[0] || '--' }}
           </span>
         </div>
-        <div class="mt-2 flex items-center justify-between text-right text-[11px] text-slate-400">
-          <span class="text-amber-600">点击查看详情</span>
-          <span>{{ getRelativeTime(item.date) }}</span>
-        </div>
+        <p class="mt-1 text-right text-[11px] text-slate-400">点击查看详情</p>
       </article>
 
       <!-- 分页加载更多 -->
@@ -123,11 +129,9 @@
         >
           {{ loadingMore ? '加载中...' : '加载更多' }}
         </button>
-        <!-- 非筛选模式且无更多数据时显示“已经到底了” -->
         <p v-else-if="!selectedMonth && !hasMore" class="text-xs text-slate-400">
           —— 已经到底了 ——
         </p>
-        <!-- 筛选模式下直接显示“已经到底了”（因为数据已全部展示） -->
         <p v-else-if="selectedMonth" class="text-xs text-slate-400">—— 已经到底了 ——</p>
       </div>
     </div>
@@ -162,7 +166,7 @@
       </button>
     </transition>
 
-    <!-- 详情弹窗 -->
+    <!-- 详情弹窗（保持原有结构，但增加四项内容） -->
     <Teleport to="body">
       <Transition name="fortune-share">
         <div
@@ -189,6 +193,41 @@
                 <p class="mt-1 text-base font-semibold text-slate-900">{{ selectedItem.title }}</p>
                 <p class="mt-1 text-slate-700">{{ selectedItem.content_main || '—' }}</p>
                 <p class="mt-1 text-xs text-slate-500">{{ selectedItem.content_sub || '' }}</p>
+              </div>
+              <!-- 爱情、事业、健康、财富 -->
+              <div class="grid grid-cols-2 gap-3">
+                <div
+                  class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                >
+                  <span class="text-slate-500 w-8 flex-shrink-0">爱情</span>
+                  <span class="font-semibold text-pink-500 flex-1 break-words">{{
+                    selectedItem.love || '--'
+                  }}</span>
+                </div>
+                <div
+                  class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                >
+                  <span class="text-slate-500 w-8 flex-shrink-0">事业</span>
+                  <span class="font-semibold text-blue-500 flex-1 break-words">{{
+                    selectedItem.career || '--'
+                  }}</span>
+                </div>
+                <div
+                  class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                >
+                  <span class="text-slate-500 w-8 flex-shrink-0">健康</span>
+                  <span class="font-semibold text-green-600 flex-1 break-words">{{
+                    selectedItem.health || '--'
+                  }}</span>
+                </div>
+                <div
+                  class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                >
+                  <span class="text-slate-500 w-8 flex-shrink-0">财富</span>
+                  <span class="font-semibold text-yellow-600 flex-1 break-words">{{
+                    selectedItem.wealth || '--'
+                  }}</span>
+                </div>
               </div>
               <div
                 class="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2"
@@ -227,8 +266,9 @@ import 'dayjs/locale/zh-cn'
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
 
-// 扩展后端返回的类型
+// 扩展后端返回的类型（增加爱情事业等字段）
 export interface ExtendedHistoryFortuneItem {
+  id: string
   date: string
   score: number
   title: string
@@ -236,6 +276,14 @@ export interface ExtendedHistoryFortuneItem {
   content_sub?: string
   yi?: string[]
   ji?: string[]
+  love?: string
+  career?: string
+  health?: string
+  wealth?: string
+  // 以下为前端计算字段
+  linkText?: string
+  linkClass?: string
+  summary?: string
 }
 
 const router = useRouter()
@@ -292,15 +340,39 @@ const formatDate = (isoDate: string) => {
   return isoDate
 }
 
-const getRelativeTime = (isoDate: string) => {
-  return dayjs(isoDate).fromNow()
-}
+// const getRelativeTime = (isoDate: string) => {
+//   return dayjs(isoDate).fromNow()
+// }
 
 const scoreLevelClass = (score: number) => {
   if (score >= 85) return 'bg-emerald-50 text-emerald-700'
   if (score >= 75) return 'bg-blue-50 text-blue-700'
   if (score >= 65) return 'bg-amber-50 text-amber-700'
   return 'bg-rose-50 text-rose-700'
+}
+
+// 生成 summary、linkText、linkClass（模拟运势看板逻辑）
+const getRelationByDelta = (currentScore: number, previousScore: number) => {
+  const delta = currentScore - previousScore
+  if (delta >= 3) {
+    return {
+      text: `↑ 比昨日提升 ${delta} 分`,
+      cls: 'bg-emerald-50 text-emerald-700',
+      summary: '昨日积累开始显效，今日气势顺承而上。',
+    }
+  }
+  if (delta <= -3) {
+    return {
+      text: `↓ 比昨日回落 ${Math.abs(delta)} 分`,
+      cls: 'bg-rose-50 text-rose-700',
+      summary: '昨日外扰余波未消，今日宜先稳住节奏。',
+    }
+  }
+  return {
+    text: '→ 与昨日基本持平',
+    cls: 'bg-amber-50 text-amber-700',
+    summary: '运势与昨日同频，适合延续既定安排。',
+  }
 }
 
 const summaryText = (item: ExtendedHistoryFortuneItem) => {
@@ -324,10 +396,21 @@ const loadHistory = async (reset = true) => {
     const res = await getHistoryFortune(page.value, limit)
     total.value = res.total
     const newList = res.list as ExtendedHistoryFortuneItem[]
+    // 为每条记录添加 linkText, linkClass, summary（用于卡片显示）
+    const enrichedList = newList.map((item, index) => {
+      const prevScore = index + 1 < newList.length ? newList[index + 1].score : item.score
+      const relation = getRelationByDelta(item.score, prevScore)
+      return {
+        ...item,
+        linkText: relation.text,
+        linkClass: relation.cls,
+        summary: summaryText(item),
+      }
+    })
     if (reset) {
-      list.value = newList
+      list.value = enrichedList
     } else {
-      list.value.push(...newList)
+      list.value.push(...enrichedList)
     }
     hasMore.value = list.value.length < total.value
   } catch (error) {
@@ -374,6 +457,9 @@ const handleScroll = () => {
 const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+// 添加字体类（与运势看板一致）
+// const fontLxgw = 'font-lxgw'
 
 onMounted(() => {
   refresh()
@@ -425,5 +511,9 @@ onUnmounted(() => {
 .fortune-share-leave-to .fortune-share-panel {
   opacity: 0;
   transform: translateY(8px) scale(0.99);
+}
+
+.font-lxgw {
+  font-family: 'LXGW WenKai', '霞鹜文楷', 'KaiTi', '楷体', cursive;
 }
 </style>

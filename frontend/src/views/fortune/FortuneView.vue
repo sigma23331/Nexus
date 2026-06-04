@@ -290,24 +290,40 @@
 
           <div v-if="isBoardUnlocked" class="space-y-2">
             <h2 class="text-sm font-semibold text-slate-700">今日概览</h2>
-            <ul class="grid grid-cols-2 gap-3 text-sm">
-              <li class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <span class="text-slate-500">爱情</span>
-                <span class="ml-2 font-semibold text-pink-500">{{ fortuneData.love }}</span>
-              </li>
-              <li class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <span class="text-slate-500">事业</span>
-                <span class="ml-2 font-semibold text-blue-500">{{ fortuneData.career }}</span>
-              </li>
-              <li class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <span class="text-slate-500">健康</span>
-                <span class="ml-2 font-semibold text-green-600">{{ fortuneData.health }}</span>
-              </li>
-              <li class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <span class="text-slate-500">财富</span>
-                <span class="ml-2 font-semibold text-yellow-600">{{ fortuneData.wealth }}</span>
-              </li>
-            </ul>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div
+                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
+              >
+                <span class="text-slate-500 w-7 flex-shrink-0">爱情</span>
+                <span class="font-semibold text-pink-500 flex-1 break-words">{{
+                  fortuneData.love
+                }}</span>
+              </div>
+              <div
+                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
+              >
+                <span class="text-slate-500 w-7 flex-shrink-0">事业</span>
+                <span class="font-semibold text-blue-500 flex-1 break-words">{{
+                  fortuneData.career
+                }}</span>
+              </div>
+              <div
+                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
+              >
+                <span class="text-slate-500 w-7 flex-shrink-0">健康</span>
+                <span class="font-semibold text-green-600 flex-1 break-words">{{
+                  fortuneData.health
+                }}</span>
+              </div>
+              <div
+                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
+              >
+                <span class="text-slate-500 w-7 flex-shrink-0">财富</span>
+                <span class="font-semibold text-yellow-600 flex-1 break-words">{{
+                  fortuneData.wealth
+                }}</span>
+              </div>
+            </div>
           </div>
 
           <div v-if="isBoardUnlocked" class="grid grid-cols-2 gap-3" style="margin-top: 1rem">
@@ -343,36 +359,103 @@
         </div>
 
         <div v-if="isBoardUnlocked" class="flex gap-3 mt-4">
+          <!-- 下载运势按钮 -->
           <button
             type="button"
-            class="flex-1 bg-[#dce5b8a2] border-2 border-[#dce5b8] hover:bg-[#dce5b8] text-slate-700 rounded-xl py-2 text-sm font-medium disabled:opacity-50"
+            class="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition disabled:opacity-50"
             :disabled="shareCardGenerating"
             @click="handleDownloadFortuneCard"
           >
-            {{ shareCardGenerating ? '生成运势中...' : '下载运势' }}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="4" ry="4" />
+              <polyline points="8 12 12 16 16 12" />
+              <line x1="12" y1="16" x2="12" y2="6" />
+            </svg>
+            <span>{{ shareCardGenerating ? '生成运势中...' : '下载运势' }}</span>
           </button>
+
+          <!-- 分享按钮 -->
           <button
             type="button"
-            class="flex-1 bg-white border-2 border-slate-200 hover:bg-gray-200 text-slate-700 rounded-xl py-2 text-sm font-medium"
+            class="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition"
             @click="openShareFortuneModal"
           >
-            分享
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+            <span>分享到广场</span>
           </button>
+
+          <!-- 发起运势挑战按钮 -->
           <button
             type="button"
-            class="flex-1 bg-[#d9f3f090] border-2 border-[#d0e6ee] hover:bg-[#d0e6ee] text-slate-700 rounded-xl py-2 text-sm font-medium"
+            class="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition disabled:opacity-50"
             :disabled="pkCreating"
             @click="handleCreatePKChallenge"
           >
-            {{ pkCreating ? '创建中...' : '发起运势挑战' }}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M12 2v4M12 22v-4M4 12H2M22 12h-2M5.6 5.6l2.8 2.8M18.4 18.4l-2.8-2.8M5.6 18.4l2.8-2.8M18.4 5.6l-2.8 2.8"
+              />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <span>{{ pkCreating ? '创建中...' : '发起运势挑战' }}</span>
           </button>
+
+          <!-- 调试按钮（仅开发环境） -->
           <!-- <button
             v-if="isDev"
             type="button"
-            class="flex-1 bg-gray-200 text-gray-700 rounded-xl py-2 text-sm font-medium"
+            class="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-100 transition"
             @click="debugPreviewCard"
           >
-            调试预览
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4M12 16h.01" />
+            </svg>
+            <span>调试预览</span>
           </button> -->
         </div>
       </section>
@@ -682,14 +765,23 @@ const FORTUNE_BOARD_CACHE_TTL_MS = 60 * 1000
 //     content_sub: fortuneData.value.content_sub,
 //     yi: fortuneData.value.yi,
 //     ji: fortuneData.value.ji,
+//     love: fortuneData.value.love,
+//     career: fortuneData.value.career,
+//     health: fortuneData.value.health,
+//     wealth: fortuneData.value.wealth,
 //   }
 //   // const testData = {
 //   //   title: fortuneData.value.title,
 //   //   score: fortuneData.value.score,
-//   //   content_main: '这是一段非常长的测试文本，目的是为了验证主签文在超过一行时能否自动缩小字号并在两行内完整显示。如果仍然超出，字号会继续减小直到适合。',
+//   //   content_main:
+//   //     '这是一段非常长的测试文本，目的是为了验证主签文在超过一行时能否自动缩小字号并在两行内完整显示。',
 //   //   content_sub: fortuneData.value.content_sub,
-//   //   yi: fortuneData.value.yi,
-//   //   ji: fortuneData.value.ji,
+//   //   yi: ['第一项很长很长', '第二项也很长', '第三项也很长的'],
+//   //   ji: ['第一项很长很长', '第二项也很长', '第三项也很长的'],
+//   //   love: '主动表达，才有机会',
+//   //   career: '稳扎稳打，步步为营',
+//   //   health: '轻运动唤醒身体',
+//   //   wealth: '谨慎理财，避免冲动',
 //   // }
 //   await previewFortuneCard(cardData)
 // }
@@ -1332,6 +1424,10 @@ const handleDownloadFortuneCard = () => {
     content_sub: fortuneData.value.content_sub,
     yi: fortuneData.value.yi,
     ji: fortuneData.value.ji,
+    love: fortuneData.value.love,
+    career: fortuneData.value.career,
+    health: fortuneData.value.health,
+    wealth: fortuneData.value.wealth,
   }
   generateFortuneCard(cardData)
 }

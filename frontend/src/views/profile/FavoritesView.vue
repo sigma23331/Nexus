@@ -32,7 +32,7 @@
           :class="[
             'rounded-full px-4 py-1.5 text-xs font-medium transition',
             selectedMonth === ''
-              ? 'bg-purple-600 text-white'
+              ? 'bg-indigo-400 text-white'
               : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50',
           ]"
         >
@@ -44,7 +44,7 @@
             :class="[
               'rounded-full px-4 py-1.5 text-xs font-medium transition flex items-center gap-1',
               selectedMonth !== ''
-                ? 'bg-purple-600 text-white'
+                ? 'bg-indigo-400 text-white'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50',
             ]"
           >

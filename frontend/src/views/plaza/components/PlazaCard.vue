@@ -20,7 +20,6 @@
           <p class="text-xs text-slate-400">{{ formatTime(card.createdAt) }}</p>
         </div>
       </div>
-      <!-- 菜单按钮（仅作者可见） -->
       <div class="relative" v-if="isOwner">
         <button
           @click="showMenu = !showMenu"
@@ -41,15 +40,15 @@
           </button>
         </div>
       </div>
-      <!-- 非作者占位保持对齐 -->
       <div v-else class="w-8"></div>
     </div>
 
+    <!-- 分割线：淡淡的一条线 -->
+    <div class="border-t border-slate-300 mx-4 my-2"></div>
+
     <!-- 分享文案（独立于卡片外部） -->
-    <div v-if="shareMessage" class="px-4 pb-2">
-      <div
-        class="bg-white/80 rounded-lg p-3 text-sm text-purple-800 border border-purple-200 shadow-sm"
-      >
+    <div v-if="shareMessage" class="px-2 pb-2">
+      <div class="bg-white/80 rounded-lg p-3 text-sm text-slate-600 shadow-sm">
         {{ shareMessage }}
       </div>
     </div>
@@ -60,38 +59,120 @@
       <div v-if="hasValidImage" class="mb-2">
         <img :src="card.snapshotUrl" class="w-full rounded-xl border border-slate-200" />
       </div>
-      <!-- 运势卡片（文本样式） -->
+
+      <!-- 运势卡片 -->
       <div
         v-else-if="card.type === 'fortune'"
         class="fortune-card rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-rose-50 p-4"
       >
         <div class="text-center">
-          <p class="text-xs font-semibold text-amber-700">今日签文</p>
-          <p class="mt-1 text-lg font-bold text-slate-900">{{ fortuneTitle }}</p>
+          <p class="text-sm font-semibold text-amber-700">心运岛 · 今日签文</p>
         </div>
-        <div class="mt-3 text-sm text-slate-700 whitespace-pre-wrap">
-          {{ fortuneMainContent }}
-        </div>
-        <div class="mt-2 text-xs text-slate-500">{{ fortuneSubContent }}</div>
-        <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
-          <div class="rounded-lg bg-emerald-50 p-2 text-emerald-700">
-            <span class="font-medium">宜</span> {{ fortuneYi }}
+        <!-- 运势标题 + 分数（参考 TodayFortuneContent） -->
+        <div class="flex justify-center mt-2">
+          <div class="relative inline-block">
+            <span
+              class="rounded-full px-4 py-1.5 text-[28px] font-semibold font-lxgw text-[#B45309] bg-amber-50"
+            >
+              {{ fortuneTitle }}
+            </span>
+            <span
+              class="absolute -bottom-0 -right-6 text-xs text-slate-600 bg-white/80 px-1 rounded"
+            >
+              {{ fortuneScore }} 分
+            </span>
           </div>
-          <div class="rounded-lg bg-rose-50 p-2 text-rose-700">
-            <span class="font-medium">忌</span> {{ fortuneJi }}
+        </div>
+
+        <!-- 主签文（居中，加粗） -->
+        <div class="mt-4 text-center">
+          <p class="text-lg font-bold text-slate-900">{{ fortuneMainContent }}</p>
+        </div>
+
+        <!-- 副签文（居中） -->
+        <div class="mt-2 text-center text-xs text-slate-500">{{ fortuneSubContent }}</div>
+
+        <!-- 爱情、事业、健康、财富四项（网格布局） -->
+        <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <div
+            class="rounded-xl border border-orange-200 bg-amber-50 px-3 py-2 flex justify-between items-start gap-2"
+          >
+            <span class="text-slate-500 w-7 flex-shrink-0">爱情</span>
+            <span class="font-semibold text-pink-500 flex-1 break-words">{{ fortuneLove }}</span>
+          </div>
+          <div
+            class="rounded-xl border border-orange-200 bg-amber-50 px-3 py-2 flex justify-between items-start gap-2"
+          >
+            <span class="text-slate-500 w-7 flex-shrink-0">事业</span>
+            <span class="font-semibold text-blue-500 flex-1 break-words">{{ fortuneCareer }}</span>
+          </div>
+          <div
+            class="rounded-xl border border-orange-200 bg-amber-50 px-3 py-2 flex justify-between items-start gap-2"
+          >
+            <span class="text-slate-500 w-7 flex-shrink-0">健康</span>
+            <span class="font-semibold text-green-600 flex-1 break-words">{{ fortuneHealth }}</span>
+          </div>
+          <div
+            class="rounded-xl border border-orange-200 bg-amber-50 px-3 py-2 flex justify-between items-start gap-2"
+          >
+            <span class="text-slate-500 w-7 flex-shrink-0">财富</span>
+            <span class="font-semibold text-yellow-600 flex-1 break-words">{{
+              fortuneWealth
+            }}</span>
           </div>
         </div>
-        <div class="mt-2 text-right text-[10px] text-amber-600/60">{{ dateText }}</div>
+
+        <!-- 宜忌：左右两列，每个子项独立框，带“宜：”/“忌：”前缀 -->
+        <div class="mt-4 grid grid-cols-2 gap-3">
+          <!-- 左列：宜 -->
+          <div class="space-y-1.5">
+            <div
+              v-for="(item, idx) in fortuneYiList"
+              :key="idx"
+              class="rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-700 inline-block"
+            >
+              宜：{{ item }}
+            </div>
+            <div
+              v-if="!fortuneYiList.length"
+              class="rounded-full bg-emerald-50 px-3 py-1 text-xs text-emerald-700 inline-block"
+            >
+              宜：--
+            </div>
+          </div>
+          <!-- 右列：忌 -->
+          <div class="space-y-1.5">
+            <div
+              v-for="(item, idx) in fortuneJiList"
+              :key="idx"
+              class="rounded-full bg-rose-100 px-3 py-1 text-xs text-rose-700 inline-block"
+            >
+              忌：{{ item }}
+            </div>
+            <div
+              v-if="!fortuneJiList.length"
+              class="rounded-full bg-rose-100 px-3 py-1 text-xs text-rose-700 inline-block"
+            >
+              忌：--
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-2 text-right text-[12px] text-amber-600/80">{{ dateText }}</div>
       </div>
-      <!-- 答案卡片（牛皮卷样式） -->
-      <div v-else class="text-card rounded-xl border border-amber-200 bg-amber-50 p-4">
+
+      <!-- 答案卡片（样式与运势卡片统一） -->
+      <div
+        v-else
+        class="answer-card rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-4"
+      >
         <div class="text-center mb-3">
-          <span class="text-2xl">📖</span>
-          <p class="text-xs text-amber-700/80">心运岛 · 答案之书</p>
+          <span class="text-2xl">✨</span>
+          <p class="text-xs text-purple-700/80">心运岛 · 答案之书</p>
         </div>
         <div class="whitespace-pre-wrap text-sm text-slate-700">{{ cardInnerContent }}</div>
         <div
-          class="text-right text-[10px] text-amber-600/60 border-t border-amber-200/60 pt-2 mt-2"
+          class="text-right text-[12px] text-purple-600/80 border-t border-purple-200/60 pt-2 mt-2"
         >
           {{ dateText }}
         </div>
@@ -100,7 +181,7 @@
 
     <!-- 底部按钮 -->
     <div
-      class="flex items-center justify-between px-4 text-xs text-slate-500"
+      class="flex items-center justify-between px-4 text-xs text-slate-500 mt-1"
       :class="showComments ? 'pb-2' : 'pb-4'"
     >
       <div class="flex items-center gap-4">
@@ -117,7 +198,7 @@
           <span>{{ commentsCount }}</span>
         </button>
       </div>
-      <span class="text-xs text-slate-400">{{
+      <span class="text-xs text-slate-500">{{
         card.type === 'fortune' ? '运势卡片' : '答案卡片'
       }}</span>
     </div>
@@ -185,7 +266,6 @@ const onCommentsCountUpdate = (count: number) => {
   emit('update-comments', props.card.cardId, count)
 }
 
-// 格式化时间
 const formatTime = (isoString: string) => {
   const date = new Date(isoString)
   const year = date.getFullYear()
@@ -200,7 +280,6 @@ const toggleLike = () => {
   emit('like', props.card.cardId, !props.card.stats.isLiked)
 }
 
-// 确认删除
 const confirmDelete = () => {
   if (confirm('确定要删除这张卡片吗？删除后不可恢复。')) {
     emit('delete', props.card.cardId)
@@ -209,7 +288,6 @@ const confirmDelete = () => {
 }
 
 const fallbackAvatar = 'https://placehold.co/100x100/FDE68A/8B5CF6?text=U'
-
 const handleAvatarError = (e: Event) => {
   const img = e.target as HTMLImageElement
   if (img.src !== fallbackAvatar) {
@@ -217,7 +295,6 @@ const handleAvatarError = (e: Event) => {
   }
 }
 
-// 图片有效性
 const hasValidImage = computed(() => {
   const url = props.card.snapshotUrl
   if (!url || !url.startsWith('http')) return false
@@ -250,72 +327,90 @@ const dateText = computed(() => {
   return formatTime(props.card.createdAt).slice(0, 10)
 })
 
-// 运势卡片解析（基于完整 content，绕过前置分享文案）
+// 运势卡片完整文本（剔除分享文案）
 const fullContent = computed(() => props.card.content || '')
-const fortuneTitle = computed(() => {
+const getCleanedContent = () => {
   let start = 0
   if (shareMessage.value) {
     const idx = fullContent.value.indexOf('\n\n')
     if (idx !== -1) start = idx + 2
   }
-  const rest = fullContent.value.slice(start).trim()
+  return fullContent.value.slice(start).trim()
+}
+
+const fortuneTitle = computed(() => {
+  const rest = getCleanedContent()
   const firstLine = rest.split('\n')[0] || ''
   return firstLine.replace(/✨/, '').trim()
 })
+
+const fortuneScore = computed(() => {
+  const rest = getCleanedContent()
+  const match = rest.match(/(\d+)\s*分/)
+  return match ? match[1] : '0'
+})
+
 const fortuneMainContent = computed(() => {
-  let start = 0
-  if (shareMessage.value) {
-    const idx = fullContent.value.indexOf('\n\n')
-    if (idx !== -1) start = idx + 2
-  }
-  const rest = fullContent.value.slice(start).trim()
+  const rest = getCleanedContent()
   const linesArr = rest.split('\n')
   return linesArr[1] || ''
 })
+
 const fortuneSubContent = computed(() => {
-  let start = 0
-  if (shareMessage.value) {
-    const idx = fullContent.value.indexOf('\n\n')
-    if (idx !== -1) start = idx + 2
-  }
-  const rest = fullContent.value.slice(start).trim()
+  const rest = getCleanedContent()
   const linesArr = rest.split('\n')
   return linesArr[2] || ''
 })
-const fortuneYi = computed(() => {
-  let start = 0
-  if (shareMessage.value) {
-    const idx = fullContent.value.indexOf('\n\n')
-    if (idx !== -1) start = idx + 2
+
+// 解析爱情事业等
+const extractField = (fieldName: string): string => {
+  const rest = getCleanedContent()
+  const lines = rest.split('\n')
+  for (const line of lines) {
+    if (line.startsWith(fieldName + '：') || line.startsWith(fieldName + ':')) {
+      return line.replace(/^(爱情|事业|健康|财富)[：:]/, '').trim()
+    }
   }
-  const rest = fullContent.value.slice(start).trim()
+  return '--'
+}
+
+const fortuneLove = computed(() => extractField('爱情'))
+const fortuneCareer = computed(() => extractField('事业'))
+const fortuneHealth = computed(() => extractField('健康'))
+const fortuneWealth = computed(() => extractField('财富'))
+
+// 宜忌字符串
+const fortuneYi = computed(() => {
+  const rest = getCleanedContent()
   const yiLine = rest.split('\n').find((l) => l.startsWith('宜：')) || ''
   return yiLine.replace('宜：', '')
 })
+
 const fortuneJi = computed(() => {
-  let start = 0
-  if (shareMessage.value) {
-    const idx = fullContent.value.indexOf('\n\n')
-    if (idx !== -1) start = idx + 2
-  }
-  const rest = fullContent.value.slice(start).trim()
+  const rest = getCleanedContent()
   const jiLine = rest.split('\n').find((l) => l.startsWith('忌：')) || ''
   return jiLine.replace('忌：', '')
 })
+
+// 拆分宜忌字符串为数组
+const splitYiJi = (str: string): string[] => {
+  if (!str || str === '--') return []
+  // 按中文顿号、逗号、空格分割
+  return str.split(/[、，, ]+/).filter((s) => s.trim().length > 0)
+}
+
+const fortuneYiList = computed(() => splitYiJi(fortuneYi.value))
+const fortuneJiList = computed(() => splitYiJi(fortuneJi.value))
 </script>
 
 <style scoped>
-.text-card {
-  background: #fef7e0;
-  background-image:
-    radial-gradient(circle at 25% 40%, rgba(210, 180, 140, 0.08) 2%, transparent 2.5%),
-    radial-gradient(circle at 70% 85%, rgba(160, 120, 80, 0.06) 1.8%, transparent 2%);
-  background-size:
-    40px 40px,
-    35px 35px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+.font-lxgw {
+  font-family: 'LXGW WenKai', '霞鹜文楷', 'KaiTi', '楷体', cursive;
 }
-.fortune-card {
+
+/* 运势卡片与答案卡片统一风格 */
+.fortune-card,
+.answer-card {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 </style>

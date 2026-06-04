@@ -7,6 +7,10 @@ export interface FortuneShareData {
   content_sub: string
   yi: string[]
   ji: string[]
+  love: string
+  career: string
+  health: string
+  wealth: string
 }
 
 export interface AnswerShareData {
@@ -39,11 +43,15 @@ const STYLE = {
   answerSize: 44,
   questionSize: 38,
   yiJiSize: 32,
+  aspectFontSize: 28,
+  aspectLineHeight: 36,
+  aspectItemGap: 8,
+  aspectMaxLines: 2,
   // 加大内边距
   padding: 70,
   lineHeight: 1.6,
   // 二维码配置
-  qrSize: 140,
+  qrSize: 120,
   qrMargin: 40,
   qrImagePath: '/images/qrcode.png',
   qrText: '扫码体验更多运势答案',
@@ -60,6 +68,8 @@ const FONTS = {
   main: `${STYLE.mainSize}px 'Noto Serif SC', 'Times New Roman', serif`,
   // 副签文字体（Noto Serif SC）
   sub: `${STYLE.subSize}px 'Noto Serif SC', 'Times New Roman', serif`,
+  // 四项字体
+  aspect: `bold ${STYLE.aspectFontSize}px 'KaiTi', '楷体', 'STKaiti', '华文楷书', 'Noto Serif SC', 'Times New Roman', serif`,
   // 宜/忌等辅助文本（HarmonyOS Sans）
   auxiliary: `${STYLE.yiJiSize}px 'KaiTi', '楷体', 'STKaiti', '华文楷书', 'Noto Serif SC', 'Times New Roman', serif`,
   // 底部标语字体（HarmonyOS Sans）
@@ -82,8 +92,8 @@ async function drawQRCode(ctx: CanvasRenderingContext2D, width: number, height: 
   const size = STYLE.qrSize
   const margin = STYLE.qrMargin
   // 二维码左上角坐标（右下角定位，增加右侧额外偏移）
-  const x = width - size - margin - 40
-  const y = height - size - margin - 30
+  const x = width - size - margin - 30
+  const y = height - size - margin - 10
 
   try {
     const qrImg = await loadImage(STYLE.qrImagePath)
@@ -169,6 +179,37 @@ function wrapText(
   return currentY
 }
 
+// 辅助函数：将文本换行并返回行数组（不绘制）
+function wrapTextToLines(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  lineHeight: number,
+  maxLines?: number,
+): string[] {
+  if (!text) return ['--']
+  const chars = [...text]
+  let line = ''
+  const lines: string[] = []
+  for (let i = 0; i < chars.length; i++) {
+    const testLine = line + chars[i]
+    const metrics = ctx.measureText(testLine)
+    if (metrics.width > maxWidth && line.length > 0) {
+      lines.push(line)
+      line = chars[i]
+      if (maxLines !== undefined && lines.length >= maxLines) {
+        const lastLine = line.slice(0, -1) + '…'
+        lines.push(lastLine)
+        return lines
+      }
+    } else {
+      line = testLine
+    }
+  }
+  if (line) lines.push(line)
+  return lines
+}
+
 // ========== 运势卡片 ==========
 export async function drawFortuneShareCard(
   canvas: HTMLCanvasElement,
@@ -212,7 +253,7 @@ export async function drawFortuneShareCard(
   ctx.fillText(`运势得分 ${data.score}分`, titleX, 360)
 
   // ========== 主签文（动态字号，两行内完整显示，矩形居中，middle基线） ==========
-  const mainRect = { left: 103, right: 814, top: 523, bottom: 613 }
+  const mainRect = { left: 103, right: 814, top: 455, bottom: 545 }
   const mainMaxWidth = mainRect.right - mainRect.left
   const MIN_MAIN_FONT_SIZE = 20
   let mainFontSize = STYLE.mainSize
@@ -307,7 +348,7 @@ export async function drawFortuneShareCard(
     currentY += mainLineHeight
   }
   // ========== 副签文（单行，固定位置，宽度限制，动态缩小字号或截断） ==========
-  const subRect = { left: 103, right: 814, top: 626, bottom: 670 } // 可调整Y
+  const subRect = { left: 103, right: 814, top: 545, bottom: 590 } // 可调整Y
   const subMaxWidth = subRect.right - subRect.left
   let subFontSize = STYLE.subSize
   const MIN_SUB_FONT_SIZE = 18
@@ -352,10 +393,62 @@ export async function drawFortuneShareCard(
   //   ctx.restore()
   // }
 
+  // ========== 爱情、事业、健康、财富四项（独立矩形，每项可单独调整） ==========
+  const loveRect = { left: 220, right: 420, top: 630, bottom: 710 }
+  const careerRect = { left: 605, right: 805, top: 630, bottom: 710 }
+  const healthRect = { left: 220, right: 420, top: 775, bottom: 855 }
+  const wealthRect = { left: 605, right: 805, top: 775, bottom: 855 }
+
+  const aspects = [
+    { rect: loveRect, value: data.love, color: '#9f504b' },
+    { rect: careerRect, value: data.career, color: '#254584' },
+    { rect: healthRect, value: data.health, color: '#317051' },
+    { rect: wealthRect, value: data.wealth, color: '#bc925d' },
+  ]
+
+  const lineHeight = STYLE.aspectLineHeight
+  const maxWidth = 200
+
+  ctx.save()
+  ctx.font = FONTS.aspect
+  ctx.textBaseline = 'top'
+  ctx.textAlign = 'left'
+
+  for (const aspect of aspects) {
+    const rect = aspect.rect
+    const text = aspect.value
+    const color = aspect.color
+
+    // 将文本换行（最多 STYLE.aspectMaxLines 行）
+    const lines = wrapTextToLines(ctx, text, maxWidth, lineHeight, STYLE.aspectMaxLines)
+    const blockHeight = lines.length * lineHeight
+    // 垂直居中计算（让文本块在矩形内垂直居中）
+    const rectHeight = rect.bottom - rect.top
+    let startY = rect.top + (rectHeight - blockHeight) / 2
+    startY = Math.max(rect.top, Math.min(startY, rect.bottom - blockHeight))
+
+    let contentY = startY
+    for (const line of lines) {
+      ctx.fillStyle = color
+      ctx.fillText(line, rect.left, contentY)
+      contentY += lineHeight
+    }
+
+    // 调试红线（仅开发环境）
+    // if (import.meta.env.DEV) {
+    //   ctx.save()
+    //   ctx.strokeStyle = 'red'
+    //   ctx.lineWidth = 2
+    //   ctx.strokeRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
+    //   ctx.restore()
+    // }
+  }
+  ctx.restore()
+
   //ctx.textAlign = 'left'
   // ========== 宜 / 忌（精确垂直居中，支持单行/两行，单行向上微调） ==========
-  const yiRect = { left: 260, top: 700, bottom: 780, right: 640 } // 宽度 380
-  const jiRect = { left: 260, top: 813, bottom: 890, right: 640 } // 宽度 380
+  const yiRect = { left: 230, top: 890, bottom: 970, right: 640 } // 宽度 380
+  const jiRect = { left: 230, top: 965, bottom: 1045, right: 640 } // 宽度 380
 
   const YIJI_LINE_HEIGHT_RATIO = 1.25 // 行高系数，可调
   const SINGLE_LINE_OFFSET_RATIO = 0.12 // 单行向上移动比例（相对于字号）
@@ -363,7 +456,7 @@ export async function drawFortuneShareCard(
   function splitYiJiText(items: string[]): string[] {
     if (!items.length) return ['无']
     const totalChars = items.reduce((sum, item) => sum + item.length, 0)
-    if (totalChars <= 14) {
+    if (totalChars <= 18) {
       return [items.join('、')]
     } else {
       if (items.length === 2) return [items[0], items[1]]

@@ -1,18 +1,18 @@
 <template>
-  <div class="min-h-screen bg-slate-50 text-slate-900 pb-8">
+  <div class="min-h-screen text-slate-900 pb-8">
     <header
-      class="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur"
+      class="sticky top-0 z-20 flex items-center gap-3 border-b border-purple-200 bg-white/90 px-4 py-3 backdrop-blur"
     >
       <button
         type="button"
-        class="rounded-full p-2 text-slate-600 hover:bg-slate-100"
+        class="rounded-full p-2 text-slate-600"
         aria-label="返回"
         @click="goBack"
       >
         <span class="text-lg">←</span>
       </button>
       <div class="min-w-0 flex-1">
-        <h1 class="text-base font-bold text-slate-900">过往答案</h1>
+        <h1 class="text-lg font-bold text-slate-900">过往答案</h1>
       </div>
     </header>
 
@@ -24,8 +24,8 @@
           :class="[
             'rounded-full px-4 py-1.5 text-xs font-medium transition',
             selectedMonth === ''
-              ? 'bg-purple-600 text-white'
-              : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50',
+              ? 'bg-indigo-400 text-white'
+              : 'bg-white border border-purple-300 text-slate-700 hover:bg-purple-100',
           ]"
         >
           全部
@@ -36,8 +36,8 @@
             :class="[
               'rounded-full px-4 py-1.5 text-xs font-medium transition flex items-center gap-1',
               selectedMonth !== ''
-                ? 'bg-purple-600 text-white'
-                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50',
+                ? 'bg-indigo-400 text-white'
+                : 'bg-white border border-purple-300 text-slate-700 hover:bg-purple-100',
             ]"
           >
             {{ selectedMonthDisplay || '选择月份' }}
@@ -45,14 +45,14 @@
           </button>
           <div
             v-if="showMonthSelector"
-            class="absolute left-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto w-32"
+            class="absolute left-0 top-full mt-1 bg-white border border-purple-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto w-32"
           >
             <div
               v-for="opt in availableMonths"
               :key="opt.value"
               @click="selectMonth(opt.value)"
-              class="px-3 py-2 text-xs hover:bg-slate-100 cursor-pointer text-slate-700"
-              :class="{ 'bg-purple-50 text-purple-600': opt.value === selectedMonth }"
+              class="px-3 py-2 text-xs hover:bg-purple-100 cursor-pointer text-slate-700"
+              :class="{ 'bg-purple-100 text-purple-700': opt.value === selectedMonth }"
             >
               {{ opt.label }}
             </div>
@@ -83,13 +83,13 @@
       <template v-else>
         <!-- 加载占位 -->
         <div v-if="loading && !filteredList.length" class="space-y-3">
-          <div v-for="n in 4" :key="n" class="h-20 animate-pulse rounded-xl bg-slate-200/80" />
+          <div v-for="n in 4" :key="n" class="h-20 animate-pulse rounded-xl bg-purple-200/70" />
         </div>
 
         <!-- 空状态 -->
         <div
           v-else-if="!filteredList.length"
-          class="rounded-2xl border border-dashed border-slate-200 bg-white py-12 text-center text-sm text-slate-400"
+          class="rounded-2xl border border-dashed border-purple-300 bg-white py-12 text-center text-sm text-slate-500"
         >
           {{ selectedMonth ? '该月份没有答案记录' : '暂无历史记录，去提问吧' }}
         </div>
@@ -99,20 +99,36 @@
           <li
             v-for="item in filteredList"
             :key="item.id"
-            class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm cursor-pointer hover:bg-slate-50 transition"
+            class="rounded-2xl bg-gradient-to-br from-indigo-100/80 via-white to-purple-100/80 p-4 shadow-sm cursor-pointer transition hover:shadow-md hover:from-indigo-200/80 hover:to-purple-200/80 border border-purple-200"
             @click="openDetail(item)"
           >
             <div class="flex items-start justify-between gap-2">
-              <p class="text-xs font-medium text-slate-800 line-clamp-2">问：{{ item.question }}</p>
-              <span
-                v-if="item.isFavorited"
-                class="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700"
+              <p class="text-sm font-medium text-slate-800 line-clamp-2">问：{{ item.question }}</p>
+              <!-- 星标收藏按钮 -->
+              <button
+                @click.stop="toggleFavorite(item)"
+                class="shrink-0 p-1 transition hover:scale-110"
+                :class="item.isFavorited ? 'text-amber-500' : 'text-slate-400'"
+                aria-label="收藏"
               >
-                已收藏
-              </span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="w-5 h-5"
+                  :fill="item.isFavorited ? 'currentColor' : 'none'"
+                  :stroke="item.isFavorited ? 'none' : 'currentColor'"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polygon
+                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                  />
+                </svg>
+              </button>
             </div>
-            <p class="mt-2 text-[11px] text-slate-500 line-clamp-2">「{{ item.answerText }}」</p>
-            <p class="mt-2 text-[10px] text-slate-400">{{ formatTime(item.createdAt) }}</p>
+            <p class="mt-1 text-[11px] text-slate-600 line-clamp-2">「{{ item.answerText }}」</p>
+            <p class="mt-2 text-[10px] text-slate-500">{{ formatTime(item.createdAt) }}</p>
           </li>
         </ul>
       </template>
@@ -148,8 +164,12 @@
 import { ref, computed, onMounted, onActivated, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { fetchAndSyncHistory, getLocalAnswerList } from '@/utils/answerService'
-import type { AnswerHistoryItem } from '@/api/answer'
+import {
+  fetchAndSyncHistory,
+  getLocalAnswerList,
+  updateLocalFavoriteStatus,
+} from '@/utils/answerService'
+import { favoriteAnswer, type AnswerHistoryItem } from '@/api/answer'
 import AnswerDetailModal from './components/AnswerDetailModal.vue'
 
 const router = useRouter()
@@ -160,7 +180,7 @@ const loading = ref(false)
 const loadError = ref('')
 
 // 筛选相关
-const selectedMonth = ref('') // 格式 YYYY-MM
+const selectedMonth = ref('')
 const showMonthSelector = ref(false)
 const monthSelectorRef = ref<HTMLElement | null>(null)
 
@@ -171,7 +191,7 @@ const showBackToTop = ref(false)
 const availableMonths = computed(() => {
   const monthsSet = new Set<string>()
   allAnswers.value.forEach((item) => {
-    const month = item.createdAt.slice(0, 7) // YYYY-MM
+    const month = item.createdAt.slice(0, 7)
     monthsSet.add(month)
   })
   return Array.from(monthsSet)
@@ -232,18 +252,12 @@ function handleClickOutside(event: MouseEvent) {
   }
 }
 
-// 监听滚动，控制回到顶部按钮显示
+// 滚动
 function handleScroll() {
-  // 滚动超过 300px 时显示按钮
   showBackToTop.value = window.scrollY > 300
 }
-
-// 回到顶部
 function scrollToTop() {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth',
-  })
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 function formatTime(iso: string) {
@@ -262,6 +276,26 @@ function openDetail(item: AnswerHistoryItem) {
 
 function retryFirstPage() {
   loadAllAnswers()
+}
+
+// 切换收藏状态
+const toggleFavorite = async (item: AnswerHistoryItem) => {
+  if (!navigator.onLine) {
+    alert('网络不可用')
+    return
+  }
+  const action = item.isFavorited ? 'unfavorite' : 'favorite'
+  try {
+    await favoriteAnswer(item.id, action)
+    const newStatus = !item.isFavorited
+    updateLocalFavoriteStatus(item.id, newStatus)
+    // 更新当前列表中的状态
+    const target = allAnswers.value.find((a) => a.id === item.id)
+    if (target) target.isFavorited = newStatus
+  } catch (err) {
+    console.error('收藏操作失败', err)
+    alert('操作失败，请重试')
+  }
 }
 
 onMounted(() => {
@@ -284,7 +318,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 淡入淡出 + 缩放动画 */
 .fade-scale-enter-active,
 .fade-scale-leave-active {
   transition: all 0.2s ease;

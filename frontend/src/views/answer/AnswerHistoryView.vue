@@ -115,6 +115,18 @@
             <p class="mt-2 text-[10px] text-slate-400">{{ formatTime(item.createdAt) }}</p>
           </li>
         </ul>
+        <div v-if="!selectedMonth && filteredList.length > 0" class="py-4 text-center">
+          <button
+            v-if="hasMore"
+            type="button"
+            class="rounded-full bg-purple-50 px-6 py-2 text-sm font-semibold text-purple-600 transition hover:bg-purple-100 disabled:opacity-50"
+            :disabled="loadingMore"
+            @click="loadMore"
+          >
+            {{ loadingMore ? '加载中...' : '加载更多' }}
+          </button>
+          <p v-else class="text-xs text-slate-400">—— 已经到底了 ——</p>
+        </div>
       </template>
     </main>
 
@@ -156,8 +168,13 @@ const router = useRouter()
 
 // 数据状态
 const allAnswers = ref<AnswerHistoryItem[]>([])
+const total = ref(0)
+const page = ref(1)
+const pageSize = 5
 const loading = ref(false)
+const loadingMore = ref(false)
 const loadError = ref('')
+const hasMore = ref(true)
 
 // 筛选相关
 const selectedMonth = ref('') // 格式 YYYY-MM
@@ -191,31 +208,53 @@ const filteredList = computed(() => {
 
 const filteredTotal = computed(() => filteredList.value.length)
 
-// 加载所有数据
-async function loadAllAnswers() {
-  loading.value = true
+function mergeLoadedAnswers(items: AnswerHistoryItem[]) {
+  const merged = new Map<string, AnswerHistoryItem>()
+  allAnswers.value.forEach((item) => merged.set(item.id, item))
+  items.forEach((item) => merged.set(item.id, item))
+  allAnswers.value = Array.from(merged.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )
+}
+
+// 首屏只加载 5 条，剩余记录通过“加载更多”分页追加
+async function loadAnswerPage(reset = true) {
+  if (reset) {
+    page.value = 1
+    allAnswers.value = []
+    hasMore.value = true
+    loading.value = true
+  } else {
+    loadingMore.value = true
+  }
   loadError.value = ''
   try {
-    await fetchAllRemoteAndSync()
-    allAnswers.value = getLocalAnswerList()
+    const res = await fetchAndSyncHistory(page.value, pageSize)
+    total.value = res.total
+    if (reset) {
+      allAnswers.value = res.list
+    } else {
+      mergeLoadedAnswers(res.list)
+    }
+    hasMore.value = allAnswers.value.length < total.value
   } catch (e) {
     loadError.value = e instanceof Error ? e.message : '加载失败，请稍后重试'
   } finally {
     loading.value = false
+    loadingMore.value = false
   }
 }
 
-// 递归拉取所有分页
-async function fetchAllRemoteAndSync(page = 1, limit = 20) {
-  const res = await fetchAndSyncHistory(page, limit)
-  if (res.list.length === limit && res.list.length < res.total) {
-    await fetchAllRemoteAndSync(page + 1, limit)
-  }
+function loadMore() {
+  if (loadingMore.value || loading.value || !hasMore.value || selectedMonth.value) return
+  page.value += 1
+  loadAnswerPage(false)
 }
 
 // 监听全局数据更新
 function handleAnswersUpdated() {
-  allAnswers.value = getLocalAnswerList()
+  allAnswers.value = getLocalAnswerList().slice(0, page.value * pageSize)
+  hasMore.value = allAnswers.value.length < total.value
 }
 
 // 月份选择器
@@ -261,19 +300,19 @@ function openDetail(item: AnswerHistoryItem) {
 }
 
 function retryFirstPage() {
-  loadAllAnswers()
+  loadAnswerPage()
 }
 
 onMounted(() => {
-  loadAllAnswers()
+  loadAnswerPage()
   window.addEventListener('answers-updated', handleAnswersUpdated)
   document.addEventListener('click', handleClickOutside)
   window.addEventListener('scroll', handleScroll)
 })
 
 onActivated(() => {
-  allAnswers.value = getLocalAnswerList()
-  fetchAllRemoteAndSync().catch(console.warn)
+  allAnswers.value = getLocalAnswerList().slice(0, page.value * pageSize)
+  loadAnswerPage().catch(console.warn)
 })
 
 onUnmounted(() => {

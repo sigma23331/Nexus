@@ -198,6 +198,17 @@
               </div>
               <div class="grid grid-cols-2 gap-3 text-xs">
                 <div
+                  v-for="aspect in fortuneAspectItems(selectedItem)"
+                  :key="aspect.label"
+                  class="rounded-xl border p-3"
+                  :class="aspect.cardClass"
+                >
+                  <p class="font-semibold" :class="aspect.labelClass">{{ aspect.label }}</p>
+                  <p class="mt-1 font-semibold" :class="aspect.valueClass">{{ aspect.value }}</p>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div
                   class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-700"
                 >
                   <p class="font-semibold">宜</p>
@@ -234,6 +245,10 @@ export interface ExtendedHistoryFortuneItem {
   title: string
   content_main?: string
   content_sub?: string
+  love?: string
+  career?: string
+  health?: string
+  wealth?: string
   yi?: string[]
   ji?: string[]
 }
@@ -309,6 +324,45 @@ const summaryText = (item: ExtendedHistoryFortuneItem) => {
   if (item.score >= 65) return '平稳过渡，先稳再进'
   return '波动偏大，建议降低预期'
 }
+
+const fortuneAspectMeta = [
+  {
+    key: 'love',
+    label: '爱情',
+    cardClass: 'border-pink-200 bg-pink-50',
+    labelClass: 'text-pink-700',
+    valueClass: 'text-pink-600',
+  },
+  {
+    key: 'career',
+    label: '事业',
+    cardClass: 'border-blue-200 bg-blue-50',
+    labelClass: 'text-blue-700',
+    valueClass: 'text-blue-600',
+  },
+  {
+    key: 'health',
+    label: '健康',
+    cardClass: 'border-emerald-200 bg-emerald-50',
+    labelClass: 'text-emerald-700',
+    valueClass: 'text-emerald-600',
+  },
+  {
+    key: 'wealth',
+    label: '财富',
+    cardClass: 'border-yellow-200 bg-yellow-50',
+    labelClass: 'text-yellow-700',
+    valueClass: 'text-yellow-600',
+  },
+] as const
+
+const fortuneAspectItems = (
+  record: Partial<Pick<ExtendedHistoryFortuneItem, 'love' | 'career' | 'health' | 'wealth'>>,
+) =>
+  fortuneAspectMeta.map((item) => ({
+    ...item,
+    value: record[item.key] || '--',
+  }))
 
 const loadHistory = async (reset = true) => {
   if (reset) {

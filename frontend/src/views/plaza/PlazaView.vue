@@ -100,10 +100,19 @@
         </div>
 
         <!-- 加载状态 -->
-        <div v-if="loading" class="text-center py-8 text-slate-400">加载中...</div>
+        <div v-if="initialLoading" class="text-center py-8 text-slate-400">加载中...</div>
         <div v-else-if="error" class="text-center py-8 text-slate-400">服务器出错，请稍后重试</div>
         <div v-else-if="filteredCards.length === 0" class="text-center py-8 text-slate-400">
-          暂无数据，去发布第一条吧～
+          <p>暂无数据，去发布第一条吧～</p>
+          <button
+            v-if="hasMore"
+            type="button"
+            class="mt-3 rounded-full bg-purple-50 px-5 py-2 text-sm font-semibold text-purple-600 transition hover:bg-purple-100 disabled:opacity-50"
+            :disabled="loadingMore"
+            @click="loadMore"
+          >
+            {{ loadingMore ? '加载中...' : '继续加载更多' }}
+          </button>
         </div>
         <div v-else class="space-y-4">
           <PlazaCard
@@ -119,10 +128,17 @@
 
         <!-- 加载更多按钮 -->
         <div
-          v-if="!error && hasMore && !loading && filteredCards.length > 0"
+          v-if="!error && hasMore && !initialLoading && filteredCards.length > 0"
           class="text-center mt-4"
         >
-          <button @click="loadMore" class="text-sm text-purple-600">加载更多</button>
+          <button
+            type="button"
+            class="rounded-full bg-purple-50 px-5 py-2 text-sm font-semibold text-purple-600 transition hover:bg-purple-100 disabled:opacity-50"
+            :disabled="loadingMore"
+            @click="loadMore"
+          >
+            {{ loadingMore ? '加载中...' : '加载更多' }}
+          </button>
         </div>
       </section>
     </main>
@@ -150,7 +166,8 @@ const currentUserId = computed(() => userStore.userInfo?.uid || '')
 
 // 数据状态
 const cards = ref<PlazaCardType[]>([])
-const loading = ref(false)
+const initialLoading = ref(false)
+const loadingMore = ref(false)
 const error = ref(false)
 const hasMore = ref(true)
 const nextCursor = ref<string | null>(null)
@@ -184,8 +201,12 @@ const filteredCards = computed(() => {
 
 // 获取卡片列表（支持分页）
 const fetchCards = async (reset = true) => {
-  if (loading.value) return
-  loading.value = true
+  if (initialLoading.value || loadingMore.value) return
+  if (reset) {
+    initialLoading.value = true
+  } else {
+    loadingMore.value = true
+  }
   error.value = false
   try {
     const params: GetPlazaCardsParams = {
@@ -209,7 +230,8 @@ const fetchCards = async (reset = true) => {
     if (reset) cards.value = []
     hasMore.value = false
   } finally {
-    loading.value = false
+    initialLoading.value = false
+    loadingMore.value = false
   }
 }
 
@@ -221,14 +243,16 @@ const resetAndFetch = () => {
   fetchCards(true)
 }
 
-// 监听筛选变化
+// 筛选只在当前已加载列表上即时生效，不重新拉第一页，避免列表跳回顶部。
 watch([filterType, showOnlyMine], () => {
-  resetAndFetch()
+  if (!cards.value.length && hasMore.value) {
+    resetAndFetch()
+  }
 })
 
 // 加载更多
 const loadMore = () => {
-  if (!hasMore.value || loading.value || error.value) return
+  if (!hasMore.value || initialLoading.value || loadingMore.value || error.value) return
   fetchCards(false)
 }
 

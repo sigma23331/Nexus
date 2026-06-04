@@ -59,12 +59,7 @@
       <section>
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold">回溯复盘</h2>
-          <router-link
-            :to="{ name: 'answer-history' }"
-            class="text-xs font-medium text-purple-600 hover:text-purple-700"
-          >
-            查看更多
-          </router-link>
+          <span class="text-xs text-slate-400">最近 {{ recentAnswerPreviewLimit }} 条</span>
         </div>
         <div class="space-y-3">
           <div
@@ -93,6 +88,13 @@
             暂无历史记录，去提问吧
           </div>
           <div v-if="loadingHistory" class="text-center text-xs text-slate-400 py-2">加载中...</div>
+          <router-link
+            v-if="recentAnswers.length > 0"
+            :to="{ name: 'answer-history' }"
+            class="block w-full rounded-xl border border-purple-100 bg-purple-50 py-2 text-center text-xs font-semibold text-purple-600 hover:bg-purple-100"
+          >
+            加载更多
+          </router-link>
         </div>
       </section>
     </main>
@@ -193,6 +195,7 @@ const recentAnswers = ref<AnswerHistoryItem[]>([])
 const loadingHistory = ref(false)
 const answerDetailModalRef = ref<InstanceType<typeof AnswerDetailModal> | null>(null)
 const activeEasterEgg = ref<AnswerEasterEgg | null>(null)
+const recentAnswerPreviewLimit = 3
 
 // 输入框错误状态（用于抖动和红框）
 const inputError = ref(false)
@@ -215,15 +218,15 @@ function formatDate(iso: string) {
   return dayjs(iso).format('MM月DD日')
 }
 
-// 加载最近5条历史记录
+// 首页只预览少量记录，其余进入完整历史页继续加载
 async function loadRecentHistory() {
   loadingHistory.value = true
   try {
     const local = getLocalAnswerList()
-    recentAnswers.value = local.slice(0, 5)
-    await fetchAndSyncHistory(1, 5)
+    recentAnswers.value = local.slice(0, recentAnswerPreviewLimit)
+    await fetchAndSyncHistory(1, recentAnswerPreviewLimit)
     const updated = getLocalAnswerList()
-    recentAnswers.value = updated.slice(0, 5)
+    recentAnswers.value = updated.slice(0, recentAnswerPreviewLimit)
   } catch (err) {
     console.error('加载历史记录失败', err)
   } finally {
@@ -272,7 +275,7 @@ async function drawAnswer() {
       isFavorited: false,
     }
     addLocalAnswer(newItem)
-    recentAnswers.value = [newItem, ...recentAnswers.value.slice(0, 4)]
+    recentAnswers.value = [newItem, ...recentAnswers.value.slice(0, recentAnswerPreviewLimit - 1)]
     question.value = ''
   } catch (err) {
     console.error('提问失败', err)

@@ -534,6 +534,21 @@
               <p class="mt-2 text-xs text-amber-700">{{ selectedHistory.content_sub || '' }}</p>
             </div>
 
+            <!-- 四项运势 -->
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <div
+                v-for="aspect in fortuneAspectItems(selectedHistory)"
+                :key="aspect.label"
+                class="rounded-xl border px-3 py-2"
+                :class="aspect.cardClass"
+              >
+                <p class="text-xs font-semibold" :class="aspect.labelClass">{{ aspect.label }}</p>
+                <p class="mt-1 text-sm font-semibold" :class="aspect.valueClass">
+                  {{ aspect.value }}
+                </p>
+              </div>
+            </div>
+
             <!-- 宜忌 -->
             <div class="mt-4 grid grid-cols-2 gap-3">
               <div class="rounded-xl bg-[#ecfdf55b] border border-emerald-400 p-3">
@@ -627,6 +642,10 @@ const historyFortunes = ref<
     // 以下为真实历史内容
     content_main: string
     content_sub: string
+    love: string
+    career: string
+    health: string
+    wealth: string
     yi: string[]
     ji: string[]
     // 以下用于卡片摘要（保持不变）
@@ -799,6 +818,45 @@ const scoreSummary = (score: number) => {
   if (score >= 65) return '平稳过渡，先稳再进'
   return '波动偏大，建议降低预期'
 }
+const fortuneAspectMeta = [
+  {
+    key: 'love',
+    label: '爱情',
+    cardClass: 'border-pink-200 bg-pink-50',
+    labelClass: 'text-pink-700',
+    valueClass: 'text-pink-600',
+  },
+  {
+    key: 'career',
+    label: '事业',
+    cardClass: 'border-blue-200 bg-blue-50',
+    labelClass: 'text-blue-700',
+    valueClass: 'text-blue-600',
+  },
+  {
+    key: 'health',
+    label: '健康',
+    cardClass: 'border-emerald-200 bg-emerald-50',
+    labelClass: 'text-emerald-700',
+    valueClass: 'text-emerald-600',
+  },
+  {
+    key: 'wealth',
+    label: '财富',
+    cardClass: 'border-yellow-200 bg-yellow-50',
+    labelClass: 'text-yellow-700',
+    valueClass: 'text-yellow-600',
+  },
+] as const
+
+const fortuneAspectItems = (
+  record: Partial<Pick<FortuneViewData, 'love' | 'career' | 'health' | 'wealth'>>,
+) =>
+  fortuneAspectMeta.map((item) => ({
+    ...item,
+    value: record[item.key] || '--',
+  }))
+
 const relationByDelta = (deltaValue: number) => {
   if (deltaValue >= 3) {
     return {
@@ -1063,6 +1121,10 @@ const loadFortuneBoardWithOptions = async (
           // 真实历史内容
           content_main: item.content_main || '—',
           content_sub: item.content_sub || '',
+          love: item.love || '--',
+          career: item.career || '--',
+          health: item.health || '--',
+          wealth: item.wealth || '--',
           yi: item.yi || [],
           ji: item.ji || [],
           // 卡片摘要字段（保持原有风格）

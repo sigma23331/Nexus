@@ -8,6 +8,7 @@ docx/AppIcons 下存放了不同尺寸与命名方式的桌面图标
 - **能力**：发表评论、回复顶级评论、查看全部回复、删除自己的评论；评论数与后端 `stats.comments` 同步。
 - **接口**：见 `docx/API.md` 第 5.5–5.8 节；前端封装在 `frontend/src/api/plaza.ts`。
 - **组件**：`PlazaCommentPanel.vue`、`PlazaCommentItem.vue`（`frontend/src/views/plaza/components/`）。
+- **分页体验**：广场和「只看我的」加载更多时保留当前列表并向下追加，不重新拉第一页，避免滚动位置跳回顶部。
 
 ## 答案之书 · 彩蛋机制
 
@@ -22,3 +23,13 @@ docx/AppIcons 下存放了不同尺寸与命名方式的桌面图标
 - **优先级**：节气 > 天气 > 时间（同一时刻只展示一个彩蛋）。
 - **实现**：`frontend/src/composables/useAnswerEasterEgg.ts`（检测与本地统计）、`AnswerEasterEggEffects.vue`（弹窗动画）、`AnswerView.vue`（集成展示）。
 - **统计**：触发次数写入 `localStorage`（`answer-easter-egg-stats-v1`），供后续「彩蛋猎人」徽章使用。
+
+## 答案之书 · 回溯复盘
+
+- **首页预览**：答案之书首页的「回溯复盘」只展示最近 3 条答案，避免列表过长。
+- **加载更多**：点击「加载更多」进入完整历史页；完整历史页每次加载 5 条，继续点击可追加剩余记录。
+
+## 运势详情 · 四项运势
+
+- **入口**：运势看板页的「历史运势记录」详情，以及个人中心「历史运势记录」详情。
+- **展示**：在签文和综合评分下方展示爱情、事业、健康、财富四项运势。

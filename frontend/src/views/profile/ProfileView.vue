@@ -13,12 +13,54 @@
               {{ userStore.userInfo?.nickname || '未登录' }}
             </h2>
             <div class="flex justify-between items-center mt-1 gap-4">
-              <span class="text-xs text-slate-500"> 🎂 {{ formattedBirthday }} </span>
+              <!-- 生日区域：🎂 emoji + 格式化生日 -->
               <span class="text-xs text-slate-500 flex items-center gap-1">
-                {{ genderIcon }} {{ genderText }}
+                <span>🎂</span>
+                {{ formattedBirthday }}
+              </span>
+
+              <!-- 性别区域：仅当性别为男或女时显示，保密时不显示任何内容 -->
+              <!-- 文字尺寸改为 text-sm，图标放大至 w-4 h-4 -->
+              <span
+                v-if="
+                  userStore.userInfo?.gender === 'male' || userStore.userInfo?.gender === 'female'
+                "
+                class="text-sm text-slate-500 flex items-center gap-1"
+              >
+                <svg
+                  v-if="userStore.userInfo?.gender === 'male'"
+                  class="w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="10" r="4" />
+                  <path d="M15 13L20 18" />
+                  <path d="M18 16L20 18L18 20" />
+                </svg>
+                <svg
+                  v-else-if="userStore.userInfo?.gender === 'female'"
+                  class="w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="10" r="4" />
+                  <path d="M12 14v6" />
+                  <path d="M9 17h6" />
+                </svg>
+                {{ genderText }}
               </span>
             </div>
-            <p class="mt-1 text-[11px] text-slate-400">位置：{{ locationDisplayText }}</p>
+            <!-- <p class="mt-1 text-[11px] text-slate-400">位置：{{ locationDisplayText }}</p> -->
           </div>
         </div>
       </div>
@@ -76,7 +118,7 @@
         <div class="mt-4">
           <button
             @click="openMoodModal"
-            class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 rounded-xl transition"
+            class="w-full bg-purple-500 hover:bg-purple-700 text-white font-medium py-2.5 rounded-xl transition"
           >
             📝 今日心情
           </button>
@@ -118,18 +160,6 @@ const monthlyOverviewRef = ref<InstanceType<typeof MonthlyMoodOverview> | null>(
 
 const displayAvatar = computed(() => getValidAvatar(userStore.userInfo?.avatar))
 
-const genderIcon = computed(() => {
-  const gender = userStore.userInfo?.gender
-  switch (gender) {
-    case 'male':
-      return '♂'
-    case 'female':
-      return '♀'
-    default:
-      return '🔒'
-  }
-})
-
 const genderText = computed(() => {
   const gender = userStore.userInfo?.gender
   switch (gender) {
@@ -149,21 +179,21 @@ const formattedBirthday = computed(() => {
   return `${year}年${month}月${day}日`
 })
 
-const locationDisplayText = computed(() => {
-  const latitude = userStore.userInfo?.latitude
-  const longitude = userStore.userInfo?.longitude
-  const updatedAt = userStore.userInfo?.locationUpdatedAt
+// const locationDisplayText = computed(() => {
+//   const latitude = userStore.userInfo?.latitude
+//   const longitude = userStore.userInfo?.longitude
+//   const updatedAt = userStore.userInfo?.locationUpdatedAt
 
-  if (typeof latitude !== 'number' || typeof longitude !== 'number') {
-    return '未保存'
-  }
+//   if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+//     return '未保存'
+//   }
 
-  const coordinateText = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
-  if (!updatedAt) return coordinateText
+//   const coordinateText = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+//   if (!updatedAt) return coordinateText
 
-  const timeText = updatedAt.replace('T', ' ').slice(0, 19)
-  return `${coordinateText}（${timeText}）`
-})
+//   const timeText = updatedAt.replace('T', ' ').slice(0, 19)
+//   return `${coordinateText}（${timeText}）`
+// })
 
 const openMoodModal = () => moodModalRef.value?.open()
 

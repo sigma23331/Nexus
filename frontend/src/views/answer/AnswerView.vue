@@ -122,57 +122,96 @@
         @click.self="hideAnswer"
       >
         <div
-          class="answer-modal-panel relative overflow-hidden border rounded-3xl w-full max-w-sm p-8 text-center"
+          class="answer-modal-panel relative overflow-hidden border rounded-2xl w-full max-w-sm p-8 text-center"
           :class="
             activeEasterEgg
               ? `answer-modal-panel--egg answer-modal-panel--egg-${activeEasterEgg.animation}`
-              : 'bg-white border-slate-200'
+              : 'bg-white border-slate-300'
           "
         >
           <AnswerEasterEggEffects v-if="activeEasterEgg" :animation="activeEasterEgg.animation" />
           <div class="relative z-10">
             <span v-if="activeEasterEgg" class="egg-badge">{{ activeEasterEgg.badge }}彩蛋</span>
-            <span v-else class="text-4xl">✨</span>
-            <p class="mt-3 text-xs text-slate-500">你问：{{ currentQuestion }}</p>
+            <!-- 带背景图的容器 -->
+            <div v-else class="relative w-full">
+              <img :src="bgImageUrl" alt="装饰图案" class="w-full h-auto block" />
+            </div>
+            <p class="mt-6 text-normal text-slate-600">问：{{ currentQuestion }}</p>
             <p class="my-6 text-xl font-bold leading-relaxed text-slate-900">
               {{ currentAnswer }}
             </p>
           </div>
+
+          <!-- “我明白了”按钮（保留，并增加上边距） -->
           <button
             @click="hideAnswer"
-            class="relative z-10 w-full rounded-2xl py-4 font-bold text-white"
+            class="relative z-10 w-2/3 mx-auto rounded-2xl py-3 font-bold text-white mb-4"
             :class="
               activeEasterEgg
                 ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600'
-                : 'bg-gradient-to-r from-purple-600 to-pink-600'
+                : 'bg-gradient-to-r from-indigo-400 to-pink-300'
             "
           >
             我明白了
           </button>
-          <div class="relative z-10 mt-6 flex justify-center gap-4">
-            <button type="button" class="flex items-center gap-1 text-xs text-slate-500">
-              📤 分享卡片
-            </button>
+
+          <!-- 底部三个按钮：分享到广场、收藏、下载卡片 -->
+          <div class="relative z-10 flex justify-center gap-3 mt-2">
+            <!-- 分享到广场 -->
             <button
               type="button"
-              class="flex items-center gap-1 text-xs text-slate-500"
+              class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition"
+              @click="openShareToPlaza"
+            >
+              <span>📤</span>
+              <span>分享</span>
+            </button>
+
+            <!-- 收藏按钮（五角星） -->
+            <button
+              type="button"
+              class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition"
+              :class="
+                currentIsFavorited
+                  ? 'text-amber-500 bg-amber-50 hover:bg-amber-100'
+                  : 'text-slate-600 bg-slate-100 hover:bg-slate-200'
+              "
               @click="toggleFavorite(currentAnswerId)"
             >
-              🔖 {{ currentIsFavorited ? '取消收藏' : '存入收藏' }}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4"
+                :fill="currentIsFavorited ? 'currentColor' : 'none'"
+                :stroke="currentIsFavorited ? 'none' : 'currentColor'"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                />
+              </svg>
+              <span>{{ currentIsFavorited ? '已收藏' : '收藏' }}</span>
             </button>
-            <!-- 调试预览按钮（仅开发环境） -->
-            <!-- <button
-              v-if="isDev"
+
+            <!-- 下载卡片按钮（新增） -->
+            <button
               type="button"
-              class="flex items-center gap-1 text-xs text-slate-500"
-              @click="debugPreviewAnswerCard"
+              class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition disabled:opacity-50"
+              :disabled="cardGenerating"
+              @click="downloadAnswerCard"
             >
-              🖼️ 调试预览
-            </button> -->
+              <span>⬇️</span>
+              <span>{{ cardGenerating ? '生成中' : '下载' }}</span>
+            </button>
           </div>
         </div>
       </div>
     </Transition>
+
+    <!-- 通用分享弹窗 -->
+    <ShareToPlazaModal ref="shareModalRef" />
 
     <!-- 答案详情弹窗 -->
     <AnswerDetailModal ref="answerDetailModalRef" />
@@ -191,11 +230,13 @@ import {
 } from '@/utils/answerService'
 import AnswerDetailModal from './components/AnswerDetailModal.vue'
 import AnswerEasterEggEffects from './components/AnswerEasterEggEffects.vue'
+import ShareToPlazaModal from '@/components/common/ShareToPlazaModal.vue'
 import {
   detectAnswerEasterEgg,
   recordEasterEggTrigger,
   type AnswerEasterEgg,
 } from '@/composables/useAnswerEasterEgg'
+import { useShareCard } from '@/composables/useShareCard'
 
 // ---------- 数据 ----------
 const question = ref('')
@@ -210,8 +251,22 @@ const recentAnswers = ref<AnswerHistoryItem[]>([])
 const loadingHistory = ref(false)
 const answerDetailModalRef = ref<InstanceType<typeof AnswerDetailModal> | null>(null)
 const activeEasterEgg = ref<AnswerEasterEgg | null>(null)
+const shareModalRef = ref<InstanceType<typeof ShareToPlazaModal> | null>(null)
+// 在 useShareCard 解构中增加 generateAnswerCard 和 isGenerating
+const { isGenerating: cardGenerating, generateAnswerCard } = useShareCard()
 
-// 输入框错误状态（用于抖动和红框）
+// 新增下载卡片方法
+const downloadAnswerCard = () => {
+  if (!currentQuestion.value || !currentAnswer.value) return
+  // 注意：需要将答案文本中的“宇宙说：”前缀去掉（如果有）
+  const answerText = currentAnswer.value.replace(/^宇宙说：/, '')
+  generateAnswerCard({
+    question: currentQuestion.value,
+    answerText: answerText,
+    createdAt: new Date().toISOString(), // 可选，传入真实时间更好
+  })
+}
+// 输入框错误状态
 const inputError = ref(false)
 let errorTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -225,15 +280,10 @@ function triggerInputError() {
   errorTimer = setTimeout(() => {
     inputError.value = false
     errorTimer = null
-  }, 400) // 与动画时长一致
+  }, 400)
 }
 
-// 格式化日期（仅日期）
-// function formatDate(iso: string) {
-//   return dayjs(iso).format('MM月DD日')
-// }
-
-// 格式化日期时间（带时分秒）
+// 格式化日期时间
 function formatDateTime(iso: string) {
   return dayjs(iso).format('MM月DD日 HH:mm:ss')
 }
@@ -355,27 +405,22 @@ function openDetail(item: AnswerHistoryItem) {
   answerDetailModalRef.value?.open(item)
 }
 
-// 分享功能（弹窗中的分享卡片按钮调用）
-// function openShareModal() {
-//   // 暂时仅输出，后续可接入分享弹窗
-//   console.log('分享卡片', currentQuestion.value, currentAnswer.value)
-// }
+// 打开分享到广场弹窗
+function openShareToPlaza() {
+  if (!currentQuestion.value || !currentAnswer.value) return
+  const content = `问：${currentQuestion.value}\n答：${currentAnswer.value}`
+  shareModalRef.value?.open({
+    type: 'answer',
+    sourceId: currentAnswerId.value,
+    content: content,
+  })
+}
 
 onMounted(() => {
   loadRecentHistory()
 })
 
-// import { previewAnswerCard } from '@/utils/shareCardGenerator'
-// const isDev = import.meta.env.DEV
-
-// // 调试预览当前答案卡片
-// const debugPreviewAnswerCard = async () => {
-//   await previewAnswerCard({
-//     question: currentQuestion.value,
-//     answerText: currentAnswer.value.replace('宇宙说：', ''),
-//     createdAt: new Date().toISOString(),
-//   })
-// }
+const bgImageUrl = new URL('/images/answer_detail_bg.png', import.meta.url).href
 </script>
 
 <style scoped>

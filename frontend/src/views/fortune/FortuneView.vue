@@ -1464,7 +1464,7 @@ const handleCreatePKChallenge = async () => {
   font-family: 'KaiTi', '楷体', 'STKaiti', 'Noto Serif SC', serif;
 }
 .font-lxgw {
-  font-family: 'LXGW WenKai', '霞鹜文楷', 'KaiTi', '楷体', cursive;
+  font-family: 'KaiTi', '楷体', cursive;
 }
 .fortune-share-enter-active,
 .fortune-share-leave-active {

@@ -61,9 +61,9 @@ const STYLE = {
 // ==================== 字体配置（治愈国风） ====================
 const FONTS = {
   // 上吉/中吉/大吉等标题字体（霞鹜文楷）
-  title: `bold ${STYLE.titleSize}px 'LXGW WenKai', '霞鹜文楷', 'KaiTi', '楷体', cursive`,
-  // 分数专用字体（DIN）
-  score: `${STYLE.scoreSize}px 'DIN', 'Arial', sans-serif`,
+  title: `bold ${STYLE.titleSize}px 'KaiTi', '楷体', cursive`,
+  // 分数专用字体（Oswald）
+  score: `${STYLE.scoreSize}px 'Arial', sans-serif`,
   // 主签文字体（Noto Serif SC）
   main: `${STYLE.mainSize}px 'Noto Serif SC', 'Times New Roman', serif`,
   // 副签文字体（Noto Serif SC）

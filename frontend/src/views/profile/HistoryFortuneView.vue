@@ -514,6 +514,6 @@ onUnmounted(() => {
 }
 
 .font-lxgw {
-  font-family: 'LXGW WenKai', '霞鹜文楷', 'KaiTi', '楷体', cursive;
+  font-family: 'KaiTi', '楷体', cursive;
 }
 </style>

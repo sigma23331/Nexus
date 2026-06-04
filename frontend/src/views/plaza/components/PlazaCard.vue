@@ -407,7 +407,7 @@ const fortuneJiList = computed(() => splitYiJi(fortuneJi.value))
 
 <style scoped>
 .font-lxgw {
-  font-family: 'LXGW WenKai', '霞鹜文楷', 'KaiTi', '楷体', cursive;
+  font-family: 'KaiTi', '楷体', cursive;
 }
 
 /* 运势卡片与答案卡片统一风格 */

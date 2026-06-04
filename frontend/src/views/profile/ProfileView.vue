@@ -18,8 +18,7 @@
                 <span>🎂</span>
                 {{ formattedBirthday }}
               </span>
-
-              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -118,18 +117,6 @@ const moodModalRef = ref<InstanceType<typeof MoodDiaryModal> | null>(null)
 const monthlyOverviewRef = ref<InstanceType<typeof MonthlyMoodOverview> | null>(null)
 
 const displayAvatar = computed(() => getValidAvatar(userStore.userInfo?.avatar))
-
-const genderText = computed(() => {
-  const gender = userStore.userInfo?.gender
-  switch (gender) {
-    case 'male':
-      return '男'
-    case 'female':
-      return '女'
-    default:
-      return '保密'
-  }
-})
 
 const formattedBirthday = computed(() => {
   const birthday = userStore.userInfo?.birthday

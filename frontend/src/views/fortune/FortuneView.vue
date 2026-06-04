@@ -631,6 +631,7 @@ const boardDrawPhase = ref<'idle' | 'shaking' | 'stick'>('idle')
 let boardDrawTimers: ReturnType<typeof setTimeout>[] = []
 const boardDrawStorageKey = ref('')
 const boardDrawStorageKeys = ref<string[]>([])
+const BOARD_DRAW_STORAGE_PREFIX = 'fortune-board-draw-confirmed-v2'
 
 const trendPoints = ref<Array<{ date: string; value: number }>>([])
 const historyFortunes = ref<
@@ -909,7 +910,7 @@ const getLocalDateKey = () => {
   const d = String(now.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
 }
-const initBoardDrawState = (fortuneDate: string, recordExisted = false) => {
+const initBoardDrawState = (fortuneDate: string) => {
   const dateKeys = Array.from(
     new Set(
       [fortuneDate?.slice(0, 10), getLocalDateKey()].filter((item): item is string =>
@@ -917,11 +918,11 @@ const initBoardDrawState = (fortuneDate: string, recordExisted = false) => {
       ),
     ),
   )
-  boardDrawStorageKeys.value = dateKeys.map((key) => `fortune-board-draw-played-${key}`)
+  boardDrawStorageKeys.value = dateKeys.map((key) => `${BOARD_DRAW_STORAGE_PREFIX}-${key}`)
   boardDrawStorageKey.value = boardDrawStorageKeys.value[0] || ''
   const localPlayed = boardDrawStorageKeys.value.some((key) => localStorage.getItem(key) === '1')
-  // 兜底：后端已存在今日记录，说明今天已抽过签（如换设备/清缓存场景）
-  const played = localPlayed || recordExisted
+  // 只认本机“用户点过开始抽签”的标记；后端已有今日运势不等于用户看过摇签动画。
+  const played = localPlayed
   isBoardUnlocked.value = played
   boardDrawPhase.value = played ? 'stick' : 'idle'
   if (played && boardDrawStorageKeys.value.length) {
@@ -1006,7 +1007,7 @@ const applyFortuneBoardCache = (cache: FortuneBoardCachePayload) => {
   fortuneData.value = cache.fortuneData
   trendPoints.value = cache.trendPoints
   historyFortunes.value = cache.historyFortunes
-  initBoardDrawState(fortuneData.value.date, fortuneData.value.record_existed)
+  initBoardDrawState(fortuneData.value.date)
 }
 
 const formatMMDD = (dateStr: string) => {
@@ -1077,7 +1078,7 @@ const loadFortuneBoardWithOptions = async (
     const today = await getFortuneToday()
     if (requestToken !== boardRequestToken) return
     fortuneData.value = normalizeFortuneToday(today)
-    initBoardDrawState(fortuneData.value.date, fortuneData.value.record_existed)
+    initBoardDrawState(fortuneData.value.date)
 
     const [trendResult, historyResult] = await Promise.allSettled([
       getFortuneTrend(),

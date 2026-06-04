@@ -8,13 +8,7 @@
 
     <main class="px-6 py-4 space-y-8">
       <section
-        v-if="loading"
-        class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600"
-      >
-        正在加载运势数据...
-      </section>
-      <section
-        v-else-if="errorMessage"
+        v-if="errorMessage"
         class="flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
       >
         <span>📡 {{ errorMessage }}</span>
@@ -122,28 +116,21 @@
           <div class="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-amber-100"></div>
           <div class="absolute -bottom-10 -left-10 h-24 w-24 rounded-full bg-rose-100"></div>
         </template>
-        <div class="relative space-y-4">
-          <div class="flex items-center justify-between">
+        <div class="relative space-y-0">
+          <!-- 左侧“今日签文”依然保留 -->
+          <div class="relative flex items-center justify-center mb-1">
             <span
-              class="text-xs font-semibold tracking-wide"
+              class="absolute left-0 text-sm font-semibold tracking-wide"
               :class="isDuanwu ? 'text-red-700' : 'text-amber-700'"
             >
               今日签文
             </span>
-            <!-- 运势分展示（本示例忽略，全站统计需要） -->
-            <span
-              class="rounded-full px-3 py-1 text-xs font-semibold"
-              :class="
-                isDuanwu
-                  ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
-                  : 'bg-amber-50 text-amber-700'
-              "
-            >
-              {{ isBoardUnlocked ? fortuneData.title : '待揭晓' }}
-            </span>
+            <!-- 原先的运势标题已移除，改用 TodayFortuneContent 内部渲染 -->
           </div>
           <TodayFortuneContent
             v-if="isBoardUnlocked"
+            :title="fortuneData.title"
+            :score="fortuneData.score"
             :content-main="fortuneData.content_main"
             :content-sub="fortuneData.content_sub"
           />
@@ -301,7 +288,7 @@
             </div>
           </div>
 
-          <div v-if="isBoardUnlocked" class="space-y-3">
+          <div v-if="isBoardUnlocked" class="space-y-2">
             <h2 class="text-sm font-semibold text-slate-700">今日概览</h2>
             <ul class="grid grid-cols-2 gap-3 text-sm">
               <li class="rounded-xl border border-slate-200 bg-white px-3 py-2">
@@ -323,22 +310,70 @@
             </ul>
           </div>
 
-          <div v-if="isBoardUnlocked" class="grid grid-cols-2 gap-3">
-            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
-              <p class="text-xs font-semibold text-emerald-700">宜</p>
-              <ul class="mt-2 text-sm text-emerald-700 space-y-1">
-                <li v-for="item in fortuneData.yi" :key="item">• {{ item }}</li>
-                <li v-if="!fortuneData.yi.length">• --</li>
-              </ul>
+          <div v-if="isBoardUnlocked" class="grid grid-cols-2 gap-3" style="margin-top: 1rem">
+            <!-- 宜 -->
+            <div class="rounded-2xl border border-emerald-400 bg-emerald-50 p-3">
+              <div class="grid grid-cols-5 gap-1">
+                <div class="col-span-1">
+                  <p class="text-m font-semibold text-emerald-700">宜</p>
+                </div>
+                <div class="col-span-4">
+                  <ul class="text-sm font-medium text-emerald-700 font-song space-y-1">
+                    <li v-for="item in fortuneData.yi" :key="item">• {{ item }}</li>
+                    <li v-if="!fortuneData.yi.length">• --</li>
+                  </ul>
+                </div>
+              </div>
             </div>
-            <div class="rounded-2xl border border-rose-200 bg-rose-50 p-3">
-              <p class="text-xs font-semibold text-rose-700">忌</p>
-              <ul class="mt-2 text-sm text-rose-700 space-y-1">
-                <li v-for="item in fortuneData.ji" :key="item">• {{ item }}</li>
-                <li v-if="!fortuneData.ji.length">• --</li>
-              </ul>
+            <!-- 忌 -->
+            <div class="rounded-2xl border border-rose-400 bg-rose-50 p-3">
+              <div class="grid grid-cols-5 gap-1">
+                <div class="col-span-1">
+                  <p class="text-m font-semibold text-rose-700">忌</p>
+                </div>
+                <div class="col-span-4">
+                  <ul class="text-sm font-medium text-rose-700 font-song space-y-1">
+                    <li v-for="item in fortuneData.ji" :key="item">• {{ item }}</li>
+                    <li v-if="!fortuneData.ji.length">• --</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+
+        <div v-if="isBoardUnlocked" class="flex gap-3 mt-4">
+          <button
+            type="button"
+            class="flex-1 bg-[#dce5b8a2] border-2 border-[#dce5b8] hover:bg-[#dce5b8] text-slate-700 rounded-xl py-2 text-sm font-medium disabled:opacity-50"
+            :disabled="shareCardGenerating"
+            @click="handleDownloadFortuneCard"
+          >
+            {{ shareCardGenerating ? '生成运势中...' : '下载运势' }}
+          </button>
+          <button
+            type="button"
+            class="flex-1 bg-white border-2 border-slate-200 hover:bg-gray-200 text-slate-700 rounded-xl py-2 text-sm font-medium"
+            @click="openShareFortuneModal"
+          >
+            分享
+          </button>
+          <button
+            type="button"
+            class="flex-1 bg-[#d9f3f090] border-2 border-[#d0e6ee] hover:bg-[#d0e6ee] text-slate-700 rounded-xl py-2 text-sm font-medium"
+            :disabled="pkCreating"
+            @click="handleCreatePKChallenge"
+          >
+            {{ pkCreating ? '创建中...' : '发起运势挑战' }}
+          </button>
+          <!-- <button
+            v-if="isDev"
+            type="button"
+            class="flex-1 bg-gray-200 text-gray-700 rounded-xl py-2 text-sm font-medium"
+            @click="debugPreviewCard"
+          >
+            调试预览
+          </button> -->
         </div>
       </section>
 
@@ -399,15 +434,14 @@
           <article
             v-for="record in historyFortunes"
             :key="record.id"
-            class="cursor-pointer rounded-2xl border border-amber-100 bg-gradient-to-r from-amber-50/60 to-white p-4 shadow-sm transition hover:shadow-md"
+            class="cursor-pointer rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50/60 to-white p-4 shadow-sm transition hover:shadow-md"
             @click="openHistoryDetail(record)"
           >
-            <div class="mb-3 flex items-center justify-between">
+            <div class="mb-2 flex items-center justify-between">
               <div>
-                <p class="text-sm font-semibold text-slate-900">
-                  {{ record.date }} · {{ record.title }}
-                </p>
-                <p class="text-xs text-slate-500">{{ record.summary }}</p>
+                <span class="text-sm font-semibold text-slate-700">{{ record.date }}</span>
+                <span class="text-sm font-bold text-slate-700"> · </span>
+                <span class="text-lg font-bold font-lxgw text-slate-900">{{ record.title }}</span>
               </div>
               <span
                 class="rounded-full px-2.5 py-1 text-xs font-semibold"
@@ -416,10 +450,12 @@
                 {{ record.score }} 分
               </span>
             </div>
-            <div class="mb-2 text-xs">
+            <!-- 合并后的运势对比与摘要 -->
+            <div class="mb-2 text-sm">
               <span class="rounded-full px-2 py-1" :class="record.linkClass">
                 {{ record.linkText }}
               </span>
+              <span class="ml-4 text-slate-600"> {{ record.summary }}</span>
             </div>
             <div class="flex gap-2 text-xs">
               <span
@@ -433,7 +469,7 @@
                 忌：{{ record.ji[0] }}
               </span>
             </div>
-            <p class="mt-2 text-right text-[11px] text-slate-400">点击查看详情</p>
+            <p class="mt-1 text-right text-[11px] text-slate-400">点击查看详情</p>
           </article>
           <article
             v-if="!historyFortunes.length"
@@ -441,42 +477,6 @@
           >
             暂无历史运势记录
           </article>
-        </div>
-      </section>
-
-      <section v-if="isBoardUnlocked">
-        <div class="flex gap-3 mt-4">
-          <button
-            type="button"
-            class="flex-1 bg-purple-600 hover:bg-purple-700 rounded-xl py-2 text-sm font-medium text-white disabled:opacity-50"
-            :disabled="shareCardGenerating"
-            @click="handleDownloadFortuneCard"
-          >
-            {{ shareCardGenerating ? '生成运势中...' : '下载运势卡片' }}
-          </button>
-          <button
-            type="button"
-            class="flex-1 bg-white border border-slate-200 text-slate-700 rounded-xl py-2 text-sm font-medium"
-            @click="openShareFortuneModal"
-          >
-            分享
-          </button>
-          <button
-            type="button"
-            class="flex-1 bg-amber-500 hover:bg-amber-600 rounded-xl py-2 text-sm font-medium text-white"
-            :disabled="pkCreating"
-            @click="handleCreatePKChallenge"
-          >
-            {{ pkCreating ? '创建中...' : '发起运势挑战' }}
-          </button>
-          <!-- <button
-            v-if="isDev"
-            type="button"
-            class="flex-1 bg-gray-200 text-gray-700 rounded-xl py-2 text-sm font-medium"
-            @click="debugPreviewCard"
-          >
-            调试预览
-          </button> -->
         </div>
       </section>
     </main>
@@ -492,68 +492,63 @@
             <div class="mb-3 flex items-center justify-between">
               <h3 class="text-base font-semibold text-slate-900">历史运势详情</h3>
               <button
-                type="button"
-                class="rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+                class="rounded-full p-1 text-slate-500 hover:bg-slate-100 transition"
                 @click="historyDetailOpen = false"
+                aria-label="关闭"
               >
-                关闭
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
               </button>
             </div>
-            <div class="space-y-3 text-sm">
-              <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p class="text-xs text-slate-500">{{ formatMMDD(selectedHistory.date) }}</p>
-                <p class="mt-1 text-base font-semibold text-slate-900">
-                  {{ selectedHistory.title }}
-                </p>
-                <!-- 显示签文主旨 -->
-                <p class="mt-1 text-slate-700">{{ selectedHistory.content_main || '—' }}</p>
-                <!-- 显示签文解读 -->
-                <p class="mt-1 text-xs text-slate-500">{{ selectedHistory.content_sub || '' }}</p>
-              </div>
-              <div
-                class="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2"
-              >
-                <span class="text-slate-600">综合评分</span>
-                <span class="font-semibold text-amber-700">{{ selectedHistory.score }} 分</span>
-              </div>
-              <div class="grid grid-cols-2 gap-3 text-xs">
-                <div
-                  class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-700"
-                >
-                  <p class="font-semibold">宜</p>
-                  <!-- 显示完整的宜数组 -->
-                  <p class="mt-1">{{ selectedHistory.yi?.join('、') || '--' }}</p>
-                </div>
-                <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-700">
-                  <p class="font-semibold">忌</p>
-                  <!-- 显示完整的忌数组 -->
-                  <p class="mt-1">{{ selectedHistory.ji?.join('、') || '--' }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Transition>
 
-      <Transition name="fortune-share">
-        <div
-          v-if="sharePreviewOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-          @click.self="sharePreviewOpen = false"
-        >
-          <div
-            class="fortune-share-panel max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
-          >
-            <div class="mb-4 flex items-center justify-end">
-              <button
-                type="button"
-                class="rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
-                @click="sharePreviewOpen = false"
-              >
-                关闭
-              </button>
+            <!-- 日期（左对齐） -->
+            <p class="text-left text-ms text-slate-500 mb-0">{{ selectedHistory.date }}</p>
+
+            <!-- 标题 + 分数（居中，右下角分数） -->
+            <div class="flex justify-center mb-4">
+              <div class="relative inline-block">
+                <span
+                  class="rounded-full px-4 py-1.5 text-[28px] font-semibold font-lxgw text-[#B45309]"
+                >
+                  {{ selectedHistory.title }}
+                </span>
+                <span
+                  class="absolute -bottom-0 -right-6 text-xs text-slate-600 bg-white px-1 rounded"
+                >
+                  {{ selectedHistory.score }} 分
+                </span>
+              </div>
             </div>
-            <FortuneShareReveal :fortune="fortuneSharePayload" />
+
+            <!-- 签文内容卡片 -->
+            <div class="rounded-2xl bg-[#fff5e6a5] border border-amber-300 px-4 py-5 text-center">
+              <p class="text-lg font-semibold text-slate-900">
+                {{ selectedHistory.content_main || '—' }}
+              </p>
+              <p class="mt-2 text-xs text-amber-700">{{ selectedHistory.content_sub || '' }}</p>
+            </div>
+
+            <!-- 宜忌 -->
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <div class="rounded-xl bg-[#ecfdf55b] border border-emerald-400 p-3">
+                <p class="text-xs font-semibold text-emerald-700">宜</p>
+                <p class="mt-1 text-sm text-emerald-700">
+                  {{ selectedHistory.yi?.join('、') || '--' }}
+                </p>
+              </div>
+              <div class="rounded-xl bg-[#fff1f294] border border-rose-300 p-3">
+                <p class="text-xs font-semibold text-rose-700">忌</p>
+                <p class="mt-1 text-sm text-rose-700">
+                  {{ selectedHistory.ji?.join('、') || '--' }}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </Transition>
@@ -567,7 +562,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onActivated, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getFortuneToday, getFortuneTrend, getHistoryFortune } from '@/api/fortune'
-import FortuneShareReveal from './components/FortuneShareReveal.vue'
 import TodayFortuneContent from './components/TodayFortuneContent.vue'
 import ShareToPlazaModal from '@/components/common/ShareToPlazaModal.vue'
 import { useFestivalTheme } from '@/composables/useFestivalTheme'
@@ -622,17 +616,6 @@ const boardDrawPhase = ref<'idle' | 'shaking' | 'stick'>('idle')
 let boardDrawTimers: ReturnType<typeof setTimeout>[] = []
 const boardDrawStorageKey = ref('')
 const boardDrawStorageKeys = ref<string[]>([])
-
-const sharePreviewOpen = ref(false)
-
-const fortuneSharePayload = computed(() => ({
-  title: fortuneData.value.title,
-  score: fortuneData.value.score,
-  content_main: fortuneData.value.content_main,
-  content_sub: fortuneData.value.content_sub,
-  yi: fortuneData.value.yi,
-  ji: fortuneData.value.ji,
-}))
 
 const trendPoints = ref<Array<{ date: string; value: number }>>([])
 const historyFortunes = ref<
@@ -793,7 +776,7 @@ const drawStickTitle = computed(() => {
 })
 const trendBadgeClass = computed(() => {
   if (delta.value >= 3) return 'border-emerald-200 bg-emerald-50 text-emerald-700'
-  if (delta.value <= -3) return 'border-rose-200 bg-rose-50 text-rose-700'
+  if (delta.value <= -5) return 'border-rose-200 bg-rose-50 text-rose-700'
   return 'border-amber-200 bg-amber-50 text-amber-700'
 })
 const scoreToSign = (score: number) => {
@@ -821,7 +804,7 @@ const relationByDelta = (deltaValue: number) => {
     return {
       type: 'up',
       text: `↑ 比昨日提升 ${deltaValue} 分`,
-      cls: 'bg-emerald-50 text-emerald-700',
+      cls: 'bg-amber-50 text-emerald-700',
       story: '昨日积累开始显效，今日气势顺承而上。',
     }
   }
@@ -829,7 +812,7 @@ const relationByDelta = (deltaValue: number) => {
     return {
       type: 'down',
       text: `↓ 比昨日回落 ${Math.abs(deltaValue)} 分`,
-      cls: 'bg-rose-50 text-rose-700',
+      cls: 'bg-amber-50 text-rose-700',
       story: '昨日外扰余波未消，今日宜先稳住节奏。',
     }
   }
@@ -1311,6 +1294,18 @@ const handleCreatePKChallenge = async () => {
 </script>
 
 <style scoped>
+.font-song {
+  font-family: 'SimSun', '宋体', serif;
+}
+.font-ys {
+  font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
+}
+.font-kai {
+  font-family: 'KaiTi', '楷体', 'STKaiti', 'Noto Serif SC', serif;
+}
+.font-lxgw {
+  font-family: 'LXGW WenKai', '霞鹜文楷', 'KaiTi', '楷体', cursive;
+}
 .fortune-share-enter-active,
 .fortune-share-leave-active {
   transition: background-color 0.22s ease;

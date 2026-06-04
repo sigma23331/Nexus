@@ -4,6 +4,7 @@ from flask import Blueprint, current_app, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from services import fortune_service
+from services import badge_service
 from services import fortune_pk_service
 from services.user_profile_service import UserProfileService
 from utils.api_response import success, fail
@@ -16,6 +17,7 @@ fortune_bp = Blueprint('fortune', __name__)
 def today_fortune():
     user_id = get_jwt_identity()
     payload = fortune_service.get_today_fortune(user_id=user_id)
+    badge_service.evaluate_after_event(user_id=user_id, trigger="fortune_created")
     try:
         UserProfileService.update_profile_by_behavior(
             user_id=user_id, event_type="fortune_created", event_time=datetime.utcnow()

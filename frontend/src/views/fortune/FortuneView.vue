@@ -617,39 +617,18 @@
               <p class="mt-2 text-xs text-amber-700">{{ selectedHistory.content_sub || '' }}</p>
             </div>
 
-            <!-- 爱情、事业、健康、财富四项 -->
-            <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <!-- 四项运势 -->
+            <div class="mt-4 grid grid-cols-2 gap-3">
               <div
-                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
+                v-for="aspect in fortuneAspectItems(selectedHistory)"
+                :key="aspect.label"
+                class="rounded-xl border px-3 py-2"
+                :class="aspect.cardClass"
               >
-                <span class="text-slate-500 w-8 flex-shrink-0">爱情</span>
-                <span class="font-semibold text-pink-500 flex-1 break-words">{{
-                  selectedHistory.love
-                }}</span>
-              </div>
-              <div
-                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
-              >
-                <span class="text-slate-500 w-8 flex-shrink-0">事业</span>
-                <span class="font-semibold text-blue-500 flex-1 break-words">{{
-                  selectedHistory.career
-                }}</span>
-              </div>
-              <div
-                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
-              >
-                <span class="text-slate-500 w-8 flex-shrink-0">健康</span>
-                <span class="font-semibold text-green-600 flex-1 break-words">{{
-                  selectedHistory.health
-                }}</span>
-              </div>
-              <div
-                class="rounded-xl border border-slate-300 bg-white px-3 py-2 flex justify-between items-start gap-2"
-              >
-                <span class="text-slate-500 w-8 flex-shrink-0">财富</span>
-                <span class="font-semibold text-yellow-600 flex-1 break-words">{{
-                  selectedHistory.wealth
-                }}</span>
+                <p class="text-xs font-semibold" :class="aspect.labelClass">{{ aspect.label }}</p>
+                <p class="mt-1 text-sm font-semibold" :class="aspect.valueClass">
+                  {{ aspect.value }}
+                </p>
               </div>
             </div>
 
@@ -735,6 +714,7 @@ const boardDrawPhase = ref<'idle' | 'shaking' | 'stick'>('idle')
 let boardDrawTimers: ReturnType<typeof setTimeout>[] = []
 const boardDrawStorageKey = ref('')
 const boardDrawStorageKeys = ref<string[]>([])
+const BOARD_DRAW_STORAGE_PREFIX = 'fortune-board-draw-confirmed-v2'
 
 const trendPoints = ref<Array<{ date: string; value: number }>>([])
 const historyFortunes = ref<
@@ -746,13 +726,13 @@ const historyFortunes = ref<
     // 以下为真实历史内容
     content_main: string
     content_sub: string
-    yi: string[]
-    ji: string[]
-    // 以下用于卡片摘要（保持不变）
     love: string
     career: string
     health: string
     wealth: string
+    yi: string[]
+    ji: string[]
+    // 以下用于卡片摘要（保持不变）
     summary: string
     story: string
     linkText: string
@@ -931,6 +911,45 @@ const scoreSummary = (score: number) => {
   if (score >= 65) return '平稳过渡，先稳再进'
   return '波动偏大，建议降低预期'
 }
+const fortuneAspectMeta = [
+  {
+    key: 'love',
+    label: '爱情',
+    cardClass: 'border-pink-200 bg-pink-50',
+    labelClass: 'text-pink-700',
+    valueClass: 'text-pink-600',
+  },
+  {
+    key: 'career',
+    label: '事业',
+    cardClass: 'border-blue-200 bg-blue-50',
+    labelClass: 'text-blue-700',
+    valueClass: 'text-blue-600',
+  },
+  {
+    key: 'health',
+    label: '健康',
+    cardClass: 'border-emerald-200 bg-emerald-50',
+    labelClass: 'text-emerald-700',
+    valueClass: 'text-emerald-600',
+  },
+  {
+    key: 'wealth',
+    label: '财富',
+    cardClass: 'border-yellow-200 bg-yellow-50',
+    labelClass: 'text-yellow-700',
+    valueClass: 'text-yellow-600',
+  },
+] as const
+
+const fortuneAspectItems = (
+  record: Partial<Pick<FortuneViewData, 'love' | 'career' | 'health' | 'wealth'>>,
+) =>
+  fortuneAspectMeta.map((item) => ({
+    ...item,
+    value: record[item.key] || '--',
+  }))
+
 const relationByDelta = (deltaValue: number) => {
   if (deltaValue >= 3) {
     return {
@@ -983,7 +1002,7 @@ const getLocalDateKey = () => {
   const d = String(now.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
 }
-const initBoardDrawState = (fortuneDate: string, recordExisted = false) => {
+const initBoardDrawState = (fortuneDate: string) => {
   const dateKeys = Array.from(
     new Set(
       [fortuneDate?.slice(0, 10), getLocalDateKey()].filter((item): item is string =>
@@ -991,11 +1010,11 @@ const initBoardDrawState = (fortuneDate: string, recordExisted = false) => {
       ),
     ),
   )
-  boardDrawStorageKeys.value = dateKeys.map((key) => `fortune-board-draw-played-${key}`)
+  boardDrawStorageKeys.value = dateKeys.map((key) => `${BOARD_DRAW_STORAGE_PREFIX}-${key}`)
   boardDrawStorageKey.value = boardDrawStorageKeys.value[0] || ''
   const localPlayed = boardDrawStorageKeys.value.some((key) => localStorage.getItem(key) === '1')
-  // 兜底：后端已存在今日记录，说明今天已抽过签（如换设备/清缓存场景）
-  const played = localPlayed || recordExisted
+  // 只认本机“用户点过开始抽签”的标记；后端已有今日运势不等于用户看过摇签动画。
+  const played = localPlayed
   isBoardUnlocked.value = played
   boardDrawPhase.value = played ? 'stick' : 'idle'
   if (played && boardDrawStorageKeys.value.length) {
@@ -1080,7 +1099,7 @@ const applyFortuneBoardCache = (cache: FortuneBoardCachePayload) => {
   fortuneData.value = cache.fortuneData
   trendPoints.value = cache.trendPoints
   historyFortunes.value = cache.historyFortunes
-  initBoardDrawState(fortuneData.value.date, fortuneData.value.record_existed)
+  initBoardDrawState(fortuneData.value.date)
 }
 
 const formatMMDD = (dateStr: string) => {
@@ -1151,12 +1170,7 @@ const loadFortuneBoardWithOptions = async (
     const today = await getFortuneToday()
     if (requestToken !== boardRequestToken) return
     fortuneData.value = normalizeFortuneToday(today)
-    // 调试：覆盖四项为测试数据
-    // fortuneData.value.love = '测试爱情运势：今日桃花运旺盛，适合主动表白。'
-    // fortuneData.value.career = '测试事业运势：工作顺利，有晋升机会。'
-    // fortuneData.value.health = '测试健康运势：状态良好，注意休息。'
-    // fortuneData.value.wealth = '测试财富运势：偏财运佳，可小额投资。'
-    initBoardDrawState(fortuneData.value.date, fortuneData.value.record_existed)
+    initBoardDrawState(fortuneData.value.date)
 
     const [trendResult, historyResult] = await Promise.allSettled([
       getFortuneTrend(),
@@ -1200,13 +1214,13 @@ const loadFortuneBoardWithOptions = async (
           // 真实历史内容
           content_main: item.content_main || '—',
           content_sub: item.content_sub || '',
-          yi: item.yi || [],
-          ji: item.ji || [],
-          // 卡片摘要字段（保持原有风格）
           love: item.love || '--',
           career: item.career || '--',
           health: item.health || '--',
           wealth: item.wealth || '--',
+          yi: item.yi || [],
+          ji: item.ji || [],
+          // 卡片摘要字段（保持原有风格）
           summary: scoreSummary(current),
           story: relation.story,
           linkText: relation.text,

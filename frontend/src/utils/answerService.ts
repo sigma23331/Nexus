@@ -96,7 +96,7 @@ export async function fetchAndSyncHistory(
   // 4. 返回基于本地缓存的分页结果
   return {
     list: pageList,
-    total: allLocal.length,
+    total: Math.max(res.total, allLocal.length),
     page,
     limit,
   }

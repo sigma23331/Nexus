@@ -5,7 +5,7 @@
     >
       <button
         type="button"
-        class="rounded-full p-2 text-slate-600 hover:bg-slate-100"
+        class="rounded-full p-2 text-slate-600"
         aria-label="返回"
         @click="goBack"
       >
@@ -13,28 +13,41 @@
       </button>
       <div class="min-w-0 flex-1">
         <h1 class="text-base font-bold text-slate-900">心情时间轴</h1>
-        <p class="truncate text-xs text-slate-500">按时间回看情绪日记</p>
+        <!-- <p class="truncate text-xs text-slate-500">按时间回看情绪日记</p> -->
       </div>
     </header>
 
     <main class="px-4 pt-4">
       <div class="mb-4 flex flex-wrap items-end gap-3">
-        <label class="flex flex-col gap-1 text-xs text-slate-600">
-          <span>筛选月份</span>
-          <input
-            v-model="yearMonth"
-            type="month"
-            class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-200"
-            @change="onMonthChange"
-          />
-        </label>
+        <!-- “全部”按钮（放在最前面） -->
         <button
           type="button"
-          class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
-          @click="clearMonth"
+          class="rounded-xl border px-3 py-2 text-xs font-medium transition"
+          :class="
+            activeFilter === 'all'
+              ? 'border-violet-400 bg-violet-100 text-violet-700'
+              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+          "
+          @click="setFilterAll"
         >
           全部
         </button>
+
+        <!-- 月份筛选 -->
+        <label class="flex flex-col gap-1 text-xs text-slate-600">
+          <span class="sr-only">选择月份</span>
+          <input
+            v-model="yearMonth"
+            type="month"
+            class="rounded-xl border bg-white px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-200"
+            :class="
+              activeFilter !== 'all' && yearMonth
+                ? 'border-violet-400 bg-violet-200'
+                : 'border-slate-200 bg-violet-100'
+            "
+            @change="onMonthChange"
+          />
+        </label>
       </div>
 
       <div
@@ -81,9 +94,7 @@
           class="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500"
         >
           <p>暂无日记记录</p>
-          <p class="mt-2 text-xs text-slate-400">
-            在「我的」里写「今日心情」，或连接后端保存后会显示在这里。
-          </p>
+          <p class="mt-2 text-xs text-slate-400">在「我的」里写「今日心情」后会显示在这里。</p>
           <button
             v-if="localFallbackItems.length"
             type="button"
@@ -123,12 +134,12 @@
               <p class="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-600">
                 {{ row.snippet || '' }}
               </p>
-              <span
+              <!-- <span
                 v-if="row.localOnly"
                 class="mt-2 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800"
               >
                 本机
-              </span>
+              </span> -->
             </button>
           </li>
         </ul>
@@ -169,6 +180,15 @@ const loadingMore = ref(false)
 const loadError = ref('')
 const yearMonth = ref<string>('')
 const usingLocalOnly = ref(false)
+
+const activeFilter = ref<'all' | string>('all')
+// 设置筛选为“全部”
+function setFilterAll() {
+  activeFilter.value = 'all'
+  yearMonth.value = ''
+  page.value = 1
+  void fetchPage(false)
+}
 
 const detailRef = ref<InstanceType<typeof DiaryDetailModal> | null>(null)
 
@@ -267,13 +287,14 @@ async function fetchPage(append: boolean) {
   }
 }
 
+// 修改原有的 onMonthChange
 function onMonthChange() {
-  page.value = 1
-  void fetchPage(false)
-}
-
-function clearMonth() {
-  yearMonth.value = ''
+  if (yearMonth.value) {
+    activeFilter.value = yearMonth.value
+  } else {
+    // 如果清空了月份输入框（理论上不会发生，但防御）
+    activeFilter.value = 'all'
+  }
   page.value = 1
   void fetchPage(false)
 }

@@ -76,9 +76,7 @@
             >
               {{ fortuneTitle }}
             </span>
-            <span
-              class="absolute -bottom-0 -right-6 text-xs text-slate-600 bg-white/80 px-1 rounded"
-            >
+            <span class="absolute -bottom-0 -right-6 text-xs text-slate-600 px-1 rounded">
               {{ fortuneScore }} 分
             </span>
           </div>
@@ -341,7 +339,11 @@ const getCleanedContent = () => {
 const fortuneTitle = computed(() => {
   const rest = getCleanedContent()
   const firstLine = rest.split('\n')[0] || ''
-  return firstLine.replace(/✨/, '').trim()
+  const cleaned = firstLine
+    .replace(/✨/, '')
+    .replace(/[（(][^）)]*[）)]/g, '')
+    .trim()
+  return cleaned
 })
 
 const fortuneScore = computed(() => {
@@ -405,7 +407,7 @@ const fortuneJiList = computed(() => splitYiJi(fortuneJi.value))
 
 <style scoped>
 .font-lxgw {
-  font-family: 'LXGW WenKai', '霞鹜文楷', 'KaiTi', '楷体', cursive;
+  font-family: 'KaiTi', '楷体', cursive;
 }
 
 /* 运势卡片与答案卡片统一风格 */

@@ -329,29 +329,44 @@
           <div v-if="isBoardUnlocked" class="grid grid-cols-2 gap-3" style="margin-top: 1rem">
             <!-- 宜 -->
             <div class="rounded-2xl border border-emerald-400 bg-emerald-50 p-3">
-              <div class="grid grid-cols-5 gap-1">
-                <div class="col-span-1">
-                  <p class="text-m font-semibold text-emerald-700">宜</p>
+              <p class="text-m font-semibold text-emerald-700 mb-2">宜</p>
+              <div class="space-y-1">
+                <div
+                  v-for="item in fortuneData.yi"
+                  :key="item"
+                  class="flex gap-2 text-sm font-medium text-emerald-700 font-song"
+                >
+                  <span class="flex-shrink-0">•</span>
+                  <span class="flex-1">{{ item }}</span>
                 </div>
-                <div class="col-span-4">
-                  <ul class="text-sm font-medium text-emerald-700 font-song space-y-1">
-                    <li v-for="item in fortuneData.yi" :key="item">• {{ item }}</li>
-                    <li v-if="!fortuneData.yi.length">• --</li>
-                  </ul>
+                <div
+                  v-if="!fortuneData.yi.length"
+                  class="flex gap-2 text-sm font-medium text-emerald-700 font-song"
+                >
+                  <span class="flex-shrink-0">•</span>
+                  <span class="flex-1">--</span>
                 </div>
               </div>
             </div>
+
             <!-- 忌 -->
             <div class="rounded-2xl border border-rose-400 bg-rose-50 p-3">
-              <div class="grid grid-cols-5 gap-1">
-                <div class="col-span-1">
-                  <p class="text-m font-semibold text-rose-700">忌</p>
+              <p class="text-m font-semibold text-rose-700 mb-2">忌</p>
+              <div class="space-y-1">
+                <div
+                  v-for="item in fortuneData.ji"
+                  :key="item"
+                  class="flex gap-2 text-sm font-medium text-rose-700 font-song"
+                >
+                  <span class="flex-shrink-0">•</span>
+                  <span class="flex-1">{{ item }}</span>
                 </div>
-                <div class="col-span-4">
-                  <ul class="text-sm font-medium text-rose-700 font-song space-y-1">
-                    <li v-for="item in fortuneData.ji" :key="item">• {{ item }}</li>
-                    <li v-if="!fortuneData.ji.length">• --</li>
-                  </ul>
+                <div
+                  v-if="!fortuneData.ji.length"
+                  class="flex gap-2 text-sm font-medium text-rose-700 font-song"
+                >
+                  <span class="flex-shrink-0">•</span>
+                  <span class="flex-1">--</span>
                 </div>
               </div>
             </div>
@@ -431,7 +446,7 @@
               />
               <circle cx="12" cy="12" r="3" />
             </svg>
-            <span>{{ pkCreating ? '创建中...' : '发起运势挑战' }}</span>
+            <span>{{ pkCreating ? '创建中...' : '运势挑战' }}</span>
           </button>
 
           <!-- 调试按钮（仅开发环境） -->
@@ -1463,7 +1478,7 @@ const handleCreatePKChallenge = async () => {
   font-family: 'KaiTi', '楷体', 'STKaiti', 'Noto Serif SC', serif;
 }
 .font-lxgw {
-  font-family: 'LXGW WenKai', '霞鹜文楷', 'KaiTi', '楷体', cursive;
+  font-family: 'KaiTi', '楷体', cursive;
 }
 .fortune-share-enter-active,
 .fortune-share-leave-active {

@@ -68,3 +68,44 @@ def test_evaluate_my_badges_returns_400_for_service_validation_error(client, aut
 
     assert response.status_code == 400
     assert response.get_json()["message"] == "bad badge request"
+
+
+def test_get_badge_changes_uses_authenticated_user(client, auth_header, monkeypatch):
+    def fake_list_unread_changes(user_id):
+        assert user_id == "u-test"
+        return {"total": 1, "list": [{"id": "n1", "badgeCode": "share_station"}]}
+
+    monkeypatch.setattr(route_module.badge_service, "list_unread_changes", fake_list_unread_changes)
+
+    response = client.get("/v1/badge/changes", headers=auth_header)
+
+    assert response.status_code == 200
+    assert response.get_json()["data"]["list"][0]["id"] == "n1"
+
+
+def test_mark_badge_changes_read_accepts_optional_ids(client, auth_header, monkeypatch):
+    def fake_mark_changes_read(user_id, change_ids=None):
+        assert user_id == "u-test"
+        assert change_ids == ["n1"]
+        return {"updated": 1}
+
+    monkeypatch.setattr(route_module.badge_service, "mark_changes_read", fake_mark_changes_read)
+
+    response = client.post("/v1/badge/changes/read", json={"changeIds": ["n1"]}, headers=auth_header)
+
+    assert response.status_code == 200
+    assert response.get_json()["data"]["updated"] == 1
+
+
+def test_mark_badge_changes_read_returns_400_for_invalid_payload(client, auth_header, monkeypatch):
+    def fake_mark_changes_read(user_id, change_ids=None):
+        assert user_id == "u-test"
+        assert change_ids == "bad"
+        raise ValueError("changeIds 必须为数组")
+
+    monkeypatch.setattr(route_module.badge_service, "mark_changes_read", fake_mark_changes_read)
+
+    response = client.post("/v1/badge/changes/read", json={"changeIds": "bad"}, headers=auth_header)
+
+    assert response.status_code == 400
+    assert response.get_json()["message"] == "changeIds 必须为数组"

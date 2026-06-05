@@ -68,6 +68,22 @@ class UserBadge(BaseModel):
         return f"<UserBadge user:{self.user_id} badge:{self.badge_code} level:{self.level}>"
 
 
+class UserBadgeNotification(BaseModel):
+    __tablename__ = "user_badge_notifications"
+
+    user_id = db.Column(db.String(64), db.ForeignKey("users.id"), nullable=False, index=True)
+    badge_code = db.Column(db.String(64), db.ForeignKey("badge_definitions.code"), nullable=False, index=True)
+    level = db.Column(db.Integer, nullable=False)
+    change_type = db.Column(db.String(16), nullable=False, index=True)
+    read_at = db.Column(db.DateTime, nullable=True, index=True)
+
+    user = db.relationship("User", back_populates="badge_notifications")
+    badge = db.relationship("BadgeDefinition")
+
+    def __repr__(self):
+        return f"<UserBadgeNotification user:{self.user_id} badge:{self.badge_code} type:{self.change_type}>"
+
+
 class UserLoginDay(BaseModel):
     __tablename__ = "user_login_days"
     __table_args__ = (

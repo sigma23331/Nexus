@@ -31,6 +31,9 @@ class FakeColumn:
     def in_(self, values):
         return ("in", tuple(values))
 
+    def asc(self):
+        return ("asc", self)
+
 
 class FakeUserBadgeQuery:
     def __init__(self, rows):
@@ -71,6 +74,38 @@ class FakeUserBadge:
         self.target = target
         self.unlocked_at = unlocked_at
         self.last_evaluated_at = last_evaluated_at
+
+
+class FakeNotificationQuery:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def filter_by(self, **_kwargs):
+        return self
+
+    def filter(self, *_args):
+        return self
+
+    def order_by(self, *_args):
+        return self
+
+    def all(self):
+        return list(self.rows)
+
+
+class FakeNotification:
+    id = FakeColumn()
+    created_at = FakeColumn()
+    query = FakeNotificationQuery([])
+
+    def __init__(self, user_id, badge_code, level, change_type):
+        self.id = f"n-{badge_code}-{level}"
+        self.user_id = user_id
+        self.badge_code = badge_code
+        self.level = level
+        self.change_type = change_type
+        self.created_at = None
+        self.read_at = None
 
 
 def _definition(code="share_station", metric_key="plaza_card_count"):
@@ -193,6 +228,7 @@ def test_evaluate_user_badges_unlocks_historical_progress_at_highest_level(monke
     monkeypatch.setattr(badge_service, "_active_definitions", fake_active_definitions)
     monkeypatch.setattr(badge_service, "collect_metrics", fake_collect_metrics)
     monkeypatch.setattr(badge_service, "UserBadge", FakeUserBadge)
+    monkeypatch.setattr(badge_service, "UserBadgeNotification", FakeNotification)
     monkeypatch.setattr(badge_service.db, "session", session)
 
     result = badge_service.evaluate_user_badges(user_id="u1", trigger="plaza_card_created")
@@ -201,6 +237,8 @@ def test_evaluate_user_badges_unlocks_historical_progress_at_highest_level(monke
     assert session.added[0].badge_code == "share_station"
     assert session.added[0].level == 4
     assert session.added[0].current_progress == 250
+    assert session.added[1].badge_code == "share_station"
+    assert session.added[1].change_type == "unlock"
     assert result["newUnlocks"][0]["level"] == 4
     assert result["newUnlocks"][0]["target"] == 200
     assert result["upgrades"] == []
@@ -231,6 +269,44 @@ def test_evaluate_user_badges_never_downgrades_existing_level(monkeypatch):
     assert existing.target == 200
     assert result == {"newUnlocks": [], "upgrades": []}
     assert session.committed is True
+
+
+def test_mark_changes_read_updates_unread_rows(monkeypatch):
+    session = FakeSession()
+    rows = [
+        SimpleNamespace(id="n1", read_at=None),
+        SimpleNamespace(id="n2", read_at=None),
+    ]
+    FakeNotification.query = FakeNotificationQuery(rows)
+    monkeypatch.setattr(badge_service, "UserBadgeNotification", FakeNotification)
+    monkeypatch.setattr(badge_service.db, "session", session)
+
+    result = badge_service.mark_changes_read("u1", change_ids=["n1"])
+
+    assert result == {"updated": 2}
+    assert rows[0].read_at is not None
+    assert rows[1].read_at is not None
+    assert session.committed is True
+
+
+def test_list_unread_changes_formats_badge_notification(monkeypatch):
+    row = SimpleNamespace(
+        id="n1",
+        badge_code="share_station",
+        level=1,
+        change_type="unlock",
+        created_at=None,
+    )
+    FakeNotification.query = FakeNotificationQuery([row])
+    monkeypatch.setattr(badge_service, "UserBadgeNotification", FakeNotification)
+    monkeypatch.setattr(badge_service, "_active_definitions", lambda badge_codes=None: [_definition()])
+
+    result = badge_service.list_unread_changes("u1")
+
+    assert result["total"] == 1
+    assert result["list"][0]["id"] == "n1"
+    assert result["list"][0]["badgeName"] == "share_station"
+    assert result["list"][0]["changeType"] == "unlock"
 
 
 def test_evaluate_user_badges_sets_target_from_upgraded_level(monkeypatch):

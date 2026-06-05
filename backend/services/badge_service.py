@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from extensions import db
 from models.answer import AnswerRecord
 from models.association import Favorite, Like
-from models.badge import BadgeDefinition, UserBadge, UserLoginDay
+from models.badge import BadgeDefinition, UserBadge, UserBadgeNotification, UserLoginDay
 from models.diary import DiaryEntry
 from models.fortune import FortuneRecord
 from models.plaza import PlazaCard
@@ -154,8 +154,10 @@ def evaluate_user_badges(user_id, trigger=None):
             payload = _format_user_badge(definition, row)
             if previous_level <= 0:
                 new_unlocks.append(payload)
+                _create_badge_notification(user_id, definition["code"], result["level"], "unlock")
             else:
                 upgrades.append(payload)
+                _create_badge_notification(user_id, definition["code"], result["level"], "upgrade")
 
     db.session.commit()
     return {"newUnlocks": new_unlocks, "upgrades": upgrades}
@@ -171,6 +173,48 @@ def list_user_badges(user_id):
         "totalCount": len(items),
         "list": items,
     }
+
+
+def list_unread_changes(user_id):
+    notifications = (
+        UserBadgeNotification.query.filter_by(user_id=user_id, read_at=None)
+        .order_by(UserBadgeNotification.created_at.asc(), UserBadgeNotification.id.asc())
+        .all()
+    )
+    if not notifications:
+        return {"total": 0, "list": []}
+
+    definitions = _active_definitions({item.badge_code for item in notifications})
+    definition_by_code = {item["code"]: item for item in definitions}
+    return {
+        "total": len(notifications),
+        "list": [
+            _format_badge_notification(item, definition_by_code.get(item.badge_code))
+            for item in notifications
+        ],
+    }
+
+
+def mark_changes_read(user_id, change_ids=None):
+    query = UserBadgeNotification.query.filter_by(user_id=user_id, read_at=None)
+    if change_ids is not None:
+        if not isinstance(change_ids, list):
+            raise ValueError("changeIds 必须为数组")
+        normalized_ids = []
+        for item in change_ids:
+            if not isinstance(item, str) or not item.strip():
+                raise ValueError("changeIds 必须包含非空字符串")
+            normalized_ids.append(item.strip())
+        if not normalized_ids:
+            return {"updated": 0}
+        query = query.filter(UserBadgeNotification.id.in_(normalized_ids))
+
+    now = datetime.utcnow()
+    rows = query.all()
+    for row in rows:
+        row.read_at = now
+    db.session.commit()
+    return {"updated": len(rows)}
 
 
 def collect_metrics(user_id, metric_keys=None):
@@ -311,6 +355,17 @@ def _upsert_user_badge(user_id, definition, result, existing=None):
     return row
 
 
+def _create_badge_notification(user_id, badge_code, level, change_type):
+    db.session.add(
+        UserBadgeNotification(
+            user_id=user_id,
+            badge_code=badge_code,
+            level=level,
+            change_type=change_type,
+        )
+    )
+
+
 def _public_definition_payload(definition):
     return {
         "code": definition["code"],
@@ -331,6 +386,27 @@ def _public_definition_payload(definition):
             }
             for level in definition["levels"]
         ],
+    }
+
+
+def _format_badge_notification(notification, definition=None):
+    level_payload = None
+    if definition:
+        level_payload = next(
+            (item for item in definition["levels"] if item["level"] == notification.level),
+            None,
+        )
+    return {
+        "id": notification.id,
+        "badgeCode": notification.badge_code,
+        "badgeName": definition["name"] if definition else notification.badge_code,
+        "category": definition["category"] if definition else None,
+        "level": notification.level,
+        "title": level_payload["title"] if level_payload else None,
+        "changeType": notification.change_type,
+        "iconUrl": definition["icon_url"] if definition else None,
+        "grayIconUrl": definition["gray_icon_url"] if definition else None,
+        "createdAt": notification.created_at.isoformat() + "Z" if notification.created_at else None,
     }
 
 

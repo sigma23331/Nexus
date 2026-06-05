@@ -1,5 +1,6 @@
 from flask import Blueprint, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from werkzeug.exceptions import BadRequest
 
 from services import badge_service
 from utils.api_response import fail, success
@@ -45,7 +46,18 @@ def get_badge_changes():
 @jwt_required()
 def mark_badge_changes_read():
     user_id = get_jwt_identity()
-    data = request.get_json(silent=True) or {}
+    raw_body = request.get_data(cache=True)
+    if not raw_body:
+        if request.is_json:
+            return fail("请求体必须是有效的JSON对象", code=400)
+        data = {}
+    elif not request.is_json:
+        return fail("请求体必须是有效的JSON对象", code=400)
+    else:
+        try:
+            data = request.get_json()
+        except BadRequest:
+            return fail("请求体必须是有效的JSON对象", code=400)
     if not isinstance(data, dict):
         return fail("请求体必须是有效的JSON对象", code=400)
     try:

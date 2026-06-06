@@ -125,7 +125,7 @@
           v-if="hasMore && selectedMonth === ''"
           @click="loadMore"
           :disabled="loadingMore"
-          class="px-6 py-2 text-sm text-purple-600 bg-purple-50 rounded-full hover:bg-purple-100 transition disabled:opacity-50"
+          class="rounded-full px-6 py-2 text-sm font-semibold text-purple-500 transitiondisabled:opacity-50"
         >
           {{ loadingMore ? '加载中...' : '加载更多' }}
         </button>

@@ -28,15 +28,23 @@ def _decode_cursor(cursor):
         raise ValueError("cursor 无效")
 
 
-def _card_owner(user):
+def _equipped_badges_by_user_ids(user_ids):
+    from services import badge_service
+
+    return badge_service.list_public_equipped_badges_by_user_ids(user_ids)
+
+
+def _card_owner(user, badges_by_user_id=None):
+    badges_by_user_id = badges_by_user_id or {}
     return {
         "uid": user.id,
         "nickname": user.nickname,
         "avatar": user.avatar or "",
+        "badges": badges_by_user_id.get(user.id, []),
     }
 
 
-def _format_card(card, current_user_id, liked_card_ids=None):
+def _format_card(card, current_user_id, liked_card_ids=None, badges_by_user_id=None):
     if liked_card_ids is not None:
         is_liked = card.id in liked_card_ids
     else:
@@ -44,7 +52,7 @@ def _format_card(card, current_user_id, liked_card_ids=None):
     return {
         "cardId": card.id,
         "type": card.type.value,
-        "owner": _card_owner(card.user),
+        "owner": _card_owner(card.user, badges_by_user_id),
         "snapshotUrl": card.snapshot_url,
         "content": card.content,
         "stats": {
@@ -115,9 +123,13 @@ def list_cards(user_id, tab="latest", cursor=None, limit=10):
             Like.user_id == user_id, Like.card_id.in_(card_ids)
         ).all()
     } if card_ids else set()
+    badges_by_user_id = _equipped_badges_by_user_ids([
+        getattr(card, "user_id", card.user.id)
+        for card in current_rows
+    ])
 
     return {
-        "list": [_format_card(card, user_id, liked_ids) for card in current_rows],
+        "list": [_format_card(card, user_id, liked_ids, badges_by_user_id) for card in current_rows],
         "nextCursor": next_cursor,
         "hasMore": has_more,
     }
@@ -177,7 +189,8 @@ def create_card(user_id, payload):
         raise LookupError("用户不存在")
     card.user = user
 
-    return _format_card(card, user_id)
+    badges_by_user_id = _equipped_badges_by_user_ids([user_id])
+    return _format_card(card, user_id, badges_by_user_id=badges_by_user_id)
 
 
 def toggle_like(user_id, card_id, action):

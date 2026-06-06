@@ -27,22 +27,30 @@ def _decode_cursor(cursor):
         raise ValueError("cursor 无效") from exc
 
 
-def _comment_owner(user):
+def _equipped_badges_by_user_ids(user_ids):
+    from services import badge_service
+
+    return badge_service.list_public_equipped_badges_by_user_ids(user_ids)
+
+
+def _comment_owner(user, badges_by_user_id=None):
+    badges_by_user_id = badges_by_user_id or {}
     return {
         "uid": user.id,
         "nickname": user.nickname,
         "avatar": user.avatar or "",
+        "badges": badges_by_user_id.get(user.id, []),
     }
 
 
-def _format_comment(comment, current_user_id, reply_preview=None, reply_count=None):
+def _format_comment(comment, current_user_id, reply_preview=None, reply_count=None, badges_by_user_id=None):
     reply_to_user = None
     if comment.reply_to_user:
-        reply_to_user = _comment_owner(comment.reply_to_user)
+        reply_to_user = _comment_owner(comment.reply_to_user, badges_by_user_id)
     return {
         "commentId": comment.id,
         "cardId": comment.card_id,
-        "owner": _comment_owner(comment.user),
+        "owner": _comment_owner(comment.user, badges_by_user_id),
         "content": comment.content,
         "parentId": comment.parent_id,
         "replyToUser": reply_to_user,
@@ -99,18 +107,33 @@ def list_comments(current_user_id, card_id, cursor=None, limit=20):
     top_ids = [item.id for item in current_rows]
     reply_counts = {}
     reply_preview_map = {item.id: [] for item in current_rows}
+    reply_rows = []
     if top_ids:
-        replies = (
+        reply_rows = (
             _visible_comment_query()
             .filter(PlazaComment.parent_id.in_(top_ids))
             .order_by(PlazaComment.created_at.asc(), PlazaComment.id.asc())
             .all()
         )
-        for reply in replies:
-            reply_counts[reply.parent_id] = reply_counts.get(reply.parent_id, 0) + 1
-            preview = reply_preview_map.setdefault(reply.parent_id, [])
-            if len(preview) < 2:
-                preview.append(_format_comment(reply, current_user_id, reply_preview=[], reply_count=0))
+    user_ids = [
+        getattr(comment, "user_id", comment.user.id)
+        for comment in [*current_rows, *reply_rows]
+    ]
+    badges_by_user_id = _equipped_badges_by_user_ids(user_ids)
+
+    for reply in reply_rows:
+        reply_counts[reply.parent_id] = reply_counts.get(reply.parent_id, 0) + 1
+        preview = reply_preview_map.setdefault(reply.parent_id, [])
+        if len(preview) < 2:
+            preview.append(
+                _format_comment(
+                    reply,
+                    current_user_id,
+                    reply_preview=[],
+                    reply_count=0,
+                    badges_by_user_id=badges_by_user_id,
+                )
+            )
 
     return {
         "list": [
@@ -119,6 +142,7 @@ def list_comments(current_user_id, card_id, cursor=None, limit=20):
                 current_user_id,
                 reply_preview=reply_preview_map.get(comment.id, []),
                 reply_count=reply_counts.get(comment.id, 0),
+                badges_by_user_id=badges_by_user_id,
             )
             for comment in current_rows
         ],
@@ -157,9 +181,22 @@ def list_replies(current_user_id, comment_id, cursor=None, limit=20):
     if has_more and current_rows:
         last = current_rows[-1]
         next_cursor = _encode_cursor(last.created_at, last.id)
+    badges_by_user_id = _equipped_badges_by_user_ids([
+        getattr(comment, "user_id", comment.user.id)
+        for comment in current_rows
+    ])
 
     return {
-        "list": [_format_comment(comment, current_user_id, reply_preview=[], reply_count=0) for comment in current_rows],
+        "list": [
+            _format_comment(
+                comment,
+                current_user_id,
+                reply_preview=[],
+                reply_count=0,
+                badges_by_user_id=badges_by_user_id,
+            )
+            for comment in current_rows
+        ],
         "nextCursor": next_cursor,
         "hasMore": has_more,
     }
@@ -223,7 +260,11 @@ def create_comment(user_id, card_id, content, parent_id=None):
     if comment.reply_to_user_id and not comment.reply_to_user:
         comment.reply_to_user = User.query.filter_by(id=comment.reply_to_user_id).first()
 
-    return _format_comment(comment, user_id, reply_preview=[], reply_count=0)
+    user_ids = [user_id]
+    if comment.reply_to_user_id:
+        user_ids.append(comment.reply_to_user_id)
+    badges_by_user_id = _equipped_badges_by_user_ids(user_ids)
+    return _format_comment(comment, user_id, reply_preview=[], reply_count=0, badges_by_user_id=badges_by_user_id)
 
 
 def delete_comment(user_id, comment_id):

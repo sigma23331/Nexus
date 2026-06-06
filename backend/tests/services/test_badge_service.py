@@ -139,6 +139,22 @@ class FakeEquippedBadge:
         self.slot_order = slot_order
 
 
+class FakeBadgeDefinitionQuery:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def filter(self, *_args):
+        return self
+
+    def all(self):
+        return list(self.rows)
+
+
+class FakeBadgeDefinition:
+    code = FakeColumn()
+    query = FakeBadgeDefinitionQuery([])
+
+
 def _definition(code="share_station", metric_key="plaza_card_count"):
     return {
         "code": code,
@@ -352,7 +368,9 @@ def test_update_equipped_badges_rejects_more_than_three_badges():
 def test_update_equipped_badges_rejects_locked_badge(monkeypatch):
     monkeypatch.setattr(badge_service, "evaluate_user_badges", lambda user_id: None)
     monkeypatch.setattr(badge_service, "_active_definitions", lambda badge_codes=None: [_definition("share_station")])
+    monkeypatch.setattr(badge_service, "BadgeDefinition", FakeBadgeDefinition)
     monkeypatch.setattr(badge_service, "UserBadge", FakeUserBadge)
+    FakeBadgeDefinition.query = FakeBadgeDefinitionQuery([])
     FakeUserBadge.query = FakeUserBadgeQuery([])
 
     try:
@@ -363,10 +381,38 @@ def test_update_equipped_badges_rejects_locked_badge(monkeypatch):
         raise AssertionError("update_equipped_badges should reject locked badges")
 
 
+def test_update_equipped_badges_rejects_disabled_database_badge_before_catalog_fallback(monkeypatch):
+    monkeypatch.setattr(badge_service, "evaluate_user_badges", lambda user_id: None)
+    monkeypatch.setattr(badge_service, "_active_definitions", lambda badge_codes=None: [_definition("share_station")])
+    monkeypatch.setattr(badge_service, "BadgeDefinition", FakeBadgeDefinition)
+    monkeypatch.setattr(badge_service, "UserBadge", FakeUserBadge)
+    FakeBadgeDefinition.query = FakeBadgeDefinitionQuery([SimpleNamespace(code="share_station", enabled=False)])
+    FakeUserBadge.query = FakeUserBadgeQuery(
+        [
+            SimpleNamespace(
+                user_id="u1",
+                badge_code="share_station",
+                level=3,
+                current_progress=75,
+                target=200,
+                unlocked_at=None,
+            )
+        ]
+    )
+
+    try:
+        badge_service.update_equipped_badges("u1", ["share_station"])
+    except ValueError as err:
+        assert str(err) == "徽章不存在或不可用"
+    else:
+        raise AssertionError("update_equipped_badges should reject disabled database badges")
+
+
 def test_update_equipped_badges_replaces_rows_and_returns_current_levels(monkeypatch):
     session = FakeSession()
     existing_equipped = [SimpleNamespace(user_id="u1", badge_code="old_badge", slot_order=1)]
     FakeEquippedBadge.query = FakeEquippedBadgeQuery(existing_equipped)
+    FakeBadgeDefinition.query = FakeBadgeDefinitionQuery([])
     FakeUserBadge.query = FakeUserBadgeQuery(
         [
             SimpleNamespace(
@@ -382,6 +428,7 @@ def test_update_equipped_badges_replaces_rows_and_returns_current_levels(monkeyp
 
     monkeypatch.setattr(badge_service, "evaluate_user_badges", lambda user_id: None)
     monkeypatch.setattr(badge_service, "_active_definitions", lambda badge_codes=None: [_definition("share_station")])
+    monkeypatch.setattr(badge_service, "BadgeDefinition", FakeBadgeDefinition)
     monkeypatch.setattr(badge_service, "UserBadge", FakeUserBadge)
     monkeypatch.setattr(badge_service, "UserEquippedBadge", FakeEquippedBadge)
     monkeypatch.setattr(badge_service.db, "session", session)

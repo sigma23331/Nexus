@@ -264,9 +264,8 @@ def _normalize_equipped_badge_codes(badge_codes):
 
 
 def _validate_equipped_badges_unlocked(user_id, badge_codes):
-    definitions = _active_definitions(set(badge_codes))
-    definition_codes = {item["code"] for item in definitions}
-    missing_codes = [badge_code for badge_code in badge_codes if badge_code not in definition_codes]
+    available_codes = _available_badge_codes_for_equipping(badge_codes)
+    missing_codes = [badge_code for badge_code in badge_codes if badge_code not in available_codes]
     if missing_codes:
         raise ValueError("徽章不存在或不可用")
 
@@ -284,6 +283,19 @@ def _validate_equipped_badges_unlocked(user_id, badge_codes):
     ]
     if locked_codes:
         raise ValueError("只能佩戴已获取的徽章")
+
+
+def _available_badge_codes_for_equipping(badge_codes):
+    db_rows = BadgeDefinition.query.filter(BadgeDefinition.code.in_(badge_codes)).all()
+    db_codes = {row.code for row in db_rows}
+    available_codes = {row.code for row in db_rows if row.enabled}
+
+    fallback_codes = {
+        item["code"]
+        for item in _fallback_definitions()
+        if item["code"] in badge_codes and item["code"] not in db_codes
+    }
+    return available_codes | fallback_codes
 
 
 def _equipped_badges_payload(user_id, equipped_rows):

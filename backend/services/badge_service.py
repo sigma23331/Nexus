@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from extensions import db
 from models.answer import AnswerRecord
 from models.association import Favorite, Like
-from models.badge import BadgeDefinition, UserBadge, UserBadgeNotification, UserLoginDay
+from models.badge import BadgeDefinition, UserBadge, UserEquippedBadge, UserBadgeNotification, UserLoginDay
 from models.diary import DiaryEntry
 from models.fortune import FortuneRecord
 from models.plaza import PlazaCard
@@ -15,6 +15,7 @@ from services.badge_catalog import BADGE_CATALOG
 
 
 LUCKY_SCORE_THRESHOLD = 90
+MAX_EQUIPPED_BADGES = 3
 
 TRIGGER_BADGE_CODES = {
     "fortune_created": {"first_fortune", "lucky_streak", "fortune_companion"},
@@ -175,6 +176,32 @@ def list_user_badges(user_id):
     }
 
 
+def list_equipped_badges(user_id):
+    evaluate_user_badges(user_id=user_id)
+    rows = (
+        UserEquippedBadge.query.filter_by(user_id=user_id)
+        .order_by(UserEquippedBadge.slot_order.asc())
+        .all()
+    )
+    return _equipped_badges_payload(user_id=user_id, equipped_rows=rows)
+
+
+def update_equipped_badges(user_id, badge_codes):
+    normalized_codes = _normalize_equipped_badge_codes(badge_codes)
+    evaluate_user_badges(user_id=user_id)
+    if normalized_codes:
+        _validate_equipped_badges_unlocked(user_id=user_id, badge_codes=normalized_codes)
+
+    UserEquippedBadge.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    rows = []
+    for index, badge_code in enumerate(normalized_codes, start=1):
+        row = UserEquippedBadge(user_id=user_id, badge_code=badge_code, slot_order=index)
+        rows.append(row)
+        db.session.add(row)
+    db.session.commit()
+    return _equipped_badges_payload(user_id=user_id, equipped_rows=rows)
+
+
 def list_unread_changes(user_id):
     notifications = (
         UserBadgeNotification.query.filter_by(user_id=user_id, read_at=None)
@@ -215,6 +242,76 @@ def mark_changes_read(user_id, change_ids=None):
         row.read_at = now
     db.session.commit()
     return {"updated": len(rows)}
+
+
+def _normalize_equipped_badge_codes(badge_codes):
+    if not isinstance(badge_codes, list):
+        raise ValueError("badgeCodes 必须为数组")
+    if len(badge_codes) > MAX_EQUIPPED_BADGES:
+        raise ValueError(f"最多只能佩戴 {MAX_EQUIPPED_BADGES} 个徽章")
+
+    normalized_codes = []
+    seen = set()
+    for item in badge_codes:
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError("badgeCodes 必须包含非空字符串")
+        badge_code = item.strip()
+        if badge_code in seen:
+            raise ValueError("badgeCodes 不能包含重复徽章")
+        seen.add(badge_code)
+        normalized_codes.append(badge_code)
+    return normalized_codes
+
+
+def _validate_equipped_badges_unlocked(user_id, badge_codes):
+    definitions = _active_definitions(set(badge_codes))
+    definition_codes = {item["code"] for item in definitions}
+    missing_codes = [badge_code for badge_code in badge_codes if badge_code not in definition_codes]
+    if missing_codes:
+        raise ValueError("徽章不存在或不可用")
+
+    user_badges = {
+        row.badge_code: row
+        for row in UserBadge.query.filter(
+            UserBadge.user_id == user_id,
+            UserBadge.badge_code.in_(badge_codes),
+        ).all()
+    }
+    locked_codes = [
+        badge_code
+        for badge_code in badge_codes
+        if not user_badges.get(badge_code) or user_badges[badge_code].level <= 0
+    ]
+    if locked_codes:
+        raise ValueError("只能佩戴已获取的徽章")
+
+
+def _equipped_badges_payload(user_id, equipped_rows):
+    rows = sorted(equipped_rows, key=lambda item: item.slot_order)
+    if not rows:
+        return {"maxEquipped": MAX_EQUIPPED_BADGES, "list": []}
+
+    badge_codes = [row.badge_code for row in rows]
+    definitions = _active_definitions(set(badge_codes))
+    definitions_by_code = {item["code"]: item for item in definitions}
+    user_badges = {
+        row.badge_code: row
+        for row in UserBadge.query.filter(
+            UserBadge.user_id == user_id,
+            UserBadge.badge_code.in_(badge_codes),
+        ).all()
+    }
+
+    items = []
+    for row in rows:
+        definition = definitions_by_code.get(row.badge_code)
+        user_badge = user_badges.get(row.badge_code)
+        if not definition or not user_badge or user_badge.level <= 0:
+            continue
+        payload = _format_user_badge(definition, user_badge)
+        payload["slotOrder"] = row.slot_order
+        items.append(payload)
+    return {"maxEquipped": MAX_EQUIPPED_BADGES, "list": items}
 
 
 def collect_metrics(user_id, metric_keys=None):

@@ -4,6 +4,10 @@ from .base import db, BaseModel
 import enum
 from sqlalchemy.dialects.postgresql import ARRAY
 
+
+PLAZA_CARD_CONTENT_MAX_LENGTH = 1000
+
+
 class CardType(enum.Enum):
     FORTUNE = 'fortune'
     ANSWER = 'answer'
@@ -21,7 +25,7 @@ class PlazaCard(BaseModel):
     user_id = db.Column(db.String(64), db.ForeignKey('users.id'), nullable=False, index=True)
     type = db.Column(db.Enum(CardType), nullable=False)
     snapshot_url = db.Column(db.String(500), nullable=False)
-    content = db.Column(db.String(100), nullable=True)
+    content = db.Column(db.String(PLAZA_CARD_CONTENT_MAX_LENGTH), nullable=True)
     tags = db.Column(ARRAY(db.String(10)), nullable=True)
     likes_count = db.Column(db.Integer, default=0, nullable=False)
     comments_count = db.Column(db.Integer, default=0, nullable=False)

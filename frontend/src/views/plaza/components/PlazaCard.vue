@@ -16,7 +16,25 @@
           />
         </div>
         <div>
-          <p class="text-sm font-semibold text-slate-800">{{ card.owner.nickname }}</p>
+          <div class="flex items-center gap-1 flex-wrap">
+            <p class="text-sm font-semibold text-slate-800">{{ card.owner.nickname }}</p>
+            <!-- 已佩戴徽章展示区域 -->
+            <div class="flex items-center gap-0.5">
+              <div v-for="badge in displayBadges" :key="badge.code" class="group relative">
+                <img
+                  :src="getBadgeIconUrl(badge.code, false)"
+                  :alt="badge.name"
+                  class="h-5 w-5 rounded-full object-contain transition-transform hover:scale-110"
+                  @error="handleBadgeImageError"
+                />
+                <div
+                  class="absolute top-full left-1/2 mt-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-white group-hover:block z-10"
+                >
+                  {{ badge.name }} Lv.{{ badge.level }}
+                </div>
+              </div>
+            </div>
+          </div>
           <p class="text-xs text-slate-400">{{ formatTime(card.createdAt) }}</p>
         </div>
       </div>
@@ -68,7 +86,7 @@
         <div class="text-center">
           <p class="text-sm font-semibold text-amber-700">心运岛 · 今日签文</p>
         </div>
-        <!-- 运势标题 + 分数（参考 TodayFortuneContent） -->
+        <!-- 运势标题 + 分数 -->
         <div class="flex justify-center mt-2">
           <div class="relative inline-block">
             <span
@@ -82,15 +100,15 @@
           </div>
         </div>
 
-        <!-- 主签文（居中，加粗） -->
+        <!-- 主签文 -->
         <div class="mt-4 text-center">
           <p class="text-lg font-bold text-slate-900">{{ fortuneMainContent }}</p>
         </div>
 
-        <!-- 副签文（居中） -->
+        <!-- 副签文 -->
         <div class="mt-2 text-center text-xs text-slate-500">{{ fortuneSubContent }}</div>
 
-        <!-- 爱情、事业、健康、财富四项（网格布局） -->
+        <!-- 爱情、事业、健康、财富四项 -->
         <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
           <div
             class="rounded-xl border border-orange-200 bg-amber-50 px-3 py-2 flex justify-between items-start gap-2"
@@ -120,9 +138,8 @@
           </div>
         </div>
 
-        <!-- 宜忌：左右两列，每个子项独立框，带“宜：”/“忌：”前缀 -->
+        <!-- 宜忌 -->
         <div class="mt-4 grid grid-cols-2 gap-3">
-          <!-- 左列：宜 -->
           <div class="space-y-1.5">
             <div
               v-for="(item, idx) in fortuneYiList"
@@ -138,7 +155,6 @@
               宜：--
             </div>
           </div>
-          <!-- 右列：忌 -->
           <div class="space-y-1.5">
             <div
               v-for="(item, idx) in fortuneJiList"
@@ -159,7 +175,7 @@
         <div class="mt-2 text-right text-[12px] text-amber-600/80">{{ dateText }}</div>
       </div>
 
-      <!-- 答案卡片（样式与运势卡片统一） -->
+      <!-- 答案卡片 -->
       <div
         v-else
         class="answer-card rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-4"
@@ -214,6 +230,8 @@
 import { ref, computed, watch } from 'vue'
 import PlazaCommentPanel from './PlazaCommentPanel.vue'
 import { getValidAvatar } from '@/utils/avatar'
+import { getBadgeIconUrl, BADGE_SORT_MAP } from '@/utils/badgeUtils'
+import type { EquippedBadge } from '@/api/badge'
 
 export interface PlazaCardData {
   cardId: string
@@ -222,6 +240,7 @@ export interface PlazaCardData {
     uid: string
     nickname: string
     avatar: string
+    badges?: EquippedBadge[]
   }
   snapshotUrl: string
   content?: string
@@ -247,6 +266,21 @@ const emit = defineEmits<{
 const showMenu = ref(false)
 const showComments = ref(false)
 const commentsCount = ref(props.card.stats.comments ?? 0)
+
+// 展示徽章
+const displayBadges = computed(() => {
+  const badges = props.card.owner.badges || []
+  return [...badges].sort((a, b) => {
+    // 等级降序
+    if (a.level !== b.level) {
+      return b.level - a.level
+    }
+    // 等级相同：按徽章序号升序
+    const sortA = BADGE_SORT_MAP[a.code] ?? 999
+    const sortB = BADGE_SORT_MAP[b.code] ?? 999
+    return sortA - sortB
+  })
+})
 
 watch(
   () => props.card.stats.comments,
@@ -293,6 +327,12 @@ const handleAvatarError = (e: Event) => {
   }
 }
 
+const handleBadgeImageError = (e: Event) => {
+  const img = e.target as HTMLImageElement
+  img.src =
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2394A3B8"%3E%3Cpath d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/%3E%3C/svg%3E'
+}
+
 const hasValidImage = computed(() => {
   const url = props.card.snapshotUrl
   if (!url || !url.startsWith('http')) return false
@@ -300,7 +340,6 @@ const hasValidImage = computed(() => {
   return true
 })
 
-// 分享文案提取
 const shareMessage = computed(() => {
   const content = props.card.content
   if (!content) return ''
@@ -311,7 +350,6 @@ const shareMessage = computed(() => {
   return ''
 })
 
-// 答案卡片内部内容（移除分享文案后）
 const cardInnerContent = computed(() => {
   let content = props.card.content || ''
   const match = content.match(/^✨\s*.+?\n\n/s)
@@ -325,7 +363,6 @@ const dateText = computed(() => {
   return formatTime(props.card.createdAt).slice(0, 10)
 })
 
-// 运势卡片完整文本（剔除分享文案）
 const fullContent = computed(() => props.card.content || '')
 const getCleanedContent = () => {
   let start = 0
@@ -364,7 +401,6 @@ const fortuneSubContent = computed(() => {
   return linesArr[2] || ''
 })
 
-// 解析爱情事业等
 const extractField = (fieldName: string): string => {
   const rest = getCleanedContent()
   const lines = rest.split('\n')
@@ -381,7 +417,6 @@ const fortuneCareer = computed(() => extractField('事业'))
 const fortuneHealth = computed(() => extractField('健康'))
 const fortuneWealth = computed(() => extractField('财富'))
 
-// 宜忌字符串
 const fortuneYi = computed(() => {
   const rest = getCleanedContent()
   const yiLine = rest.split('\n').find((l) => l.startsWith('宜：')) || ''
@@ -394,10 +429,8 @@ const fortuneJi = computed(() => {
   return jiLine.replace('忌：', '')
 })
 
-// 拆分宜忌字符串为数组
 const splitYiJi = (str: string): string[] => {
   if (!str || str === '--') return []
-  // 按中文顿号、逗号、空格分割
   return str.split(/[、，, ]+/).filter((s) => s.trim().length > 0)
 }
 
@@ -410,7 +443,6 @@ const fortuneJiList = computed(() => splitYiJi(fortuneJi.value))
   font-family: 'KaiTi', '楷体', cursive;
 }
 
-/* 运势卡片与答案卡片统一风格 */
 .fortune-card,
 .answer-card {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);

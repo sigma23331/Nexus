@@ -61,10 +61,10 @@
       <div v-else class="w-8"></div>
     </div>
 
-    <!-- 分割线：淡淡的一条线 -->
+    <!-- 分割线 -->
     <div class="border-t border-slate-300 mx-4 my-2"></div>
 
-    <!-- 分享文案（独立于卡片外部） -->
+    <!-- 分享文案 -->
     <div v-if="shareMessage" class="px-2 pb-2">
       <div class="bg-white/80 rounded-lg p-3 text-sm text-slate-600 shadow-sm">
         {{ shareMessage }}
@@ -271,11 +271,9 @@ const commentsCount = ref(props.card.stats.comments ?? 0)
 const displayBadges = computed(() => {
   const badges = props.card.owner.badges || []
   return [...badges].sort((a, b) => {
-    // 等级降序
     if (a.level !== b.level) {
       return b.level - a.level
     }
-    // 等级相同：按徽章序号升序
     const sortA = BADGE_SORT_MAP[a.code] ?? 999
     const sortB = BADGE_SORT_MAP[b.code] ?? 999
     return sortA - sortB
@@ -364,6 +362,10 @@ const dateText = computed(() => {
 })
 
 const fullContent = computed(() => props.card.content || '')
+
+/**
+ * 获取纯净的卡片内容（移除分享文案部分）
+ */
 const getCleanedContent = () => {
   let start = 0
   if (shareMessage.value) {
@@ -373,41 +375,64 @@ const getCleanedContent = () => {
   return fullContent.value.slice(start).trim()
 }
 
+// ========== 运势卡片内容解析（超强正则，兼容多种格式） ==========
 const fortuneTitle = computed(() => {
   const rest = getCleanedContent()
+  // 匹配类似 "上上签（85分）" 或 "大吉" 后跟可能的分数字段
+  const titleMatch = rest.match(/^([^（\n]+)(?:（(\d+)分）)?/)
+  if (titleMatch) {
+    return titleMatch[1].trim() || '--'
+  }
   const firstLine = rest.split('\n')[0] || ''
-  const cleaned = firstLine
-    .replace(/✨/, '')
-    .replace(/[（(][^）)]*[）)]/g, '')
-    .trim()
-  return cleaned
+  return (
+    firstLine
+      .replace(/✨/, '')
+      .replace(/[（(][^）)]*[）)]/g, '')
+      .trim() || '--'
+  )
 })
 
 const fortuneScore = computed(() => {
   const rest = getCleanedContent()
-  const match = rest.match(/(\d+)\s*分/)
-  return match ? match[1] : '0'
+  // 优先匹配括号内的分数
+  const scoreMatch = rest.match(/（(\d+)分）/)
+  if (scoreMatch) return scoreMatch[1]
+  // 其次匹配 "xx分"
+  const plainMatch = rest.match(/(\d+)\s*分/)
+  return plainMatch ? plainMatch[1] : '0'
 })
 
 const fortuneMainContent = computed(() => {
   const rest = getCleanedContent()
-  const linesArr = rest.split('\n')
-  return linesArr[1] || ''
+  const lines = rest.split('\n').filter((l) => l.trim().length > 0)
+  // 跳过第一行标题，取第二行作为主签文
+  return lines[1] || '--'
 })
 
 const fortuneSubContent = computed(() => {
   const rest = getCleanedContent()
-  const linesArr = rest.split('\n')
-  return linesArr[2] || ''
+  const lines = rest.split('\n').filter((l) => l.trim().length > 0)
+  return lines[2] || ''
 })
 
+/**
+ * 通用字段提取（爱情、事业、健康、财富）
+ * 支持中文冒号、英文冒号，支持前后空格，支持字段出现在任何位置（不依赖行首）
+ */
 const extractField = (fieldName: string): string => {
   const rest = getCleanedContent()
-  const lines = rest.split('\n')
-  for (const line of lines) {
-    if (line.startsWith(fieldName + '：') || line.startsWith(fieldName + ':')) {
-      return line.replace(/^(爱情|事业|健康|财富)[：:]/, '').trim()
+  // 正则：字段名后跟中英文冒号，捕获到行尾（或遇到下一个字段名/宜忌/换行）
+  // 更宽松：匹配到行尾或者下一个汉字字段名（如爱情、事业等）之前
+  const regex = new RegExp(`${fieldName}[：:]\\s*([^\\n]+)`, 'i')
+  const match = rest.match(regex)
+  if (match && match[1]) {
+    let value = match[1].trim()
+    // 如果提取到的值包含其他字段名（如“爱情：主动 事业：积极”），则只截取第一个字段的值
+    const nextFieldMatch = value.match(/[爱情事业健康财富][：:]/)
+    if (nextFieldMatch && nextFieldMatch.index) {
+      value = value.slice(0, nextFieldMatch.index).trim()
     }
+    return value || '--'
   }
   return '--'
 }
@@ -419,18 +444,19 @@ const fortuneWealth = computed(() => extractField('财富'))
 
 const fortuneYi = computed(() => {
   const rest = getCleanedContent()
-  const yiLine = rest.split('\n').find((l) => l.startsWith('宜：')) || ''
-  return yiLine.replace('宜：', '')
+  const match = rest.match(/宜[：:]\s*([^\n]+)/)
+  return match ? match[1].trim() : ''
 })
 
 const fortuneJi = computed(() => {
   const rest = getCleanedContent()
-  const jiLine = rest.split('\n').find((l) => l.startsWith('忌：')) || ''
-  return jiLine.replace('忌：', '')
+  const match = rest.match(/忌[：:]\s*([^\n]+)/)
+  return match ? match[1].trim() : ''
 })
 
 const splitYiJi = (str: string): string[] => {
   if (!str || str === '--') return []
+  // 支持中英文逗号、顿号、空格分割
   return str.split(/[、，, ]+/).filter((s) => s.trim().length > 0)
 }
 

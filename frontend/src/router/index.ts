@@ -98,6 +98,12 @@ const router = createRouter({
       component: () => import('@/views/profile/PrivacySettings.vue'),
       meta: { title: '隐私与权限', requiresAuth: true },
     },
+    {
+      path: '/profile/badges',
+      name: 'Badges',
+      component: () => import('@/views/profile/BadgesView.vue'),
+      meta: { title: '我的徽章', requiresAuth: true },
+    },
   ],
 })
 

@@ -186,6 +186,42 @@ def list_equipped_badges(user_id):
     return _equipped_badges_payload(user_id=user_id, equipped_rows=rows)
 
 
+def list_public_equipped_badges_by_user_ids(user_ids):
+    normalized_user_ids = list(dict.fromkeys([user_id for user_id in user_ids if user_id]))
+    result = {user_id: [] for user_id in normalized_user_ids}
+    if not normalized_user_ids:
+        return result
+
+    equipped_rows = (
+        UserEquippedBadge.query.filter(UserEquippedBadge.user_id.in_(normalized_user_ids))
+        .order_by(UserEquippedBadge.user_id.asc(), UserEquippedBadge.slot_order.asc())
+        .all()
+    )
+    if not equipped_rows:
+        return result
+
+    badge_codes = {row.badge_code for row in equipped_rows}
+    definitions = _active_definitions(badge_codes)
+    definitions_by_code = {item["code"]: item for item in definitions}
+    user_badges = {
+        (row.user_id, row.badge_code): row
+        for row in UserBadge.query.filter(
+            UserBadge.user_id.in_(normalized_user_ids),
+            UserBadge.badge_code.in_(badge_codes),
+        ).all()
+    }
+
+    for row in sorted(equipped_rows, key=lambda item: (item.user_id, item.slot_order)):
+        definition = definitions_by_code.get(row.badge_code)
+        user_badge = user_badges.get((row.user_id, row.badge_code))
+        if not definition or not user_badge or user_badge.level <= 0:
+            continue
+        payload = _format_user_badge(definition, user_badge)
+        payload["slotOrder"] = row.slot_order
+        result.setdefault(row.user_id, []).append(payload)
+    return result
+
+
 def update_equipped_badges(user_id, badge_codes):
     normalized_codes = _normalize_equipped_badge_codes(badge_codes)
     evaluate_user_badges(user_id=user_id)

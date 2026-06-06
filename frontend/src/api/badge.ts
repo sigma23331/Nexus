@@ -87,16 +87,16 @@ export interface BadgeChangesResponse {
 }
 
 export const getBadgeDefinitions = () =>
-  request.get<{ list: BadgeDefinition[] }>('/badge/definitions')
+  request.get<{ list: BadgeDefinition[] }>('/v1/badge/definitions')
 
-export const getMyBadges = () => request.get<MyBadgesResponse>('/badge/my')
+export const getMyBadges = () => request.get<MyBadgesResponse>('/v1/badge/my')
 
-export const getEquippedBadges = () => request.get<EquippedBadgesResponse>('/badge/equipped')
+export const getEquippedBadges = () => request.get<EquippedBadgesResponse>('/v1/badge/equipped')
 
 export const updateEquippedBadges = (badgeCodes: string[]) =>
-  request.put<EquippedBadgesResponse>('/badge/equipped', { badgeCodes })
+  request.put<EquippedBadgesResponse>('/v1/badge/equipped', { badgeCodes })
 
-export const getBadgeChanges = () => request.get<BadgeChangesResponse>('/badge/changes')
+export const getBadgeChanges = () => request.get<BadgeChangesResponse>('/v1/badge/changes')
 
 export const markBadgeChangesRead = (changeIds?: string[]) =>
-  request.post<{ updated: number }>('/badge/changes/read', { changeIds })
+  request.post<{ updated: number }>('/v1/badge/changes/read', { changeIds })

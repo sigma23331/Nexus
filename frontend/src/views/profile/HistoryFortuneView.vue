@@ -125,7 +125,7 @@
           v-if="hasMore && selectedMonth === ''"
           @click="loadMore"
           :disabled="loadingMore"
-          class="px-6 py-2 text-sm text-purple-600 bg-purple-50 rounded-full hover:bg-purple-100 transition disabled:opacity-50"
+          class="rounded-full px-6 py-2 text-sm font-semibold text-purple-500 transitiondisabled:opacity-50"
         >
           {{ loadingMore ? '加载中...' : '加载更多' }}
         </button>
@@ -174,78 +174,101 @@
           class="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
           @click.self="detailOpen = false"
         >
-          <div
-            class="w-full max-w-sm max-h-[85vh] overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
-          >
+          <div class="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
             <div class="mb-3 flex items-center justify-between">
-              <h3 class="text-base font-semibold text-slate-900">历史运势详情</h3>
+              <h3 class="text-base font-semibold text-slate-900">运势详情</h3>
               <button
-                type="button"
-                class="rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+                class="rounded-full p-1 text-slate-500 hover:bg-slate-100 transition"
                 @click="detailOpen = false"
+                aria-label="关闭"
               >
-                关闭
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
               </button>
             </div>
-            <div class="space-y-3 text-sm">
-              <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p class="text-xs text-slate-500">{{ formatDate(selectedItem.date) }}</p>
-                <p class="mt-1 text-base font-semibold text-slate-900">{{ selectedItem.title }}</p>
-                <p class="mt-1 text-slate-700">{{ selectedItem.content_main || '—' }}</p>
-                <p class="mt-1 text-xs text-slate-500">{{ selectedItem.content_sub || '' }}</p>
+
+            <!-- 日期（左对齐） -->
+            <p class="text-left text-sm text-slate-500 mb-0">{{ formatDate(selectedItem.date) }}</p>
+
+            <!-- 标题 + 分数（居中，右下角分数） -->
+            <div class="flex justify-center mb-4">
+              <div class="relative inline-block">
+                <span
+                  class="rounded-full px-4 py-1.5 text-[28px] font-semibold font-lxgw text-[#B45309]"
+                >
+                  {{ selectedItem.title }}
+                </span>
+                <span
+                  class="absolute -bottom-0 -right-6 text-xs text-slate-600 bg-white px-1 rounded"
+                >
+                  {{ selectedItem.score }} 分
+                </span>
               </div>
-              <!-- 爱情、事业、健康、财富 -->
-              <div class="grid grid-cols-2 gap-3">
-                <div
-                  class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
-                >
-                  <span class="text-slate-500 w-8 flex-shrink-0">爱情</span>
-                  <span class="font-semibold text-pink-500 flex-1 break-words">{{
-                    selectedItem.love || '--'
-                  }}</span>
-                </div>
-                <div
-                  class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
-                >
-                  <span class="text-slate-500 w-8 flex-shrink-0">事业</span>
-                  <span class="font-semibold text-blue-500 flex-1 break-words">{{
-                    selectedItem.career || '--'
-                  }}</span>
-                </div>
-                <div
-                  class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
-                >
-                  <span class="text-slate-500 w-8 flex-shrink-0">健康</span>
-                  <span class="font-semibold text-green-600 flex-1 break-words">{{
-                    selectedItem.health || '--'
-                  }}</span>
-                </div>
-                <div
-                  class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
-                >
-                  <span class="text-slate-500 w-8 flex-shrink-0">财富</span>
-                  <span class="font-semibold text-yellow-600 flex-1 break-words">{{
-                    selectedItem.wealth || '--'
-                  }}</span>
-                </div>
+            </div>
+
+            <!-- 签文内容卡片（与 FortuneView 一致） -->
+            <div class="rounded-2xl bg-[#fff5e6a5] border border-amber-300 px-4 py-5 text-center">
+              <p class="text-lg font-semibold text-slate-900">
+                {{ selectedItem.content_main || '—' }}
+              </p>
+              <p class="mt-2 text-xs text-amber-700">{{ selectedItem.content_sub || '' }}</p>
+            </div>
+
+            <!-- 爱情、事业、健康、财富四项 -->
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <div
+                class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+              >
+                <span class="text-slate-500 w-8 flex-shrink-0">爱情</span>
+                <span class="font-semibold text-pink-500 flex-1 break-words">{{
+                  selectedItem.love || '--'
+                }}</span>
               </div>
               <div
-                class="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2"
+                class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
               >
-                <span class="text-slate-600">综合评分</span>
-                <span class="font-semibold text-amber-700">{{ selectedItem.score }} 分</span>
+                <span class="text-slate-500 w-8 flex-shrink-0">事业</span>
+                <span class="font-semibold text-blue-500 flex-1 break-words">{{
+                  selectedItem.career || '--'
+                }}</span>
               </div>
-              <div class="grid grid-cols-2 gap-3 text-xs">
-                <div
-                  class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-700"
-                >
-                  <p class="font-semibold">宜</p>
-                  <p class="mt-1">{{ (selectedItem.yi || []).join('、') || '--' }}</p>
-                </div>
-                <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-700">
-                  <p class="font-semibold">忌</p>
-                  <p class="mt-1">{{ (selectedItem.ji || []).join('、') || '--' }}</p>
-                </div>
+              <div
+                class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+              >
+                <span class="text-slate-500 w-8 flex-shrink-0">健康</span>
+                <span class="font-semibold text-green-600 flex-1 break-words">{{
+                  selectedItem.health || '--'
+                }}</span>
+              </div>
+              <div
+                class="rounded-xl border border-slate-200 bg-white px-3 py-2 flex justify-between items-start gap-2"
+              >
+                <span class="text-slate-500 w-8 flex-shrink-0">财富</span>
+                <span class="font-semibold text-yellow-600 flex-1 break-words">{{
+                  selectedItem.wealth || '--'
+                }}</span>
+              </div>
+            </div>
+
+            <!-- 宜忌 -->
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <div class="rounded-xl bg-[#ecfdf55b] border border-emerald-400 p-3">
+                <p class="text-xs font-semibold text-emerald-700">宜</p>
+                <p class="mt-1 text-sm text-emerald-700">
+                  {{ (selectedItem.yi || []).join('、') || '--' }}
+                </p>
+              </div>
+              <div class="rounded-xl bg-[#fff1f294] border border-rose-300 p-3">
+                <p class="text-xs font-semibold text-rose-700">忌</p>
+                <p class="mt-1 text-sm text-rose-700">
+                  {{ (selectedItem.ji || []).join('、') || '--' }}
+                </p>
               </div>
             </div>
           </div>

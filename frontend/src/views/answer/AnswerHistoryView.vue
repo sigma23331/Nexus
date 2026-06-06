@@ -135,7 +135,7 @@
           <button
             v-if="hasMore"
             type="button"
-            class="rounded-full bg-purple-50 px-6 py-2 text-sm font-semibold text-purple-600 transition hover:bg-purple-100 disabled:opacity-50"
+            class="rounded-full px-6 py-2 text-sm font-semibold text-purple-500 transitiondisabled:opacity-50"
             :disabled="loadingMore"
             @click="loadMore"
           >

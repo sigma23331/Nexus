@@ -59,7 +59,12 @@
       <section>
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold">回溯复盘</h2>
-          <span class="text-xs text-slate-400">最近 {{ recentAnswerPreviewLimit }} 条</span>
+          <router-link
+            :to="{ name: 'answer-history' }"
+            class="text-xs font-medium text-purple-500 hover:text-purple-700 transition"
+          >
+            查看更多
+          </router-link>
         </div>
         <div class="space-y-3">
           <div
@@ -105,13 +110,6 @@
             暂无历史记录，去提问吧
           </div>
           <div v-if="loadingHistory" class="text-center text-xs text-slate-400 py-2">加载中...</div>
-          <router-link
-            v-if="recentAnswers.length > 0"
-            :to="{ name: 'answer-history' }"
-            class="block w-full rounded-xl border border-purple-100 bg-purple-50 py-2 text-center text-xs font-semibold text-purple-600 hover:bg-purple-100"
-          >
-            加载更多
-          </router-link>
         </div>
       </section>
     </main>

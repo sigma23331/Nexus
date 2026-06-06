@@ -1,7 +1,7 @@
 <!-- src/views/profile/BadgesView.vue -->
 <template>
   <div class="min-h-screen bg-slate-50 pb-8">
-    <div class="bg-gradient-to-r from-purple-50 to-indigo-50 px-5 py-6 shadow-sm">
+    <div class="bg-gradient-to-r from-purple-50 to-indigo-50 px-5 py-5 shadow-sm">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <button
@@ -14,20 +14,21 @@
           </button>
           <div>
             <h1 class="text-2xl font-bold text-slate-800">我的徽章</h1>
-            <p class="mt-1 text-sm text-slate-500">记录你在心运岛的每一次成长</p>
           </div>
         </div>
         <div class="text-right">
-          <div class="text-3xl font-bold text-purple-600">{{ unlockedCount }}/{{ totalCount }}</div>
+          <div class="text-3xl font-bold text-purple-500">{{ unlockedCount }}/{{ totalCount }}</div>
           <div class="text-xs text-slate-500">已解锁</div>
         </div>
       </div>
     </div>
 
     <!-- 佩戴提示 -->
-    <div class="mx-4 mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-600">
-      💡 最多可佩戴 {{ maxEquipped }} 个徽章，点击徽章详情可进行佩戴/摘下
+    <div class="mx-4 mt-3 rounded-lg bg-blue-50 px-3 py-2 text-sm text-center text-blue-600">
+      最多可佩戴 {{ maxEquipped }} 个徽章，点击徽章详情可进行佩戴/摘下
     </div>
+
+    <div class="mt-2 text-center text-xs text-slate-400 py-2">—— 记录你在心运岛的每一次成长 ——</div>
 
     <!-- 徽章列表 -->
     <div class="px-4 py-5">

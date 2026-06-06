@@ -2,6 +2,7 @@
   <div class="min-h-screen bg-white text-slate-900 pb-20">
     <div class="relative bg-gradient-to-r from-purple-50 to-indigo-50 pt-8 pb-6 px-6">
       <div class="flex items-center justify-between">
+        <!-- 左侧：头像 + 基本信息 -->
         <div class="flex items-center gap-4">
           <div
             class="w-16 h-16 rounded-full bg-purple-200 flex items-center justify-center overflow-hidden"
@@ -9,32 +10,9 @@
             <img :src="displayAvatar" class="w-full h-full object-cover" />
           </div>
           <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <h2 class="text-xl font-bold text-slate-800">
-                {{ userStore.userInfo?.nickname || '未登录' }}
-              </h2>
-              <!-- 已佩戴徽章展示区域 -->
-              <div class="flex items-center gap-1">
-                <div
-                  v-for="badge in displayEquippedBadges"
-                  :key="badge.code"
-                  class="group relative cursor-pointer"
-                  @click="goToBadges"
-                >
-                  <img
-                    :src="getBadgeIconUrl(badge.code, false)"
-                    :alt="badge.name"
-                    class="h-8 w-8 rounded-full object-contain transition-transform hover:scale-110"
-                    @error="handleBadgeImageError"
-                  />
-                  <div
-                    class="absolute bottom-full left-1/2 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-xs text-white group-hover:block"
-                  >
-                    {{ badge.name }} Lv.{{ badge.level }}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <h2 class="text-xl font-bold text-slate-800">
+              {{ userStore.userInfo?.nickname || '未登录' }}
+            </h2>
             <div class="flex justify-between items-center mt-1 gap-4">
               <!-- 生日区域 -->
               <span class="text-xs text-slate-500 flex items-center gap-1">
@@ -42,7 +20,7 @@
                 {{ formattedBirthday }}
               </span>
 
-              <!-- 性别区域：仅当性别为男或女时显示，保密时不显示 -->
+              <!-- 性别区域：仅当性别为男或女时显示 -->
               <span
                 v-if="
                   userStore.userInfo?.gender === 'male' || userStore.userInfo?.gender === 'female'
@@ -81,6 +59,28 @@
                 </svg>
                 {{ genderText }}
               </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧：已佩戴徽章区域 -->
+        <div class="flex items-center gap-1 flex-shrink-0 -mr-2">
+          <div
+            v-for="badge in displayEquippedBadges"
+            :key="badge.code"
+            class="group relative cursor-pointer"
+            @click="goToBadges"
+          >
+            <img
+              :src="getBadgeIconUrl(badge.code, false)"
+              :alt="badge.name"
+              class="h-14 w-14 rounded-full object-contain transition-transform hover:scale-110"
+              @error="handleBadgeImageError"
+            />
+            <div
+              class="absolute bottom-full left-1/2 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-xs text-white group-hover:block"
+            >
+              {{ badge.name }} Lv.{{ badge.level }}
             </div>
           </div>
         </div>
@@ -217,7 +217,7 @@ const formattedBirthday = computed(() => {
   const birthday = userStore.userInfo?.birthday
   if (!birthday) return '未填写'
   const [year, month, day] = birthday.split('-')
-  return `${year}年${month}月${day}日`
+  return `${year}/${month}/${day}`
 })
 
 // 按等级降序、sort_order升序排列显示的徽章

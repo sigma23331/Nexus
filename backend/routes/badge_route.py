@@ -23,6 +23,29 @@ def get_my_badges():
     return success(data=payload, message="success", code=200)
 
 
+@badge_bp.route("/equipped", methods=["GET"])
+@jwt_required()
+def get_equipped_badges():
+    user_id = get_jwt_identity()
+    payload = badge_service.list_equipped_badges(user_id=user_id)
+    return success(data=payload, message="success", code=200)
+
+
+@badge_bp.route("/equipped", methods=["PUT"])
+@jwt_required()
+def update_equipped_badges():
+    user_id = get_jwt_identity()
+    try:
+        data = _json_object_body()
+        payload = badge_service.update_equipped_badges(
+            user_id=user_id,
+            badge_codes=data.get("badgeCodes"),
+        )
+    except ValueError as err:
+        return fail(str(err), code=400)
+    return success(data=payload, message="success", code=200)
+
+
 @badge_bp.route("/evaluate", methods=["POST"])
 @jwt_required()
 def evaluate_my_badges():
@@ -68,3 +91,16 @@ def mark_badge_changes_read():
     except ValueError as err:
         return fail(str(err), code=400)
     return success(data=payload, message="success", code=200)
+
+
+def _json_object_body():
+    raw_body = request.get_data(cache=True)
+    if not raw_body or not request.is_json:
+        raise ValueError("请求体必须是有效的JSON对象")
+    try:
+        data = request.get_json()
+    except BadRequest as exc:
+        raise ValueError("请求体必须是有效的JSON对象") from exc
+    if not isinstance(data, dict):
+        raise ValueError("请求体必须是有效的JSON对象")
+    return data

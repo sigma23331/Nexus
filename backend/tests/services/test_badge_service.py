@@ -108,6 +108,53 @@ class FakeNotification:
         self.read_at = None
 
 
+class FakeEquippedBadgeQuery:
+    def __init__(self, rows):
+        self.rows = rows
+        self.deleted = False
+
+    def filter_by(self, **_kwargs):
+        return self
+
+    def order_by(self, *_args):
+        return self
+
+    def all(self):
+        return list(self.rows)
+
+    def delete(self, synchronize_session=False):
+        self.deleted = True
+        count = len(self.rows)
+        self.rows.clear()
+        return count
+
+
+class FakeEquippedBadge:
+    slot_order = FakeColumn()
+    query = FakeEquippedBadgeQuery([])
+
+    def __init__(self, user_id, badge_code, slot_order):
+        self.user_id = user_id
+        self.badge_code = badge_code
+        self.slot_order = slot_order
+
+
+class FakeBadgeDefinitionQuery:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def filter(self, *_args):
+        return self
+
+    def all(self):
+        return list(self.rows)
+
+
+class FakeBadgeDefinition:
+    code = FakeColumn()
+    query = FakeBadgeDefinitionQuery([])
+
+
 def _definition(code="share_station", metric_key="plaza_card_count"):
     return {
         "code": code,
@@ -307,6 +354,122 @@ def test_list_unread_changes_formats_badge_notification(monkeypatch):
     assert result["list"][0]["id"] == "n1"
     assert result["list"][0]["badgeName"] == "share_station"
     assert result["list"][0]["changeType"] == "unlock"
+
+
+def test_update_equipped_badges_rejects_more_than_three_badges():
+    try:
+        badge_service.update_equipped_badges("u1", ["b1", "b2", "b3", "b4"])
+    except ValueError as err:
+        assert str(err) == "最多只能佩戴 3 个徽章"
+    else:
+        raise AssertionError("update_equipped_badges should reject more than three badges")
+
+
+def test_update_equipped_badges_rejects_locked_badge(monkeypatch):
+    monkeypatch.setattr(badge_service, "evaluate_user_badges", lambda user_id: None)
+    monkeypatch.setattr(badge_service, "_active_definitions", lambda badge_codes=None: [_definition("share_station")])
+    monkeypatch.setattr(badge_service, "BadgeDefinition", FakeBadgeDefinition)
+    monkeypatch.setattr(badge_service, "UserBadge", FakeUserBadge)
+    FakeBadgeDefinition.query = FakeBadgeDefinitionQuery([])
+    FakeUserBadge.query = FakeUserBadgeQuery([])
+
+    try:
+        badge_service.update_equipped_badges("u1", ["share_station"])
+    except ValueError as err:
+        assert str(err) == "只能佩戴已获取的徽章"
+    else:
+        raise AssertionError("update_equipped_badges should reject locked badges")
+
+
+def test_update_equipped_badges_rejects_disabled_database_badge_before_catalog_fallback(monkeypatch):
+    monkeypatch.setattr(badge_service, "evaluate_user_badges", lambda user_id: None)
+    monkeypatch.setattr(badge_service, "_active_definitions", lambda badge_codes=None: [_definition("share_station")])
+    monkeypatch.setattr(badge_service, "BadgeDefinition", FakeBadgeDefinition)
+    monkeypatch.setattr(badge_service, "UserBadge", FakeUserBadge)
+    FakeBadgeDefinition.query = FakeBadgeDefinitionQuery([SimpleNamespace(code="share_station", enabled=False)])
+    FakeUserBadge.query = FakeUserBadgeQuery(
+        [
+            SimpleNamespace(
+                user_id="u1",
+                badge_code="share_station",
+                level=3,
+                current_progress=75,
+                target=200,
+                unlocked_at=None,
+            )
+        ]
+    )
+
+    try:
+        badge_service.update_equipped_badges("u1", ["share_station"])
+    except ValueError as err:
+        assert str(err) == "徽章不存在或不可用"
+    else:
+        raise AssertionError("update_equipped_badges should reject disabled database badges")
+
+
+def test_update_equipped_badges_replaces_rows_and_returns_current_levels(monkeypatch):
+    session = FakeSession()
+    existing_equipped = [SimpleNamespace(user_id="u1", badge_code="old_badge", slot_order=1)]
+    FakeEquippedBadge.query = FakeEquippedBadgeQuery(existing_equipped)
+    FakeBadgeDefinition.query = FakeBadgeDefinitionQuery([])
+    FakeUserBadge.query = FakeUserBadgeQuery(
+        [
+            SimpleNamespace(
+                user_id="u1",
+                badge_code="share_station",
+                level=3,
+                current_progress=75,
+                target=200,
+                unlocked_at=None,
+            )
+        ]
+    )
+
+    monkeypatch.setattr(badge_service, "evaluate_user_badges", lambda user_id: None)
+    monkeypatch.setattr(badge_service, "_active_definitions", lambda badge_codes=None: [_definition("share_station")])
+    monkeypatch.setattr(badge_service, "BadgeDefinition", FakeBadgeDefinition)
+    monkeypatch.setattr(badge_service, "UserBadge", FakeUserBadge)
+    monkeypatch.setattr(badge_service, "UserEquippedBadge", FakeEquippedBadge)
+    monkeypatch.setattr(badge_service.db, "session", session)
+
+    result = badge_service.update_equipped_badges("u1", ["share_station"])
+
+    assert FakeEquippedBadge.query.deleted is True
+    assert session.committed is True
+    assert session.added[0].badge_code == "share_station"
+    assert session.added[0].slot_order == 1
+    assert result["maxEquipped"] == 3
+    assert result["list"][0]["code"] == "share_station"
+    assert result["list"][0]["level"] == 3
+    assert result["list"][0]["slotOrder"] == 1
+
+
+def test_list_equipped_badges_reflects_current_user_badge_level(monkeypatch):
+    equipped_rows = [SimpleNamespace(user_id="u1", badge_code="share_station", slot_order=1)]
+    FakeEquippedBadge.query = FakeEquippedBadgeQuery(equipped_rows)
+    FakeUserBadge.query = FakeUserBadgeQuery(
+        [
+            SimpleNamespace(
+                user_id="u1",
+                badge_code="share_station",
+                level=4,
+                current_progress=250,
+                target=200,
+                unlocked_at=None,
+            )
+        ]
+    )
+
+    monkeypatch.setattr(badge_service, "evaluate_user_badges", lambda user_id: None)
+    monkeypatch.setattr(badge_service, "_active_definitions", lambda badge_codes=None: [_definition("share_station")])
+    monkeypatch.setattr(badge_service, "UserBadge", FakeUserBadge)
+    monkeypatch.setattr(badge_service, "UserEquippedBadge", FakeEquippedBadge)
+
+    result = badge_service.list_equipped_badges("u1")
+
+    assert result["list"][0]["level"] == 4
+    assert result["list"][0]["slotOrder"] == 1
 
 
 def test_evaluate_user_badges_sets_target_from_upgraded_level(monkeypatch):

@@ -12,7 +12,7 @@ from .plaza_comment_report import PlazaCommentReport
 from .association import Favorite, Like, SmsCode
 from .content_moderation_log import ContentModerationLog
 from .user_profile import UserProfile, AnswerStyle, PreferredFeature, ActiveHourBucket
-from .badge import BadgeDefinition, BadgeLevel, UserBadge, UserBadgeNotification, UserLoginDay
+from .badge import BadgeDefinition, BadgeLevel, UserBadge, UserEquippedBadge, UserBadgeNotification, UserLoginDay
 
 
 __all__ = [
@@ -40,6 +40,7 @@ __all__ = [
     'BadgeDefinition',
     'BadgeLevel',
     'UserBadge',
+    'UserEquippedBadge',
     'UserBadgeNotification',
     'UserLoginDay',
 ]

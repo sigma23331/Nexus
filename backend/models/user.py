@@ -73,6 +73,12 @@ class User(BaseModel):
         cascade='all, delete-orphan',
     )
     badges = relationship('UserBadge', back_populates='user', lazy='dynamic', cascade='all, delete-orphan')
+    equipped_badges = relationship(
+        'UserEquippedBadge',
+        back_populates='user',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+    )
     badge_notifications = relationship(
         'UserBadgeNotification',
         back_populates='user',

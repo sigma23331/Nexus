@@ -44,6 +44,82 @@ def test_get_my_badges_uses_authenticated_user(client, auth_header, monkeypatch)
     assert response.get_json()["data"]["unlockedCount"] == 1
 
 
+def test_get_equipped_badges_uses_authenticated_user(client, auth_header, monkeypatch):
+    def fake_list_equipped_badges(user_id):
+        assert user_id == "u-test"
+        return {"maxEquipped": 3, "list": [{"code": "login_streak", "slotOrder": 1}]}
+
+    monkeypatch.setattr(route_module.badge_service, "list_equipped_badges", fake_list_equipped_badges)
+
+    response = client.get("/v1/badge/equipped", headers=auth_header)
+
+    assert response.status_code == 200
+    assert response.get_json()["data"]["list"][0]["code"] == "login_streak"
+
+
+def test_update_equipped_badges_uses_authenticated_user(client, auth_header, monkeypatch):
+    def fake_update_equipped_badges(user_id, badge_codes):
+        assert user_id == "u-test"
+        assert badge_codes == ["login_streak", "share_station"]
+        return {
+            "maxEquipped": 3,
+            "list": [
+                {"code": "login_streak", "slotOrder": 1},
+                {"code": "share_station", "slotOrder": 2},
+            ],
+        }
+
+    monkeypatch.setattr(route_module.badge_service, "update_equipped_badges", fake_update_equipped_badges)
+
+    response = client.put(
+        "/v1/badge/equipped",
+        json={"badgeCodes": ["login_streak", "share_station"]},
+        headers=auth_header,
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["data"]["list"][1]["slotOrder"] == 2
+
+
+@pytest.mark.parametrize(
+    ("body", "content_type"),
+    [
+        ("{", "application/json"),
+        ("", "application/json"),
+        ("null", "application/json"),
+    ],
+)
+def test_update_equipped_badges_rejects_invalid_json_body(client, auth_header, monkeypatch, body, content_type):
+    def fake_update_equipped_badges(user_id, badge_codes):
+        pytest.fail("update_equipped_badges should not be called for invalid JSON payloads")
+
+    monkeypatch.setattr(route_module.badge_service, "update_equipped_badges", fake_update_equipped_badges)
+
+    response = client.put(
+        "/v1/badge/equipped",
+        data=body,
+        content_type=content_type,
+        headers=auth_header,
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["message"] == "请求体必须是有效的JSON对象"
+
+
+def test_update_equipped_badges_returns_400_for_service_validation_error(client, auth_header, monkeypatch):
+    def fake_update_equipped_badges(user_id, badge_codes):
+        assert user_id == "u-test"
+        assert badge_codes == ["locked_badge"]
+        raise ValueError("只能佩戴已获取的徽章")
+
+    monkeypatch.setattr(route_module.badge_service, "update_equipped_badges", fake_update_equipped_badges)
+
+    response = client.put("/v1/badge/equipped", json={"badgeCodes": ["locked_badge"]}, headers=auth_header)
+
+    assert response.status_code == 400
+    assert response.get_json()["message"] == "只能佩戴已获取的徽章"
+
+
 def test_evaluate_my_badges_uses_authenticated_user(client, auth_header, monkeypatch):
     def fake_evaluate_user_badges(user_id):
         assert user_id == "u-test"
@@ -95,6 +171,45 @@ def test_mark_badge_changes_read_accepts_optional_ids(client, auth_header, monke
 
     assert response.status_code == 200
     assert response.get_json()["data"]["updated"] == 1
+
+
+def test_mark_badge_changes_read_accepts_omitted_body(client, auth_header, monkeypatch):
+    def fake_mark_changes_read(user_id, change_ids=None):
+        assert user_id == "u-test"
+        assert change_ids is None
+        return {"updated": 2}
+
+    monkeypatch.setattr(route_module.badge_service, "mark_changes_read", fake_mark_changes_read)
+
+    response = client.post("/v1/badge/changes/read", headers=auth_header)
+
+    assert response.status_code == 200
+    assert response.get_json()["data"]["updated"] == 2
+
+
+@pytest.mark.parametrize(
+    ("body", "content_type"),
+    [
+        ("{", "application/json"),
+        ("", "application/json"),
+        ("null", "application/json"),
+    ],
+)
+def test_mark_badge_changes_read_rejects_invalid_json_body(client, auth_header, monkeypatch, body, content_type):
+    def fake_mark_changes_read(user_id, change_ids=None):
+        pytest.fail("mark_changes_read should not be called for invalid JSON payloads")
+
+    monkeypatch.setattr(route_module.badge_service, "mark_changes_read", fake_mark_changes_read)
+
+    response = client.post(
+        "/v1/badge/changes/read",
+        data=body,
+        content_type=content_type,
+        headers=auth_header,
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["message"] == "请求体必须是有效的JSON对象"
 
 
 def test_mark_badge_changes_read_returns_400_for_invalid_payload(client, auth_header, monkeypatch):

@@ -68,6 +68,25 @@ class UserBadge(BaseModel):
         return f"<UserBadge user:{self.user_id} badge:{self.badge_code} level:{self.level}>"
 
 
+class UserEquippedBadge(BaseModel):
+    __tablename__ = "user_equipped_badges"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "badge_code", name="uq_user_equipped_badge"),
+        db.UniqueConstraint("user_id", "slot_order", name="uq_user_equipped_badge_slot"),
+        db.CheckConstraint("slot_order >= 1 AND slot_order <= 3", name="ck_user_equipped_badge_slot_order"),
+    )
+
+    user_id = db.Column(db.String(64), db.ForeignKey("users.id"), nullable=False, index=True)
+    badge_code = db.Column(db.String(64), db.ForeignKey("badge_definitions.code"), nullable=False, index=True)
+    slot_order = db.Column(db.Integer, nullable=False)
+
+    user = db.relationship("User", back_populates="equipped_badges")
+    badge = db.relationship("BadgeDefinition")
+
+    def __repr__(self):
+        return f"<UserEquippedBadge user:{self.user_id} badge:{self.badge_code} slot:{self.slot_order}>"
+
+
 class UserBadgeNotification(BaseModel):
     __tablename__ = "user_badge_notifications"
 

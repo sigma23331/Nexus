@@ -182,8 +182,12 @@ def list_replies(current_user_id, comment_id, cursor=None, limit=20):
         last = current_rows[-1]
         next_cursor = _encode_cursor(last.created_at, last.id)
     badges_by_user_id = _equipped_badges_by_user_ids([
-        getattr(comment, "user_id", comment.user.id)
+        user_id
         for comment in current_rows
+        for user_id in (
+            getattr(comment, "user_id", comment.user.id),
+            getattr(comment, "reply_to_user_id", None),
+        )
     ])
 
     return {

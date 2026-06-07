@@ -5,7 +5,7 @@ from extensions import db
 from models.answer import AnswerRecord
 from models.association import Like
 from models.fortune import FortuneRecord
-from models.plaza import CardType, PlazaCard
+from models.plaza import PLAZA_CARD_CONTENT_MAX_LENGTH, CardType, PlazaCard
 from models.user import User
 from services import content_review_service
 
@@ -148,8 +148,10 @@ def create_card(user_id, payload):
         raise ValueError("sourceId 字段不能为空")
     if not isinstance(snapshot_url, str) or not snapshot_url.startswith(("http://", "https://")):
         raise ValueError("snapshotUrl 必须为有效URL")
-    if content is not None and (not isinstance(content, str) or len(content) > 100):
-        raise ValueError("content 长度不能超过100")
+    if content is not None and (
+        not isinstance(content, str) or len(content) > PLAZA_CARD_CONTENT_MAX_LENGTH
+    ):
+        raise ValueError(f"content 长度不能超过{PLAZA_CARD_CONTENT_MAX_LENGTH}")
     if tags is not None:
         if not isinstance(tags, list):
             raise ValueError("tags 必须为数组")

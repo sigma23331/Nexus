@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from services import plaza_service
+from models.plaza import PLAZA_CARD_CONTENT_MAX_LENGTH
 
 
 class _Field:
@@ -70,6 +71,7 @@ def test_format_card_falls_back_to_like_query(monkeypatch):
     payload = plaza_service._format_card(card, current_user_id="u1", liked_card_ids=None)
 
     assert payload["stats"]["isLiked"] is True
+    assert payload["owner"]["badges"] == []
 
 
 def test_list_cards_latest_with_cursor_and_has_more(monkeypatch):
@@ -115,6 +117,11 @@ def test_list_cards_latest_with_cursor_and_has_more(monkeypatch):
     monkeypatch.setattr(plaza_service.db, "and_", lambda *_args: True)
     monkeypatch.setattr(plaza_service, "PlazaCard", _PlazaCard)
     monkeypatch.setattr(plaza_service, "Like", _Like)
+    monkeypatch.setattr(
+        plaza_service,
+        "_equipped_badges_by_user_ids",
+        lambda user_ids: {"u-owner": [{"code": "share_station", "slotOrder": 1}]},
+    )
 
     cursor = plaza_service._encode_cursor(datetime(2026, 5, 7, 12, 0, 0), "c9")
     out = plaza_service.list_cards("u1", tab="latest", cursor=cursor, limit=2)
@@ -123,6 +130,7 @@ def test_list_cards_latest_with_cursor_and_has_more(monkeypatch):
     assert out["nextCursor"] is not None
     assert len(out["list"]) == 2
     assert out["list"][0]["stats"]["isLiked"] is True
+    assert out["list"][0]["owner"]["badges"][0]["code"] == "share_station"
 
 
 def test_create_card_validates_tags_type_and_count():
@@ -133,6 +141,96 @@ def test_create_card_validates_tags_type_and_count():
         plaza_service.create_card(
             "u1",
             {"type": "answer", "sourceId": "a1", "snapshotUrl": "https://a", "tags": ["a", "b", "c", "d"]},
+        )
+
+
+def test_create_card_allows_fortune_content_over_100(monkeypatch):
+    session = _SessionSpy()
+    monkeypatch.setattr(plaza_service.db, "session", session)
+
+    class _FortuneQuery:
+        def filter_by(self, **_kwargs):
+            return self
+
+        def first(self):
+            return SimpleNamespace(id="f1")
+
+    class _FortuneRecord:
+        query = _FortuneQuery()
+
+    class _UserQuery:
+        def filter_by(self, **_kwargs):
+            return self
+
+        def first(self):
+            return SimpleNamespace(id="u1", nickname="n", avatar="")
+
+    class _User:
+        query = _UserQuery()
+
+    class _LikeQuery:
+        def filter_by(self, **_kwargs):
+            return self
+
+        def first(self):
+            return None
+
+    class _Like:
+        query = _LikeQuery()
+
+    class _Card:
+        def __init__(self, user_id, type, snapshot_url, content, tags, likes_count):
+            self.id = "c1"
+            self.user_id = user_id
+            self.type = type
+            self.snapshot_url = snapshot_url
+            self.content = content
+            self.tags = tags
+            self.likes_count = likes_count
+            self.answer_id = None
+            self.fortune_id = None
+            self.created_at = datetime(2026, 5, 7, 12, 0, 0)
+            self.user = None
+
+    content = "\n".join(
+        [
+            "晨光微启（88分）",
+            "顺势而为，稳步推进今天最重要的目标。",
+            "先处理一件关键小事，再给自己留一点缓冲。",
+            "宜：整理计划、主动沟通、按时休息",
+            "忌：临时变卦、过度承诺、熬夜硬撑",
+            "爱情：表达可以直接一点，但不要急着要回应",
+            "事业：适合推进已有任务，先交付再扩展",
+            "健康：留意肩颈和睡眠，晚间减少屏幕时间",
+            "财富：消费前先确认预算，避免情绪化下单",
+        ]
+    )
+    assert len(content) > 100
+
+    monkeypatch.setattr(plaza_service, "FortuneRecord", _FortuneRecord)
+    monkeypatch.setattr(plaza_service, "User", _User)
+    monkeypatch.setattr(plaza_service, "Like", _Like)
+    monkeypatch.setattr(plaza_service, "PlazaCard", _Card)
+    monkeypatch.setattr(plaza_service, "_equipped_badges_by_user_ids", lambda user_ids: {})
+    monkeypatch.setattr("services.badge_service.evaluate_after_event", lambda **_kwargs: None)
+
+    out = plaza_service.create_card(
+        "u1",
+        {"type": "fortune", "sourceId": "f1", "snapshotUrl": "https://img", "content": content},
+    )
+
+    assert out["type"] == "fortune"
+    assert out["content"] == content
+    assert session.commits == 1
+
+
+def test_create_card_rejects_content_over_limit():
+    content = "x" * (PLAZA_CARD_CONTENT_MAX_LENGTH + 1)
+
+    with pytest.raises(ValueError, match=f"content 长度不能超过{PLAZA_CARD_CONTENT_MAX_LENGTH}"):
+        plaza_service.create_card(
+            "u1",
+            {"type": "answer", "sourceId": "a1", "snapshotUrl": "https://img", "content": content},
         )
 
 
@@ -199,6 +297,11 @@ def test_create_card_answer_and_fortune_success(monkeypatch):
     monkeypatch.setattr(plaza_service, "User", _User)
     monkeypatch.setattr(plaza_service, "Like", _Like)
     monkeypatch.setattr(plaza_service, "PlazaCard", _Card)
+    monkeypatch.setattr(
+        plaza_service,
+        "_equipped_badges_by_user_ids",
+        lambda user_ids: {"u1": [{"code": "share_station", "slotOrder": 1}]},
+    )
 
     ans = plaza_service.create_card(
         "u1",
@@ -211,6 +314,7 @@ def test_create_card_answer_and_fortune_success(monkeypatch):
 
     assert ans["type"] == "answer"
     assert fort["type"] == "fortune"
+    assert ans["owner"]["badges"][0]["code"] == "share_station"
     assert session.commits == 2
 
 

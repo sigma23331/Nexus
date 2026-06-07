@@ -490,7 +490,7 @@
           "avatar": "https://img.com/u.jpg"
         },
         "snapshotUrl": "https://img.com/card_v1.png",
-        "content": "有时候不回答也是一种回答。",   // 可选，1-100字符
+        "content": "有时候不回答也是一种回答。",   // 可选，1-1000字符
         "stats": {
           "likes": 24,
           "comments": 3,
@@ -517,7 +517,7 @@
     "type": "answer",               // required, fortune 或 answer
     "sourceId": "ans_1002",         // required, 答案ID 或 运势日期(yyyy-mm-dd)
     "snapshotUrl": "https://img.com/card_v1.png",  // required, 有效图片URL
-    "content": "有时候不回答也是一种回答。",       // optional, 1-100字符
+    "content": "有时候不回答也是一种回答。",       // optional, 1-1000字符
     "tags": ["成长", "解忧"]         // optional, 最多3个，每个1-10字符
   }
   ```

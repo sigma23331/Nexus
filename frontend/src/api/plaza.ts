@@ -18,7 +18,7 @@ export interface CreatePlazaCardParams {
   type: 'fortune' | 'answer'
   sourceId: string // 运势日期(yyyy-mm-dd) 或 答案ID
   snapshotUrl: string // 卡片图片URL（可为空字符串，前端降级显示文本卡片）
-  content?: string // 可选，1-100字符
+  content?: string // 可选，1-1000字符
   tags?: string[] // 可选，最多3个，每个1-10字符
 }
 

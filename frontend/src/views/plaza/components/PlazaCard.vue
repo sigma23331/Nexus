@@ -16,7 +16,25 @@
           />
         </div>
         <div>
-          <p class="text-sm font-semibold text-slate-800">{{ card.owner.nickname }}</p>
+          <div class="flex items-center gap-1 flex-wrap">
+            <p class="text-sm font-semibold text-slate-800">{{ card.owner.nickname }}</p>
+            <!-- 已佩戴徽章展示区域 -->
+            <div class="flex items-center gap-0.5">
+              <div v-for="badge in displayBadges" :key="badge.code" class="group relative">
+                <img
+                  :src="getBadgeIconUrl(badge.code, false)"
+                  :alt="badge.name"
+                  class="h-5 w-5 rounded-full object-contain transition-transform hover:scale-110"
+                  @error="handleBadgeImageError"
+                />
+                <div
+                  class="absolute top-full left-1/2 mt-1 hidden -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-white group-hover:block z-10"
+                >
+                  {{ badge.name }} Lv.{{ badge.level }}
+                </div>
+              </div>
+            </div>
+          </div>
           <p class="text-xs text-slate-400">{{ formatTime(card.createdAt) }}</p>
         </div>
       </div>
@@ -43,10 +61,10 @@
       <div v-else class="w-8"></div>
     </div>
 
-    <!-- 分割线：淡淡的一条线 -->
+    <!-- 分割线 -->
     <div class="border-t border-slate-300 mx-4 my-2"></div>
 
-    <!-- 分享文案（独立于卡片外部） -->
+    <!-- 分享文案 -->
     <div v-if="shareMessage" class="px-2 pb-2">
       <div class="bg-white/80 rounded-lg p-3 text-sm text-slate-600 shadow-sm">
         {{ shareMessage }}
@@ -68,7 +86,7 @@
         <div class="text-center">
           <p class="text-sm font-semibold text-amber-700">心运岛 · 今日签文</p>
         </div>
-        <!-- 运势标题 + 分数（参考 TodayFortuneContent） -->
+        <!-- 运势标题 + 分数 -->
         <div class="flex justify-center mt-2">
           <div class="relative inline-block">
             <span
@@ -82,15 +100,15 @@
           </div>
         </div>
 
-        <!-- 主签文（居中，加粗） -->
+        <!-- 主签文 -->
         <div class="mt-4 text-center">
           <p class="text-lg font-bold text-slate-900">{{ fortuneMainContent }}</p>
         </div>
 
-        <!-- 副签文（居中） -->
+        <!-- 副签文 -->
         <div class="mt-2 text-center text-xs text-slate-500">{{ fortuneSubContent }}</div>
 
-        <!-- 爱情、事业、健康、财富四项（网格布局） -->
+        <!-- 爱情、事业、健康、财富四项 -->
         <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
           <div
             class="rounded-xl border border-orange-200 bg-amber-50 px-3 py-2 flex justify-between items-start gap-2"
@@ -120,9 +138,8 @@
           </div>
         </div>
 
-        <!-- 宜忌：左右两列，每个子项独立框，带“宜：”/“忌：”前缀 -->
+        <!-- 宜忌 -->
         <div class="mt-4 grid grid-cols-2 gap-3">
-          <!-- 左列：宜 -->
           <div class="space-y-1.5">
             <div
               v-for="(item, idx) in fortuneYiList"
@@ -138,7 +155,6 @@
               宜：--
             </div>
           </div>
-          <!-- 右列：忌 -->
           <div class="space-y-1.5">
             <div
               v-for="(item, idx) in fortuneJiList"
@@ -159,7 +175,7 @@
         <div class="mt-2 text-right text-[12px] text-amber-600/80">{{ dateText }}</div>
       </div>
 
-      <!-- 答案卡片（样式与运势卡片统一） -->
+      <!-- 答案卡片 -->
       <div
         v-else
         class="answer-card rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-4"
@@ -214,6 +230,8 @@
 import { ref, computed, watch } from 'vue'
 import PlazaCommentPanel from './PlazaCommentPanel.vue'
 import { getValidAvatar } from '@/utils/avatar'
+import { getBadgeIconUrl, BADGE_SORT_MAP } from '@/utils/badgeUtils'
+import type { EquippedBadge } from '@/api/badge'
 
 export interface PlazaCardData {
   cardId: string
@@ -222,6 +240,7 @@ export interface PlazaCardData {
     uid: string
     nickname: string
     avatar: string
+    badges?: EquippedBadge[]
   }
   snapshotUrl: string
   content?: string
@@ -247,6 +266,19 @@ const emit = defineEmits<{
 const showMenu = ref(false)
 const showComments = ref(false)
 const commentsCount = ref(props.card.stats.comments ?? 0)
+
+// 展示徽章
+const displayBadges = computed(() => {
+  const badges = props.card.owner.badges || []
+  return [...badges].sort((a, b) => {
+    if (a.level !== b.level) {
+      return b.level - a.level
+    }
+    const sortA = BADGE_SORT_MAP[a.code] ?? 999
+    const sortB = BADGE_SORT_MAP[b.code] ?? 999
+    return sortA - sortB
+  })
+})
 
 watch(
   () => props.card.stats.comments,
@@ -293,6 +325,12 @@ const handleAvatarError = (e: Event) => {
   }
 }
 
+const handleBadgeImageError = (e: Event) => {
+  const img = e.target as HTMLImageElement
+  img.src =
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2394A3B8"%3E%3Cpath d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/%3E%3C/svg%3E'
+}
+
 const hasValidImage = computed(() => {
   const url = props.card.snapshotUrl
   if (!url || !url.startsWith('http')) return false
@@ -300,7 +338,6 @@ const hasValidImage = computed(() => {
   return true
 })
 
-// 分享文案提取
 const shareMessage = computed(() => {
   const content = props.card.content
   if (!content) return ''
@@ -311,7 +348,6 @@ const shareMessage = computed(() => {
   return ''
 })
 
-// 答案卡片内部内容（移除分享文案后）
 const cardInnerContent = computed(() => {
   let content = props.card.content || ''
   const match = content.match(/^✨\s*.+?\n\n/s)
@@ -325,8 +361,11 @@ const dateText = computed(() => {
   return formatTime(props.card.createdAt).slice(0, 10)
 })
 
-// 运势卡片完整文本（剔除分享文案）
 const fullContent = computed(() => props.card.content || '')
+
+/**
+ * 获取纯净的卡片内容（移除分享文案部分）
+ */
 const getCleanedContent = () => {
   let start = 0
   if (shareMessage.value) {
@@ -336,42 +375,64 @@ const getCleanedContent = () => {
   return fullContent.value.slice(start).trim()
 }
 
+// ========== 运势卡片内容解析（超强正则，兼容多种格式） ==========
 const fortuneTitle = computed(() => {
   const rest = getCleanedContent()
+  // 匹配类似 "上上签（85分）" 或 "大吉" 后跟可能的分数字段
+  const titleMatch = rest.match(/^([^（\n]+)(?:（(\d+)分）)?/)
+  if (titleMatch) {
+    return titleMatch[1].trim() || '--'
+  }
   const firstLine = rest.split('\n')[0] || ''
-  const cleaned = firstLine
-    .replace(/✨/, '')
-    .replace(/[（(][^）)]*[）)]/g, '')
-    .trim()
-  return cleaned
+  return (
+    firstLine
+      .replace(/✨/, '')
+      .replace(/[（(][^）)]*[）)]/g, '')
+      .trim() || '--'
+  )
 })
 
 const fortuneScore = computed(() => {
   const rest = getCleanedContent()
-  const match = rest.match(/(\d+)\s*分/)
-  return match ? match[1] : '0'
+  // 优先匹配括号内的分数
+  const scoreMatch = rest.match(/（(\d+)分）/)
+  if (scoreMatch) return scoreMatch[1]
+  // 其次匹配 "xx分"
+  const plainMatch = rest.match(/(\d+)\s*分/)
+  return plainMatch ? plainMatch[1] : '0'
 })
 
 const fortuneMainContent = computed(() => {
   const rest = getCleanedContent()
-  const linesArr = rest.split('\n')
-  return linesArr[1] || ''
+  const lines = rest.split('\n').filter((l) => l.trim().length > 0)
+  // 跳过第一行标题，取第二行作为主签文
+  return lines[1] || '--'
 })
 
 const fortuneSubContent = computed(() => {
   const rest = getCleanedContent()
-  const linesArr = rest.split('\n')
-  return linesArr[2] || ''
+  const lines = rest.split('\n').filter((l) => l.trim().length > 0)
+  return lines[2] || ''
 })
 
-// 解析爱情事业等
+/**
+ * 通用字段提取（爱情、事业、健康、财富）
+ * 支持中文冒号、英文冒号，支持前后空格，支持字段出现在任何位置（不依赖行首）
+ */
 const extractField = (fieldName: string): string => {
   const rest = getCleanedContent()
-  const lines = rest.split('\n')
-  for (const line of lines) {
-    if (line.startsWith(fieldName + '：') || line.startsWith(fieldName + ':')) {
-      return line.replace(/^(爱情|事业|健康|财富)[：:]/, '').trim()
+  // 正则：字段名后跟中英文冒号，捕获到行尾（或遇到下一个字段名/宜忌/换行）
+  // 更宽松：匹配到行尾或者下一个汉字字段名（如爱情、事业等）之前
+  const regex = new RegExp(`${fieldName}[：:]\\s*([^\\n]+)`, 'i')
+  const match = rest.match(regex)
+  if (match && match[1]) {
+    let value = match[1].trim()
+    // 如果提取到的值包含其他字段名（如“爱情：主动 事业：积极”），则只截取第一个字段的值
+    const nextFieldMatch = value.match(/[爱情事业健康财富][：:]/)
+    if (nextFieldMatch && nextFieldMatch.index) {
+      value = value.slice(0, nextFieldMatch.index).trim()
     }
+    return value || '--'
   }
   return '--'
 }
@@ -381,23 +442,21 @@ const fortuneCareer = computed(() => extractField('事业'))
 const fortuneHealth = computed(() => extractField('健康'))
 const fortuneWealth = computed(() => extractField('财富'))
 
-// 宜忌字符串
 const fortuneYi = computed(() => {
   const rest = getCleanedContent()
-  const yiLine = rest.split('\n').find((l) => l.startsWith('宜：')) || ''
-  return yiLine.replace('宜：', '')
+  const match = rest.match(/宜[：:]\s*([^\n]+)/)
+  return match ? match[1].trim() : ''
 })
 
 const fortuneJi = computed(() => {
   const rest = getCleanedContent()
-  const jiLine = rest.split('\n').find((l) => l.startsWith('忌：')) || ''
-  return jiLine.replace('忌：', '')
+  const match = rest.match(/忌[：:]\s*([^\n]+)/)
+  return match ? match[1].trim() : ''
 })
 
-// 拆分宜忌字符串为数组
 const splitYiJi = (str: string): string[] => {
   if (!str || str === '--') return []
-  // 按中文顿号、逗号、空格分割
+  // 支持中英文逗号、顿号、空格分割
   return str.split(/[、，, ]+/).filter((s) => s.trim().length > 0)
 }
 
@@ -410,7 +469,6 @@ const fortuneJiList = computed(() => splitYiJi(fortuneJi.value))
   font-family: 'KaiTi', '楷体', cursive;
 }
 
-/* 运势卡片与答案卡片统一风格 */
 .fortune-card,
 .answer-card {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);

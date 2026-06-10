@@ -76,7 +76,7 @@
           <input
             v-model="nickname"
             type="text"
-            maxlength="20"
+            maxlength="15"
             placeholder="请填写昵称"
             class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/60"
             :class="{ 'border-red-500': nicknameError }"
@@ -167,7 +167,7 @@ const defaultAvatar = '/images/avatar.png'
 // 昵称校验
 const nicknameError = computed(() => {
   if (!nickname.value.trim()) return '昵称不能为空'
-  if (nickname.value.trim().length > 20) return '昵称不能超过20个字符'
+  if (nickname.value.trim().length > 15) return '昵称不能超过15个字符'
   return ''
 })
 

@@ -51,12 +51,6 @@ const router = createRouter({
       meta: { title: '心情时间轴', tabBar: false, requiresAuth: true },
     },
     {
-      path: '/tools/prompt-lab',
-      name: 'prompt-lab',
-      component: () => import('@/views/tools/PromptLabView.vue'),
-      meta: { title: 'Prompt Lab', requiresAuth: false, fullWidth: true },
-    },
-    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/auth/LoginView.vue'),

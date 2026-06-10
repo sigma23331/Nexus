@@ -19,9 +19,9 @@ class Config:
     LLM_MAX_RETRIES = int(os.environ.get('LLM_MAX_RETRIES', '1'))
     PROMPT_LAB_DEV_ENABLED = os.environ.get('PROMPT_LAB_DEV_ENABLED', 'false').lower() == 'true'
     LLM_PROMPTS_DIR = os.environ.get('LLM_PROMPTS_DIR')
-    LLM_PROMPT_ANSWER_VERSION = os.environ.get('LLM_PROMPT_ANSWER_VERSION', 'v4')
-    LLM_PROMPT_FORTUNE_VERSION = os.environ.get('LLM_PROMPT_FORTUNE_VERSION', 'v4')
-    LLM_PROMPT_PROFILE_VERSION = os.environ.get('LLM_PROMPT_PROFILE_VERSION', 'v1')
+    LLM_PROMPT_ANSWER_VERSION = os.environ.get('LLM_PROMPT_ANSWER_VERSION', 'v7')
+    LLM_PROMPT_FORTUNE_VERSION = os.environ.get('LLM_PROMPT_FORTUNE_VERSION', 'v15')
+    LLM_PROMPT_PROFILE_VERSION = os.environ.get('LLM_PROMPT_PROFILE_VERSION', 'v2')
 
     SMS_PROVIDER = os.environ.get('SMS_PROVIDER', 'mock')
     SMS_SIGN_NAME = os.environ.get('SMS_SIGN_NAME', '速通互联验证码')

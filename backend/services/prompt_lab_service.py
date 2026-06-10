@@ -23,6 +23,33 @@ ERROR_CODES = {
 }
 MAX_PROMPT_LEN = 12000
 MAX_OUTPUT_PREVIEW_LEN = 120
+PROFILE_CONTEXT_KEYS = (
+    "user_id",
+    "virtual_user_id",
+    "id",
+    "birthday",
+    "birth_month_day",
+    "answer_style",
+    "mood_tendency",
+    "topic_interests",
+    "self_context_tag",
+    "active_hour_bucket",
+    "personalization_plan",
+    "material_hints",
+    "privacy_constraints",
+    "avoid_instructions",
+    "diversity_taboo_terms",
+    "imagery_domain",
+    "sentence_shape",
+    "tone",
+    "rhythm",
+    "length_rule",
+    "action_domain",
+    "lucky_hour_guidance",
+    "assigned_lucky_hour_name",
+    "assigned_lucky_hour_range",
+    "diversify_key",
+)
 
 
 def run_prompt_lab(task, prompt_text, temperature, input_payload, frequency_penalty=None, top_p=None):
@@ -42,6 +69,9 @@ def run_prompt_lab(task, prompt_text, temperature, input_payload, frequency_pena
                 answer_kwargs["frequency_penalty"] = validated["frequency_penalty"]
             if validated["top_p"] is not None:
                 answer_kwargs["top_p"] = validated["top_p"]
+            context = _profile_context_from_input(validated["input_payload"])
+            if context:
+                answer_kwargs["profile_context"] = context
             row = adapter.run_answer(**answer_kwargs)
         elif task_name == "fortune":
             fortune_kwargs = {
@@ -53,13 +83,8 @@ def run_prompt_lab(task, prompt_text, temperature, input_payload, frequency_pena
                 fortune_kwargs["frequency_penalty"] = validated["frequency_penalty"]
             if validated["top_p"] is not None:
                 fortune_kwargs["top_p"] = validated["top_p"]
-            profile_input = validated["input_payload"]
-            context = {
-                "mood_tendency": profile_input.get("mood_tendency"),
-                "topic_interests": profile_input.get("topic_interests"),
-                "self_context_tag": profile_input.get("self_context_tag"),
-            }
-            if any(v is not None for v in context.values()):
+            context = _profile_context_from_input(validated["input_payload"])
+            if context:
                 fortune_kwargs["profile_context"] = context
             row = adapter.run_fortune(**fortune_kwargs)
         else:
@@ -93,7 +118,14 @@ def run_prompt_lab(task, prompt_text, temperature, input_payload, frequency_pena
             error_code="unexpected_error",
             error_message=str(exc),
             started_at=started_at,
-        )
+    )
+
+
+def _profile_context_from_input(input_payload):
+    context = {key: input_payload.get(key) for key in PROFILE_CONTEXT_KEYS}
+    if any(value is not None for value in context.values()):
+        return context
+    return None
 
 
 def _build_adapter_from_runtime_config():

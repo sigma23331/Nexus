@@ -1,4 +1,7 @@
 import math
+import json
+import re
+from collections import Counter
 
 
 def _to_float(value, default=0.0):
@@ -23,6 +26,63 @@ def _safe_ratio(num, den):
     return num / den
 
 
+def _output_text(row):
+    text = str(row.get("output_text") or row.get("output_preview") or "").strip()
+    if not text:
+        return ""
+
+    try:
+        parsed = json.loads(text)
+    except Exception:
+        return text
+
+    if not isinstance(parsed, dict):
+        return text
+
+    chunks = []
+    for value in parsed.values():
+        if isinstance(value, list):
+            chunks.extend(str(item) for item in value)
+        else:
+            chunks.append(str(value))
+    return " ".join(item.strip() for item in chunks if item.strip())
+
+
+def _duplicate_rate(texts):
+    values = [text for text in texts if text]
+    if not values:
+        return 0.0
+    return _safe_ratio(len(values) - len(set(values)), len(values))
+
+
+def _prefix_duplicate_rate(texts, size=4):
+    prefixes = [text[:size] for text in texts if text]
+    if not prefixes:
+        return 0.0
+    return _safe_ratio(len(prefixes) - len(set(prefixes)), len(prefixes))
+
+
+def _extract_terms(texts):
+    counter = Counter()
+    for text in texts:
+        for match in re.findall(r"[\u4e00-\u9fff]{2,6}|[A-Za-z_]{3,}", str(text or "")):
+            if re.fullmatch(r"[\u4e00-\u9fff]{2,6}", match):
+                for size in (2, 3, 4):
+                    if len(match) >= size:
+                        counter.update(match[i : i + size] for i in range(0, len(match) - size + 1))
+            else:
+                counter.update([match.lower()])
+    return counter
+
+
+def _top_terms_summary(texts, limit=5):
+    counter = _extract_terms(texts)
+    total = sum(counter.values())
+    top = [{"term": term, "count": count} for term, count in counter.most_common(limit)]
+    coverage = _safe_ratio(sum(item["count"] for item in top), total)
+    return top, coverage
+
+
 def build_group_summary(rows):
     grouped = {}
     for row in rows or []:
@@ -40,6 +100,8 @@ def build_group_summary(rows):
         latency_values = [int(_to_float(item.get("latency_ms"), 0)) for item in items]
         success_count = sum(1 for item in items if item.get("success") is True)
         fallback_count = sum(1 for item in items if item.get("fallback_used") is True)
+        successful_texts = [_output_text(item) for item in items if item.get("success") is True]
+        top_terms, top_terms_coverage = _top_terms_summary(successful_texts)
 
         parse_values = [item.get("parse_success") for item in items if item.get("parse_success") is not None]
         parse_fail_count = sum(1 for value in parse_values if value is False)
@@ -59,6 +121,10 @@ def build_group_summary(rows):
                 "fallback_rate": _safe_ratio(fallback_count, len(items)),
                 "p50_latency_ms": _nearest_rank(latency_values, 0.5),
                 "p95_latency_ms": _nearest_rank(latency_values, 0.95),
+                "duplicate_rate": _duplicate_rate(successful_texts),
+                "prefix_duplicate_rate": _prefix_duplicate_rate(successful_texts),
+                "top_terms": top_terms,
+                "top_terms_coverage": top_terms_coverage,
             }
         )
 

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { UserInfo } from '@/types/models'
 import { getUserProfile } from '@/api/user' // 需要引入
+import { markSessionStart, clearSessionStart } from '@/utils/sessionGuard'
 
 // 辅助函数：从 localStorage 读取用户信息
 function loadUserInfo(): UserInfo | null {
@@ -27,8 +28,11 @@ export const useUserStore = defineStore('user', () => {
     token.value = newToken
     if (newToken) {
       localStorage.setItem('token', newToken)
+      // 记录会话起始时间，供 sessionGuard 到期自动登出
+      markSessionStart()
     } else {
       localStorage.removeItem('token')
+      clearSessionStart()
     }
   }
 

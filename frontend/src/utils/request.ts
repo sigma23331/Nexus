@@ -1,6 +1,7 @@
 // src/utils/request.ts
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios'
 import type { ApiResponse } from '@/types/api'
+import { clearSessionStart } from '@/utils/sessionGuard'
 
 // 创建 axios 实例
 const request: AxiosInstance = axios.create({
@@ -37,8 +38,9 @@ request.interceptors.response.use(
 
     // token 失效或未登录
     if (code === 401) {
-      // 清除本地 token
+      // 清除本地 token 与会话起始时间
       localStorage.removeItem('token')
+      clearSessionStart()
       // 如果不在登录页，跳转到登录页
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'

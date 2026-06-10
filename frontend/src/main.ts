@@ -7,6 +7,9 @@ import App from './App.vue'
 import ToastContainer from '@/components/common/ToastContainer.vue'
 import GlobalOverlay from '@/components/common/GlobalOverlay.vue'
 import { useRouteProgress } from '@/composables/useRouteProgress'
+import { useToast } from '@/composables/useToast'
+import { startSessionGuard } from '@/utils/sessionGuard'
+import { useUserStore } from '@/stores/user'
 import router from './router'
 import './style.css'
 
@@ -37,6 +40,17 @@ router.afterEach(() => {
 })
 router.onError(() => {
   routeProgress.done()
+})
+
+// 会话守卫：登录满固定时长（< 后端 token 有效期）自动退出并回到登录页
+startSessionGuard(() => {
+  const userStore = useUserStore()
+  userStore.logout()
+  const current = router.currentRoute.value
+  if (current.name !== 'login' && current.name !== 'register') {
+    useToast().warning('登录已过期，请重新登录')
+    router.replace({ name: 'login', query: { redirect: current.fullPath } })
+  }
 })
 
 startNetworkSync()

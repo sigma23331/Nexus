@@ -64,7 +64,7 @@
         </div>
 
         <!-- 右侧：已佩戴徽章区域 -->
-        <div class="flex items-center gap-1 flex-shrink-0 -mr-2">
+        <div class="flex items-center gap-1 flex-shrink-0">
           <div
             v-for="badge in displayEquippedBadges"
             :key="badge.code"
@@ -74,7 +74,7 @@
             <img
               :src="getBadgeIconUrl(badge.code, false)"
               :alt="badge.name"
-              class="h-14 w-14 rounded-full object-contain transition-transform hover:scale-110"
+              class="h-10 w-10 rounded-full object-contain transition-transform hover:scale-110"
               @error="handleBadgeImageError"
             />
             <div

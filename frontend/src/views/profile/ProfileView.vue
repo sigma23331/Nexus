@@ -13,19 +13,18 @@
             <h2 class="text-xl font-bold text-slate-800">
               {{ userStore.userInfo?.nickname || '未登录' }}
             </h2>
-            <div class="flex justify-between items-center mt-1 gap-4">
+            <div class="mt-1">
               <!-- 生日区域 -->
               <span class="text-xs text-slate-500 flex items-center gap-1">
                 <span>🎂</span>
                 {{ formattedBirthday }}
               </span>
-
-              <!-- 性别区域：仅当性别为男或女时显示 -->
+              <!-- 性别区域：仅当性别为男或女时显示，放在生日下方 -->
               <span
                 v-if="
                   userStore.userInfo?.gender === 'male' || userStore.userInfo?.gender === 'female'
                 "
-                class="text-sm text-slate-500 flex items-center gap-1"
+                class="text-sm text-slate-500 flex items-center gap-1 mt-1"
               >
                 <svg
                   v-if="userStore.userInfo?.gender === 'male'"

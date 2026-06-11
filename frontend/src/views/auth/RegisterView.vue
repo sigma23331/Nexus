@@ -369,6 +369,26 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 强制统一密码输入框在iOS上的样式，与普通文本框一致 */
+.register-password-input input {
+  -webkit-appearance: none;
+  appearance: none;
+  font-size: 16px; /* 防止iOS自动缩放导致框变细 */
+  line-height: 1.5;
+  font-family: inherit;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  color: #0f172a;
+}
+
+.login-password-input input:focus {
+  outline: none;
+  border-color: #a855f7;
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.6);
+}
+
 .register-password-input input[type='password']::-ms-reveal,
 .register-password-input input[type='password']::-ms-clear {
   display: none;

@@ -184,8 +184,8 @@ const handleFileSelect = async (e: Event) => {
     errorMsg.value = '请选择图片文件'
     return
   }
-  if (file.size > 2 * 1024 * 1024) {
-    errorMsg.value = '图片大小不能超过 2MB'
+  if (file.size > 1.4 * 1024 * 1024) {
+    errorMsg.value = '图片大小不能超过 1.4MB'
     return
   }
   try {

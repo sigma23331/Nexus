@@ -1,12 +1,14 @@
 # backend/routes/user.py
+import base64
 import re
 from datetime import date
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, Response, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy.exc import IntegrityError
 
 from extensions import db
+from utils.avatar import public_avatar_url
 from models.diary import DiaryEntry
 from models.fortune import FortuneRecord
 from models.user import Gender, User
@@ -33,7 +35,7 @@ def _serialize_user_info(user):
     return {
         "uid": user.id,
         "nickname": user.nickname,
-        "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png",
+        "avatar": public_avatar_url(user) or "https://api.xinyundao.com/default_avatar.png",
         "birthday": user.birthday.isoformat() if getattr(user, 'birthday', None) else None,
         "latitude": getattr(user, 'latitude', None),
         "longitude": getattr(user, 'longitude', None),
@@ -311,6 +313,32 @@ def get_favorite_answers():
 
 # ==================== 6.9 修改头像 ====================
 
+@user_bp.route('/avatar/<user_id>', methods=['GET'])
+def get_avatar_image(user_id):
+    """
+    输出用户头像图片（公开，<img> 标签无法携带 JWT）。
+    历史头像以 base64 data URL 存库，此端点将其解码为图片字节返回，
+    避免在列表 JSON 中内联数 MB 的 base64（广场加载缓慢的根因）。
+    """
+    user = User.query.filter_by(id=user_id).first()
+    avatar = (user.avatar or "") if user else ""
+    if not avatar.startswith("data:"):
+        return jsonify(code=404, message="头像不存在", data=None), 404
+
+    try:
+        header, b64_data = avatar.split(",", 1)
+        mime = header[5:].split(";", 1)[0] or "image/jpeg"
+        payload = base64.b64decode(b64_data)
+    except Exception:
+        current_app.logger.warning("头像数据解析失败: user_id=%s", user_id)
+        return jsonify(code=404, message="头像数据无效", data=None), 404
+
+    response = Response(payload, mimetype=mime)
+    # URL 带 v 参数（见 utils/avatar.py），头像更新后 URL 变化，可放心长缓存
+    response.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+    return response
+
+
 @user_bp.route('/profile/avatar', methods=['PUT'])
 @jwt_required()
 def update_avatar():
@@ -347,7 +375,7 @@ def update_avatar():
         return jsonify(code=500, message="更新失败，请稍后重试", data=None), 500
 
     return jsonify(code=200, message="头像更新成功", data={
-        "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png"
+        "avatar": public_avatar_url(user) or "https://api.xinyundao.com/default_avatar.png"
     }), 200
 
 

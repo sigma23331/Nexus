@@ -7,6 +7,7 @@
         :src="getValidAvatar(comment.owner.avatar)"
         class="w-full h-full object-cover"
         alt=""
+        loading="lazy"
         @error="handleAvatarError"
       />
     </div>
@@ -78,7 +79,8 @@ const props = defineProps<{
   isReply?: boolean
 }>()
 
-const fallbackAvatar = 'https://placehold.co/100x100/FDE68A/8B5CF6?text=U'
+// 本地兜底头像，避免依赖境外 placehold.co（慢且可能不通）
+const fallbackAvatar = '/images/avatar.png'
 
 const handleAvatarError = (e: Event) => {
   const img = e.target as HTMLImageElement

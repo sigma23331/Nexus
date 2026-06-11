@@ -4,6 +4,7 @@ from datetime import datetime
 from extensions import db
 from models import PlazaCard, PlazaComment, PlazaCommentReport, User
 from services import content_review_service
+from utils.avatar import public_avatar_url
 
 
 REPORT_HIDE_THRESHOLD = 2
@@ -38,7 +39,8 @@ def _comment_owner(user, badges_by_user_id=None):
     return {
         "uid": user.id,
         "nickname": user.nickname,
-        "avatar": user.avatar or "",
+        # 返回短 URL 而非内联 base64，避免评论列表 JSON 膨胀
+        "avatar": public_avatar_url(user),
         "badges": badges_by_user_id.get(user.id, []),
     }
 

@@ -1,6 +1,8 @@
 import base64
 from datetime import datetime
 
+from sqlalchemy.orm import selectinload
+
 from extensions import db
 from models.answer import AnswerRecord
 from models.association import Like
@@ -8,6 +10,7 @@ from models.fortune import FortuneRecord
 from models.plaza import PLAZA_CARD_CONTENT_MAX_LENGTH, CardType, PlazaCard
 from models.user import User
 from services import content_review_service
+from utils.avatar import public_avatar_url
 
 
 def _encode_cursor(created_at, card_id):
@@ -39,7 +42,8 @@ def _card_owner(user, badges_by_user_id=None):
     return {
         "uid": user.id,
         "nickname": user.nickname,
-        "avatar": user.avatar or "",
+        # 返回短 URL 而非内联 base64，否则一页卡片的 JSON 可膨胀至数 MB
+        "avatar": public_avatar_url(user),
         "badges": badges_by_user_id.get(user.id, []),
     }
 
@@ -94,7 +98,8 @@ def list_cards(user_id, tab="latest", cursor=None, limit=10):
 
     cursor_created_at, cursor_id = _decode_cursor(cursor)
 
-    query = PlazaCard.query
+    # 批量预加载作者，避免逐卡片懒加载 user 的 N+1 查询
+    query = PlazaCard.query.options(selectinload(PlazaCard.user))
 
     if tab == "hot":
         query = query.order_by(PlazaCard.likes_count.desc(), PlazaCard.created_at.desc(), PlazaCard.id.desc())

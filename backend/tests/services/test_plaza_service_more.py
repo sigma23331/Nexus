@@ -83,6 +83,9 @@ def test_list_cards_latest_with_cursor_and_has_more(monkeypatch):
         def __init__(self):
             self.rows = [c1, c2, c3]
 
+        def options(self, *_args):
+            return self
+
         def order_by(self, *_args):
             return self
 
@@ -100,6 +103,7 @@ def test_list_cards_latest_with_cursor_and_has_more(monkeypatch):
         likes_count = _Field()
         created_at = _Field()
         id = _Field()
+        user = _Field()
 
     class _LikeQuery:
         def filter(self, *_args):
@@ -115,6 +119,7 @@ def test_list_cards_latest_with_cursor_and_has_more(monkeypatch):
 
     monkeypatch.setattr(plaza_service.db, "or_", lambda *_args: True)
     monkeypatch.setattr(plaza_service.db, "and_", lambda *_args: True)
+    monkeypatch.setattr(plaza_service, "selectinload", lambda *_args: None)
     monkeypatch.setattr(plaza_service, "PlazaCard", _PlazaCard)
     monkeypatch.setattr(plaza_service, "Like", _Like)
     monkeypatch.setattr(

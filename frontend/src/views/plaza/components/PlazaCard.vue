@@ -12,6 +12,7 @@
             :src="getValidAvatar(card.owner.avatar)"
             class="w-full h-full object-cover"
             alt="头像"
+            loading="lazy"
             @error="handleAvatarError"
           />
         </div>
@@ -75,7 +76,11 @@
     <div class="px-4 pb-2">
       <!-- 图片卡片 -->
       <div v-if="hasValidImage" class="mb-2">
-        <img :src="card.snapshotUrl" class="w-full rounded-xl border border-slate-200" />
+        <img
+          :src="card.snapshotUrl"
+          class="w-full rounded-xl border border-slate-200"
+          loading="lazy"
+        />
       </div>
 
       <!-- 运势卡片 -->
@@ -317,7 +322,8 @@ const confirmDelete = () => {
   }
 }
 
-const fallbackAvatar = 'https://placehold.co/100x100/FDE68A/8B5CF6?text=U'
+// 本地兜底头像，避免依赖境外 placehold.co（慢且可能不通）
+const fallbackAvatar = '/images/avatar.png'
 const handleAvatarError = (e: Event) => {
   const img = e.target as HTMLImageElement
   if (img.src !== fallbackAvatar) {

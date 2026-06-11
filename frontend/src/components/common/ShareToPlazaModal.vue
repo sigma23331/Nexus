@@ -203,6 +203,7 @@ const extraContent = ref('')
 const sharing = ref(false)
 const toastMessage = ref('')
 let toastTimer: ReturnType<typeof setTimeout> | null = null
+const PLAZA_REFRESH_FLAG_KEY = 'plaza-refresh-after-share'
 
 const isFortune = computed(() => cardType.value === 'fortune')
 const previewDateText = computed(() => dayjs().format('YYYY-MM-DD'))
@@ -347,13 +348,19 @@ const confirmShare = async () => {
   sharing.value = true
   try {
     const placeholderUrl = 'https://placehold.co/400x400/FEF7E0/8B5CF6?text=心运岛&font=montserrat'
-    await createPlazaCard({
+    const createdCard = await createPlazaCard({
       type: cardType.value,
       sourceId: sourceId.value,
       snapshotUrl: placeholderUrl,
       content: finalContent.value,
       tags: [],
     })
+    localStorage.setItem(PLAZA_REFRESH_FLAG_KEY, String(Date.now()))
+    window.dispatchEvent(
+      new CustomEvent('plaza-card-created', {
+        detail: { card: createdCard },
+      }),
+    )
     showToast('✨ 已分享到广场！')
     setTimeout(() => {
       close()

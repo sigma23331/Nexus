@@ -127,7 +127,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onActivated, onMounted, onUnmounted, watch } from 'vue'
 import PlazaCard from './components/PlazaCard.vue'
 import TreeholeModal from '@/components/business/TreeholeModal.vue'
 import TreeholeResultModal from '@/components/business/TreeholeResultModal.vue'
@@ -151,6 +151,7 @@ const currentTab = ref<'hot' | 'latest'>('latest')
 const showOnlyMine = ref(false)
 const treeholeModalRef = ref<InstanceType<typeof TreeholeModal> | null>(null)
 const treeholeResultRef = ref<InstanceType<typeof TreeholeResultModal> | null>(null)
+const PLAZA_REFRESH_FLAG_KEY = 'plaza-refresh-after-share'
 
 // 打开树洞输入弹窗
 const openTreeholeModal = () => {
@@ -210,6 +211,22 @@ const fetchCards = async (reset = true) => {
   }
 }
 
+const refreshCardsSilently = async () => {
+  if (initialLoading.value || loadingMore.value) return
+  try {
+    const res = await getPlazaCards({
+      tab: currentTab.value,
+      limit: Math.max(cards.value.length, 10),
+    })
+    cards.value = res.list
+    nextCursor.value = res.nextCursor
+    hasMore.value = res.hasMore
+    error.value = false
+  } catch (err) {
+    console.error('刷新广场卡片失败', err)
+  }
+}
+
 // 重置并获取（切换筛选条件时调用）
 const resetAndFetch = () => {
   nextCursor.value = null
@@ -266,7 +283,32 @@ const handleDeleteCard = async (cardId: string) => {
   }
 }
 
+const handlePlazaCardCreated = (event: Event) => {
+  localStorage.removeItem(PLAZA_REFRESH_FLAG_KEY)
+  const createdCard = (event as CustomEvent<{ card?: PlazaCardType }>).detail?.card
+  if (createdCard && !cards.value.some((card) => card.cardId === createdCard.cardId)) {
+    cards.value = [createdCard, ...cards.value]
+  }
+  refreshCardsSilently()
+}
+
+const refreshIfSharedRecently = () => {
+  const flag = localStorage.getItem(PLAZA_REFRESH_FLAG_KEY)
+  if (!flag) return
+  localStorage.removeItem(PLAZA_REFRESH_FLAG_KEY)
+  refreshCardsSilently()
+}
+
 onMounted(() => {
   fetchCards(true)
+  window.addEventListener('plaza-card-created', handlePlazaCardCreated)
+})
+
+onActivated(() => {
+  refreshIfSharedRecently()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('plaza-card-created', handlePlazaCardCreated)
 })
 </script>

@@ -214,7 +214,7 @@
     <ShareToPlazaModal ref="shareModalRef" />
 
     <!-- 答案详情弹窗 -->
-    <AnswerDetailModal ref="answerDetailModalRef" />
+    <AnswerDetailModal ref="answerDetailModalRef" @favorite-toggled="onDetailFavoriteToggled" />
   </div>
 </template>
 
@@ -420,6 +420,12 @@ function openShareToPlaza() {
 onMounted(() => {
   loadRecentHistory()
 })
+
+const onDetailFavoriteToggled = (answerId: string, isFavorited: boolean) => {
+  // 更新 recentAnswers 中对应项的收藏状态
+  const target = recentAnswers.value.find((item) => item.id === answerId)
+  if (target) target.isFavorited = isFavorited
+}
 
 const bgImageUrl = new URL('/images/answer_detail_bg.png', import.meta.url).href
 </script>

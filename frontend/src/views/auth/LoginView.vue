@@ -53,13 +53,27 @@
         <p v-if="smsCodeError" class="text-xs text-red-500 mt-1">{{ smsCodeError }}</p>
       </div>
 
-      <!-- 密码登录（带自定义显示/隐藏图标） -->
+      <!-- 密码登录（双框切换，避免 Safari 变形） -->
       <div v-if="loginMode === 'password'">
         <label class="block text-sm font-medium text-slate-700 mb-1">密码</label>
         <div class="relative login-password-input">
+          <!-- 密码框（type="password"） -->
           <input
+            v-show="!showPassword"
             v-model="password"
-            :type="showPassword ? 'text' : 'password'"
+            type="password"
+            placeholder="请输入密码"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/60 focus:border-purple-400 pr-10"
+            :class="{ 'border-red-500': passwordError }"
+            autocomplete="off"
+            autocapitalize="none"
+            spellcheck="false"
+          />
+          <!-- 明文框（type="text"） -->
+          <input
+            v-show="showPassword"
+            v-model="password"
+            type="text"
             placeholder="请输入密码"
             class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/60 focus:border-purple-400 pr-10"
             :class="{ 'border-red-500': passwordError }"
@@ -113,6 +127,7 @@
         <p v-if="passwordError" class="text-xs text-red-500 mt-1">{{ passwordError }}</p>
       </div>
 
+      <!-- Cloudflare Turnstile 验证（仅短信登录时出现） -->
       <div
         v-if="showTurnstile && loginMode === 'sms'"
         class="rounded-2xl border border-purple-100 bg-purple-50/40 p-4 space-y-3"
@@ -181,7 +196,7 @@ const smsCode = ref('')
 const password = ref('')
 const loginLoading = ref(false)
 const smsSending = ref(false)
-const showPassword = ref(false)
+const showPassword = ref(false) // 控制密码明文/密文显示
 
 // 倒计时
 const smsCountdown = ref(0)

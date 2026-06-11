@@ -187,6 +187,11 @@ const showToast = (msg: string) => {
   }, 2000)
 }
 
+const emit = defineEmits<{
+  (e: 'favorite-toggled', answerId: string, isFavorited: boolean): void
+}>()
+
+// 修改 toggleFavorite 函数
 const toggleFavorite = async () => {
   if (favoriteLoading.value) return
   if (!navigator.onLine) {
@@ -201,6 +206,8 @@ const toggleFavorite = async () => {
     updateLocalFavoriteStatus(detailData.id, newStatus)
     detailData.isFavorited = newStatus
     showToast(newStatus ? '已收藏' : '已取消收藏')
+    // 触发事件，通知父组件更新
+    emit('favorite-toggled', detailData.id, newStatus)
   } catch (err) {
     console.error('操作失败', err)
     showToast('操作失败，请重试')

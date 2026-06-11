@@ -778,9 +778,9 @@ const historyFortunes = ref<
 const historyDetailOpen = ref(false)
 const selectedHistory = ref<(typeof historyFortunes.value)[number] | null>(null)
 const chartRef = ref<HTMLElement | null>(null)
-type EchartsModule = typeof import('echarts')
+type EchartsModule = typeof import('@/utils/echartsLite')
 let echartsModule: EchartsModule | null = null
-let chartInstance: import('echarts').ECharts | null = null
+let chartInstance: import('@/utils/echartsLite').ECharts | null = null
 let chartInitRetryTimer: ReturnType<typeof setTimeout> | null = null
 let boardRequestToken = 0
 const FORTUNE_BOARD_CACHE_KEY = 'fortune-board-cache-v1'
@@ -1249,7 +1249,8 @@ const loadFortuneBoard = async () => {
 
 const ensureEchartsModule = async () => {
   if (!echartsModule) {
-    echartsModule = await import('echarts')
+    // 按需注册的轻量入口（见 utils/echartsLite.ts），仍保持懒加载
+    echartsModule = await import('@/utils/echartsLite')
   }
   return echartsModule
 }

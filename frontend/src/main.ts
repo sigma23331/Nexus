@@ -9,9 +9,13 @@ import GlobalOverlay from '@/components/common/GlobalOverlay.vue'
 import { useRouteProgress } from '@/composables/useRouteProgress'
 import { useToast } from '@/composables/useToast'
 import { startSessionGuard } from '@/utils/sessionGuard'
+import { registerLocalIcons } from '@/utils/localIcons'
 import { useUserStore } from '@/stores/user'
 import router from './router'
 import './style.css'
+
+// 本地注册 TabBar 图标，首屏不再等待 iconify 在线 API（且离线可用）
+registerLocalIcons()
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -54,6 +58,19 @@ startSessionGuard(() => {
 })
 
 startNetworkSync()
+
+// 首屏渲染完成后，空闲时静默预取其他 Tab 页的 JS chunk，使 Tab 切换瞬时完成。
+// 模块标识与路由懒加载一致，Vite 会复用同一 chunk，不会重复打包。
+const prefetchTabViews = () => {
+  void import('@/views/answer/AnswerView.vue')
+  void import('@/views/plaza/PlazaView.vue')
+  void import('@/views/profile/ProfileView.vue')
+}
+if ('requestIdleCallback' in window) {
+  requestIdleCallback(prefetchTabViews, { timeout: 5000 })
+} else {
+  setTimeout(prefetchTabViews, 3000)
+}
 
 autoRequestUserLocation().catch(() => {
   // 自动位置请求失败时保持静默，不影响其他功能

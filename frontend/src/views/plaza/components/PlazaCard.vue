@@ -66,7 +66,7 @@
 
     <!-- 分享文案 -->
     <div v-if="shareMessage" class="px-2 pb-2">
-      <div class="bg-white/80 rounded-lg p-3 text-sm text-slate-600 shadow-sm">
+      <div class="bg-white/80 rounded-lg p-3 text-sm text-slate-600 shadow-sm whitespace-pre-wrap">
         {{ shareMessage }}
       </div>
     </div>

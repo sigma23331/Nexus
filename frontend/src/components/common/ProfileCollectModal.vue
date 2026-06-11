@@ -22,7 +22,7 @@
       </div>
 
       <div class="p-5 space-y-5">
-        <!-- 头像上传（仅文件选择，移除 URL 输入） -->
+        <!-- 头像上传（自动裁剪压缩） -->
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-2">头像</label>
           <div class="flex items-center gap-4">
@@ -34,7 +34,8 @@
               <button
                 type="button"
                 @click="triggerFileInput"
-                class="absolute bottom-0 right-0 bg-purple-600 rounded-full p-1 shadow-md hover:bg-purple-700"
+                :disabled="isProcessing"
+                class="absolute bottom-0 right-0 bg-purple-600 rounded-full p-1 shadow-md hover:bg-purple-700 disabled:bg-gray-400"
               >
                 <svg
                   class="w-4 h-4 text-white"
@@ -57,7 +58,9 @@
                 </svg>
               </button>
             </div>
-            <div class="flex-1 text-xs text-slate-500">支持 JPG/PNG，建议正方形图片</div>
+            <div class="flex-1 text-xs text-slate-500">
+              支持 JPG/PNG，自动裁剪为正方形并压缩至合适大小
+            </div>
           </div>
           <input
             ref="fileInput"
@@ -66,9 +69,11 @@
             class="hidden"
             @change="handleFileSelect"
           />
+          <div v-if="isProcessing" class="text-xs text-purple-600 mt-2 text-center">
+            处理图片中，请稍候...
+          </div>
         </div>
 
-        <!-- 昵称（必填） -->
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">
             昵称 <span class="text-red-500">*</span>
@@ -84,13 +89,11 @@
           <p v-if="nicknameError" class="text-xs text-red-500 mt-1">{{ nicknameError }}</p>
         </div>
 
-        <!-- 生日 -->
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1">生日（选填）</label>
           <BirthdayPicker v-model="birthday" />
         </div>
 
-        <!-- 性别 -->
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-2">性别（选填）</label>
           <div class="flex gap-6">
@@ -121,7 +124,7 @@
         </button>
         <button
           @click="submit"
-          :disabled="submitting || !nickname.trim()"
+          :disabled="submitting || !nickname.trim() || isProcessing"
           class="flex-1 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition disabled:opacity-50"
         >
           {{ submitting ? '保存中...' : '保存并继续' }}
@@ -136,7 +139,6 @@ import { ref, computed } from 'vue'
 import { updateUserProfile } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import BirthdayPicker from '@/components/common/BirthdayPicker.vue'
-import { compressImageToBase64 } from '@/utils/imageCompress'
 
 interface ProfilePayload {
   nickname: string
@@ -154,56 +156,120 @@ const userStore = useUserStore()
 const visible = ref(false)
 const submitting = ref(false)
 const errorMsg = ref('')
+const isProcessing = ref(false)
 
-// 表单数据
 const nickname = ref('')
-const avatarPreview = ref('') // 仅用于预览，提交时直接从 file 转 base64
+const avatarPreview = ref('')
 const birthday = ref('')
 const gender = ref<'male' | 'female' | 'secret' | ''>('')
-let selectedFileBase64: string | null = null // 存储待提交的 base64
+let compressedBase64: string | null = null
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const defaultAvatar = '/images/avatar.png'
 
-// 昵称校验
 const nicknameError = computed(() => {
   if (!nickname.value.trim()) return '昵称不能为空'
   if (nickname.value.trim().length > 15) return '昵称不能超过15个字符'
   return ''
 })
 
+/**
+ * 将图片文件压缩为 80-150KB 的正方形 JPEG Base64
+ * @param file 原始图片文件
+ * @returns Promise<string> Base64 字符串
+ */
+const compressAndCropToSquare = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const size = Math.min(img.width, img.height)
+        const sx = (img.width - size) / 2
+        const sy = (img.height - size) / 2
+
+        const targetSize = 512
+        const canvas = document.createElement('canvas')
+        canvas.width = targetSize
+        canvas.height = targetSize
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('无法创建 canvas 上下文'))
+          return
+        }
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, targetSize, targetSize)
+
+        let quality = 0.9
+        let resultBase64 = ''
+        const minSizeKB = 80
+        const maxSizeKB = 150
+        for (let attempt = 0; attempt < 6; attempt++) {
+          resultBase64 = canvas.toDataURL('image/jpeg', quality)
+          const fileSizeKB = Math.round((resultBase64.length * 0.75) / 1024)
+          if (fileSizeKB >= minSizeKB && fileSizeKB <= maxSizeKB) {
+            break
+          }
+          if (fileSizeKB > maxSizeKB) {
+            quality -= 0.15
+          } else {
+            quality += 0.1
+          }
+          quality = Math.min(0.95, Math.max(0.3, quality))
+        }
+        resolve(resultBase64)
+      }
+      img.onerror = () => reject(new Error('图片加载失败'))
+      img.src = e.target?.result as string
+    }
+    reader.onerror = () => reject(new Error('文件读取失败'))
+    reader.readAsDataURL(file)
+  })
+}
+
 const handleFileSelect = async (e: Event) => {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
+
   if (!file.type.startsWith('image/')) {
     errorMsg.value = '请选择图片文件'
     return
   }
-  if (file.size > 10 * 1024 * 1024) {
-    errorMsg.value = '图片大小不能超过 10MB'
+
+  const MAX_RAW_SIZE = 4 * 1024 * 1024
+  if (file.size > MAX_RAW_SIZE) {
+    errorMsg.value = '图片不能超过 4MB，请选择较小的图片'
     return
   }
+
+  isProcessing.value = true
+  errorMsg.value = ''
   try {
-    // 浏览器端压缩后再转 base64，确保提交体积可控
-    const base64 = await compressImageToBase64(file)
-    selectedFileBase64 = base64
+    const base64 = await compressAndCropToSquare(file)
+    compressedBase64 = base64
     avatarPreview.value = base64
-    errorMsg.value = ''
-  } catch {
-    errorMsg.value = '图片读取失败'
+    const compressedKB = Math.round((base64.length * 0.75) / 1024)
+    console.log(`图片已压缩为 ${compressedKB} KB`)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '图片处理失败'
+    errorMsg.value = message
+    compressedBase64 = null
+    avatarPreview.value = ''
+  } finally {
+    isProcessing.value = false
+    if (input) input.value = ''
   }
 }
 
 const triggerFileInput = () => {
+  if (isProcessing.value) return
   fileInput.value?.click()
 }
 
 const open = () => {
-  // 重置表单（不预填头像，因为头像需要用户主动选择）
   nickname.value = userStore.userInfo?.nickname || ''
   avatarPreview.value = ''
-  selectedFileBase64 = null
+  compressedBase64 = null
   birthday.value = userStore.userInfo?.birthday?.split('T')[0] || ''
   gender.value = userStore.userInfo?.gender ?? ''
   errorMsg.value = ''
@@ -230,16 +296,14 @@ const submit = async () => {
   const payload: ProfilePayload = {
     nickname: nickname.value.trim(),
   }
-  // 如果用户选择了新头像，则提交 base64
-  if (selectedFileBase64) {
-    payload.avatar = selectedFileBase64
+  if (compressedBase64) {
+    payload.avatar = compressedBase64
   }
   if (birthday.value) payload.birthday = birthday.value
   if (gender.value) payload.gender = gender.value
 
   try {
     await updateUserProfile(payload)
-    // 刷新 store 中的用户信息
     await userStore.fetchUserInfo()
     close(false)
   } catch (err: unknown) {

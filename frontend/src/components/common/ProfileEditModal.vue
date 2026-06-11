@@ -133,6 +133,7 @@ import { updateUserProfile } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import BirthdayPicker from '@/components/common/BirthdayPicker.vue'
 import { getValidAvatar } from '@/utils/avatar'
+import { compressImageToBase64 } from '@/utils/imageCompress'
 
 interface ProfilePayload {
   nickname: string
@@ -167,15 +168,6 @@ const nicknameError = computed(() => {
   return ''
 })
 
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
 const handleFileSelect = async (e: Event) => {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
@@ -184,12 +176,13 @@ const handleFileSelect = async (e: Event) => {
     errorMsg.value = '请选择图片文件'
     return
   }
-  if (file.size > 1.4 * 1024 * 1024) {
-    errorMsg.value = '图片大小不能超过 1.4MB'
+  if (file.size > 10 * 1024 * 1024) {
+    errorMsg.value = '图片大小不能超过 10MB'
     return
   }
   try {
-    const base64 = await fileToBase64(file)
+    // 浏览器端压缩后再转 base64，确保提交体积可控
+    const base64 = await compressImageToBase64(file)
     selectedFileBase64 = base64
     avatarPreview.value = base64
     errorMsg.value = ''

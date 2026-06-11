@@ -11,6 +11,9 @@ class Config:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or SECRET_KEY
     JWT_ACCESS_TOKEN_EXPIRES = 604800
 
+    # 请求体上限兜底（与 nginx client_max_body_size 对齐），超出返回 413
+    MAX_CONTENT_LENGTH = 4 * 1024 * 1024
+
     LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'real')
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL')
     LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME')

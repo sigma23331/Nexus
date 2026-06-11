@@ -35,6 +35,7 @@ def test_complete_rejects_self_pk():
 
 
 def test_format_pk_serializes_result_and_users():
+    challenger_avatar = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w=="
     record = SimpleNamespace(
         id="pk1",
         token="token-1",
@@ -42,7 +43,7 @@ def test_format_pk_serializes_result_and_users():
         date=date(2026, 5, 31),
         challenger_id="u1",
         challenger_score=90,
-        challenger=SimpleNamespace(id="u1", nickname="Alice", avatar=""),
+        challenger=SimpleNamespace(id="u1", nickname="Alice", avatar=challenger_avatar),
         defender_id="u2",
         defender_score=90,
         defender=SimpleNamespace(id="u2", nickname="Bob", avatar="avatar.png"),
@@ -56,4 +57,5 @@ def test_format_pk_serializes_result_and_users():
     assert payload["status"] == "completed"
     assert payload["result"] == "draw"
     assert payload["challenger"]["nickname"] == "Alice"
+    assert payload["challenger"]["avatar"].startswith("/api/v1/user/avatar/u1?v=")
     assert payload["defender"]["avatar"] == "avatar.png"

@@ -17,6 +17,7 @@ from models.user import User
 from extensions import db
 from services import sms_service
 from services.turnstile_service import verify_turnstile_token
+from utils.avatar import avatar_or_default
 
 auth_bp = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
@@ -195,7 +196,7 @@ def sms_login():
         "userInfo": {
             "uid": user.id,
             "nickname": user.nickname,
-            "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png"
+            "avatar": avatar_or_default(user)
         },
         "isNewUser": is_new
     }), 200
@@ -253,7 +254,7 @@ def register():
         "userInfo": {
             "uid": user.id,
             "nickname": user.nickname,
-            "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png"
+            "avatar": avatar_or_default(user)
         },
         "isNewUser": True
     }), 200
@@ -300,7 +301,7 @@ def register_nickname():
         "userInfo": {
             "uid": user.id,
             "nickname": user.nickname,
-            "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png"
+            "avatar": avatar_or_default(user)
         },
         "isNewUser": True
     }), 200
@@ -359,7 +360,7 @@ def password_login():
         "userInfo": {
             "uid": user.id,
             "nickname": user.nickname,
-            "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png"
+            "avatar": avatar_or_default(user)
         },
         "isNewUser": False
     }), 200
@@ -479,7 +480,7 @@ def verify_mobile():
         "userInfo": {
             "uid": user.id,
             "nickname": user.nickname,
-            "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png",
+            "avatar": avatar_or_default(user),
             "phone": user.phone
         },
         "isNewUser": is_new
@@ -500,7 +501,7 @@ def verify_token():
         "userInfo": {
             "uid": user.id,
             "nickname": user.nickname,
-            "avatar": user.avatar or "https://api.xinyundao.com/default_avatar.png",
+            "avatar": avatar_or_default(user),
             "phone": user.phone
         }
     }), 200

@@ -33,7 +33,8 @@
               <button
                 type="button"
                 @click="triggerFileInput"
-                class="absolute bottom-0 right-0 bg-purple-600 rounded-full p-1 shadow-md hover:bg-purple-700"
+                :disabled="isProcessing"
+                class="absolute bottom-0 right-0 bg-purple-600 rounded-full p-1 shadow-md hover:bg-purple-700 disabled:bg-gray-400"
               >
                 <svg
                   class="w-4 h-4 text-white"
@@ -56,7 +57,9 @@
                 </svg>
               </button>
             </div>
-            <div class="flex-1 text-xs text-slate-500">支持 JPG/PNG，建议正方形图片</div>
+            <div class="flex-1 text-xs text-slate-500">
+              支持 JPG/PNG，自动裁剪为正方形并压缩至合适大小
+            </div>
           </div>
           <input
             ref="fileInput"
@@ -65,6 +68,9 @@
             class="hidden"
             @change="handleFileSelect"
           />
+          <div v-if="isProcessing" class="text-xs text-purple-600 mt-2 text-center">
+            处理图片中，请稍候...
+          </div>
         </div>
 
         <div>
@@ -117,7 +123,7 @@
         </button>
         <button
           @click="submit"
-          :disabled="submitting || !nickname.trim()"
+          :disabled="submitting || !nickname.trim() || isProcessing"
           class="flex-1 py-2 rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition disabled:opacity-50"
         >
           {{ submitting ? '保存中...' : '保存修改' }}
@@ -133,7 +139,6 @@ import { updateUserProfile } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import BirthdayPicker from '@/components/common/BirthdayPicker.vue'
 import { getValidAvatar } from '@/utils/avatar'
-import { compressImageToBase64 } from '@/utils/imageCompress'
 
 interface ProfilePayload {
   nickname: string
@@ -150,12 +155,13 @@ const userStore = useUserStore()
 const visible = ref(false)
 const submitting = ref(false)
 const errorMsg = ref('')
+const isProcessing = ref(false)
 
 const nickname = ref('')
 const avatarPreview = ref('')
 const birthday = ref('')
 const gender = ref<'male' | 'female' | 'secret' | ''>('')
-let selectedFileBase64: string | null = null
+let compressedBase64: string | null = null
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const defaultAvatar = '/images/avatar.png'
@@ -168,37 +174,111 @@ const nicknameError = computed(() => {
   return ''
 })
 
+/**
+ * 将图片文件压缩为 80-150KB 的正方形 JPEG Base64
+ * @param file 原始图片文件
+ * @returns Promise<string> Base64 字符串
+ */
+const compressAndCropToSquare = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        // 计算正方形裁剪区域（中心覆盖，取宽高中较小值）
+        const size = Math.min(img.width, img.height)
+        const sx = (img.width - size) / 2
+        const sy = (img.height - size) / 2
+
+        // 创建 canvas，目标尺寸为 512x512（足够清晰且 Base64 不会过大）
+        const targetSize = 512
+        const canvas = document.createElement('canvas')
+        canvas.width = targetSize
+        canvas.height = targetSize
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('无法创建 canvas 上下文'))
+          return
+        }
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, targetSize, targetSize)
+
+        // 动态调整质量以达到 80-150KB 的目标
+        let quality = 0.9
+        const minSizeKB = 80
+        const maxSizeKB = 150
+        let resultBase64 = ''
+        for (let attempt = 0; attempt < 6; attempt++) {
+          resultBase64 = canvas.toDataURL('image/jpeg', quality)
+          const fileSizeKB = Math.round((resultBase64.length * 0.75) / 1024) // Base64 长度 * 0.75 ≈ 二进制大小
+          if (fileSizeKB >= minSizeKB && fileSizeKB <= maxSizeKB) {
+            break
+          }
+          if (fileSizeKB > maxSizeKB) {
+            quality -= 0.15
+          } else {
+            quality += 0.1
+          }
+          quality = Math.min(0.95, Math.max(0.3, quality))
+        }
+        resolve(resultBase64)
+      }
+      img.onerror = () => reject(new Error('图片加载失败'))
+      img.src = e.target?.result as string
+    }
+    reader.onerror = () => reject(new Error('文件读取失败'))
+    reader.readAsDataURL(file)
+  })
+}
+
 const handleFileSelect = async (e: Event) => {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
+
+  // 1. 文件类型检查
   if (!file.type.startsWith('image/')) {
     errorMsg.value = '请选择图片文件'
     return
   }
-  if (file.size > 10 * 1024 * 1024) {
-    errorMsg.value = '图片大小不能超过 10MB'
+
+  // 2. 放宽前端限制至 4MB（原始文件大小）
+  const MAX_RAW_SIZE = 4 * 1024 * 1024
+  if (file.size > MAX_RAW_SIZE) {
+    errorMsg.value = '图片不能超过 4MB，请选择较小的图片'
     return
   }
+
+  // 3. 开始处理图片（压缩+裁剪）
+  isProcessing.value = true
+  errorMsg.value = ''
   try {
-    // 浏览器端压缩后再转 base64，确保提交体积可控
-    const base64 = await compressImageToBase64(file)
-    selectedFileBase64 = base64
+    const base64 = await compressAndCropToSquare(file)
+    compressedBase64 = base64
     avatarPreview.value = base64
-    errorMsg.value = ''
-  } catch {
-    errorMsg.value = '图片读取失败'
+    // 可选：显示压缩后的大小（调试用）
+    const compressedKB = Math.round((base64.length * 0.75) / 1024)
+    console.log(`图片已压缩为 ${compressedKB} KB`)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : '图片处理失败'
+    errorMsg.value = message
+    compressedBase64 = null
+    avatarPreview.value = ''
+  } finally {
+    isProcessing.value = false
+    // 清空 input 值，允许重复选择同一文件
+    if (input) input.value = ''
   }
 }
 
 const triggerFileInput = () => {
+  if (isProcessing.value) return
   fileInput.value?.click()
 }
 
 const open = () => {
   nickname.value = userStore.userInfo?.nickname || ''
   avatarPreview.value = ''
-  selectedFileBase64 = null
+  compressedBase64 = null
   birthday.value = userStore.userInfo?.birthday?.split('T')[0] || ''
   gender.value = userStore.userInfo?.gender ?? ''
   errorMsg.value = ''
@@ -223,8 +303,8 @@ const submit = async () => {
   const payload: ProfilePayload = {
     nickname: nickname.value.trim(),
   }
-  if (selectedFileBase64) {
-    payload.avatar = selectedFileBase64
+  if (compressedBase64) {
+    payload.avatar = compressedBase64
   }
   if (birthday.value) payload.birthday = birthday.value
   if (gender.value) payload.gender = gender.value

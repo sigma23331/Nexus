@@ -46,13 +46,27 @@
         <p v-if="codeError" class="text-xs text-red-500 mt-1">{{ codeError }}</p>
       </div>
 
-      <!-- 设置密码（带自定义显示/隐藏图标） -->
+      <!-- 设置密码（双框切换，避免 Safari 变形） -->
       <div>
         <label class="block text-sm font-medium text-slate-700 mb-1">设置密码</label>
         <div class="relative register-password-input">
+          <!-- 密码框 -->
           <input
+            v-show="!showPassword"
             v-model="password"
-            :type="showPassword ? 'text' : 'password'"
+            type="password"
+            placeholder="6-20位字符"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/60 focus:border-purple-400 pr-10"
+            :class="{ 'border-red-500': passwordError }"
+            autocomplete="off"
+            autocapitalize="none"
+            spellcheck="false"
+          />
+          <!-- 明文框 -->
+          <input
+            v-show="showPassword"
+            v-model="password"
+            type="text"
             placeholder="6-20位字符"
             class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/60 focus:border-purple-400 pr-10"
             :class="{ 'border-red-500': passwordError }"
@@ -127,6 +141,7 @@
       </div>
       <p v-if="protocolError" class="text-xs text-red-500 -mt-2">{{ protocolError }}</p>
 
+      <!-- Cloudflare Turnstile 验证 -->
       <div
         v-if="showTurnstile"
         class="rounded-2xl border border-purple-100 bg-purple-50/40 p-4 space-y-3"
@@ -205,7 +220,7 @@ const password = ref('')
 const agreeProtocol = ref(false)
 const registerLoading = ref(false)
 const smsSending = ref(false)
-const showPassword = ref(false)
+const showPassword = ref(false) // 控制密码明文/密文显示
 
 // 倒计时
 const countdown = ref(0)
@@ -383,7 +398,7 @@ onUnmounted(() => {
   color: #0f172a;
 }
 
-.login-password-input input:focus {
+.register-password-input input:focus {
   outline: none;
   border-color: #a855f7;
   box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.6);

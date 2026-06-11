@@ -423,7 +423,7 @@ onMounted(() => {
 
 const onDetailFavoriteToggled = (answerId: string, isFavorited: boolean) => {
   // 更新 recentAnswers 中对应项的收藏状态
-  const target = recentAnswers.value.find(item => item.id === answerId)
+  const target = recentAnswers.value.find((item) => item.id === answerId)
   if (target) target.isFavorited = isFavorited
 }
 

@@ -125,6 +125,16 @@ class _User:
         self.plaza_cards = _Counter(2)
 
 
+class _Session:
+    @staticmethod
+    def commit():
+        return None
+
+    @staticmethod
+    def rollback():
+        return None
+
+
 class _Pagination:
     def __init__(self, items, total):
         self.items = items
@@ -238,3 +248,72 @@ def test_get_favorites_success(client, auth_header, monkeypatch):
     body = response.get_json()
     assert body["code"] == 200
     assert body["data"]["total"] == 1
+
+
+def test_update_profile_avatar_accepts_image_data_url(client, auth_header, monkeypatch):
+    user = _User()
+    monkeypatch.setattr(route_module, "get_current_user", lambda: user)
+    monkeypatch.setattr(route_module, "db", type("FakeDB", (), {"session": _Session()}))
+
+    avatar = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w=="
+    response = client.put("/v1/user/profile", json={"avatar": avatar}, headers=auth_header)
+
+    assert response.status_code == 200
+    assert user.avatar == avatar
+    body = response.get_json()
+    assert body["data"]["userInfo"]["avatar"].startswith("/api/v1/user/avatar/u-test?v=")
+
+
+def test_update_avatar_endpoint_accepts_same_image_data_url(client, auth_header, monkeypatch):
+    user = _User()
+    monkeypatch.setattr(route_module, "get_current_user", lambda: user)
+    monkeypatch.setattr(route_module, "db", type("FakeDB", (), {"session": _Session()}))
+
+    avatar = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w=="
+    response = client.put("/v1/user/profile/avatar", json={"avatar": avatar}, headers=auth_header)
+
+    assert response.status_code == 200
+    assert user.avatar == avatar
+    assert response.get_json()["data"]["avatar"].startswith("/api/v1/user/avatar/u-test?v=")
+
+
+def test_update_avatar_endpoint_rejects_invalid_data_url(client, auth_header, monkeypatch):
+    monkeypatch.setattr(route_module, "get_current_user", lambda: _User())
+
+    response = client.put(
+        "/v1/user/profile/avatar",
+        json={"avatar": "data:text/html;base64,PGgxPm5vdCBpbWFnZTwvaDE+"},
+        headers=auth_header,
+    )
+
+    assert response.status_code == 400
+
+
+def test_get_avatar_image_returns_cache_and_security_headers(client, monkeypatch):
+    avatar = "data:image/png;base64,iVBORw0KGgpwbmc="
+    user = _User()
+    user.avatar = avatar
+
+    class _Query:
+        @staticmethod
+        def filter_by(**_kwargs):
+            class _Result:
+                @staticmethod
+                def first():
+                    return user
+
+            return _Result()
+
+    monkeypatch.setattr(route_module, "User", type("FakeUser", (), {"query": _Query()}))
+
+    response = client.get("/v1/user/avatar/u-test")
+
+    assert response.status_code == 200
+    assert response.mimetype == "image/png"
+    assert response.headers["Cache-Control"] == "public, max-age=2592000, immutable"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert response.headers["Content-Length"] == str(len(response.data))
+    assert response.headers["ETag"]
+
+    cached_response = client.get("/v1/user/avatar/u-test", headers={"If-None-Match": response.headers["ETag"]})
+    assert cached_response.status_code == 304

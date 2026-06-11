@@ -219,6 +219,28 @@ def test_sms_login_success_existing_user(client, monkeypatch):
     assert body["data"]["userInfo"]["uid"] == "u-1"
 
 
+def test_sms_login_serializes_data_url_avatar_as_public_url(client, monkeypatch):
+    phone = "13800138000"
+    route_module.sms_service._sms_store[phone] = {
+        "code": "123456",
+        "expires_at": datetime.utcnow() + timedelta(minutes=5),
+        "sent_at": datetime.utcnow(),
+        "action": "login",
+    }
+
+    avatar = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w=="
+    existing_user = _User(uid="u-1", phone=phone, nickname="Alice", avatar=avatar)
+    fake_user_model = type("FakeUser", (), {"query": _QueryStub(first_result=existing_user)})
+    monkeypatch.setattr(route_module, "User", fake_user_model)
+
+    response = client.post("/v1/auth/sms/login", json={"phone": phone, "code": "123456"})
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["data"]["userInfo"]["avatar"].startswith("/api/v1/user/avatar/u-1?v=")
+    assert not body["data"]["userInfo"]["avatar"].startswith("data:")
+
+
 def test_send_bind_sms_success(client, auth_header, monkeypatch):
     fake_user_model = type("FakeUser", (), {"query": _QueryStub(first_result=None)})
     monkeypatch.setattr(route_module, "User", fake_user_model)

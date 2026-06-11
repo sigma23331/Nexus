@@ -1,6 +1,5 @@
 # backend/routes/user.py
-import base64
-import re
+import hashlib
 from datetime import date
 
 from flask import Blueprint, Response, current_app, jsonify, request
@@ -8,7 +7,7 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy.exc import IntegrityError
 
 from extensions import db
-from utils.avatar import public_avatar_url
+from utils.avatar import avatar_or_default, decode_avatar_data_url, normalize_avatar_input, public_avatar_url
 from models.diary import DiaryEntry
 from models.fortune import FortuneRecord
 from models.user import Gender, User
@@ -35,7 +34,7 @@ def _serialize_user_info(user):
     return {
         "uid": user.id,
         "nickname": user.nickname,
-        "avatar": public_avatar_url(user) or "https://api.xinyundao.com/default_avatar.png",
+        "avatar": avatar_or_default(user),
         "birthday": user.birthday.isoformat() if getattr(user, 'birthday', None) else None,
         "latitude": getattr(user, 'latitude', None),
         "longitude": getattr(user, 'longitude', None),
@@ -132,16 +131,12 @@ def update_profile():
             return jsonify(code=400, message="昵称已被占用", data=None), 400
         user.nickname = nickname
 
-    # 头像更新：允许 URL 或 dataURL（前端上传图片时用 base64）
+    # 头像更新：允许空值、URL 或图片 dataURL（前端上传图片时用 base64）
     if 'avatar' in provided_fields:
-        avatar = payload.get('avatar')
-        if avatar is None:
-            avatar = ''
-        if not isinstance(avatar, str):
-            return jsonify(code=400, message="头像格式无效", data=None), 400
-        avatar = avatar.strip()
-        if len(avatar) > 2_000_000:
-            return jsonify(code=400, message="头像数据过大，请压缩后重试", data=None), 400
+        try:
+            avatar = normalize_avatar_input(payload.get('avatar'))
+        except ValueError as exc:
+            return jsonify(code=400, message=str(exc), data=None), 400
         user.avatar = avatar
 
     if 'birthday' in provided_fields:
@@ -326,16 +321,18 @@ def get_avatar_image(user_id):
         return jsonify(code=404, message="头像不存在", data=None), 404
 
     try:
-        header, b64_data = avatar.split(",", 1)
-        mime = header[5:].split(";", 1)[0] or "image/jpeg"
-        payload = base64.b64decode(b64_data)
-    except Exception:
+        mime, payload = decode_avatar_data_url(avatar)
+    except ValueError:
         current_app.logger.warning("头像数据解析失败: user_id=%s", user_id)
         return jsonify(code=404, message="头像数据无效", data=None), 404
 
     response = Response(payload, mimetype=mime)
     # URL 带 v 参数（见 utils/avatar.py），头像更新后 URL 变化，可放心长缓存
     response.headers["Cache-Control"] = "public, max-age=2592000, immutable"
+    response.headers["Content-Length"] = str(len(payload))
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.set_etag(hashlib.sha256(payload).hexdigest())
+    response.make_conditional(request)
     return response
 
 
@@ -344,7 +341,7 @@ def get_avatar_image(user_id):
 def update_avatar():
     """
     修改用户头像
-    Request JSON: { "avatar": "头像URL" }
+    Request JSON: { "avatar": "头像URL或图片dataURL" }
     """
     user = get_current_user()
     if not user:
@@ -354,17 +351,10 @@ def update_avatar():
     if not data or 'avatar' not in data:
         return jsonify(code=400, message="缺少 avatar 参数", data=None), 400
 
-    avatar_url = data['avatar'].strip() if isinstance(data['avatar'], str) else ''
-
-    # 简单校验：非空时检查是否为合法 URL（支持 http/https/相对路径）
-    if avatar_url:
-        url_pattern = re.compile(
-            r'^(https?://)?'  # http:// 或 https:// (可选)
-            r'[\w\-]+(\.[\w\-]+)+'  # 域名
-            r'([\w\-.,@?^=%&:/~+#]*)?$'  # 路径、查询等
-        )
-        if not url_pattern.match(avatar_url):
-            return jsonify(code=400, message="头像 URL 格式不正确", data=None), 400
+    try:
+        avatar_url = normalize_avatar_input(data.get('avatar'))
+    except ValueError as exc:
+        return jsonify(code=400, message=str(exc), data=None), 400
 
     user.avatar = avatar_url
     try:
@@ -375,7 +365,7 @@ def update_avatar():
         return jsonify(code=500, message="更新失败，请稍后重试", data=None), 500
 
     return jsonify(code=200, message="头像更新成功", data={
-        "avatar": public_avatar_url(user) or "https://api.xinyundao.com/default_avatar.png"
+        "avatar": avatar_or_default(user)
     }), 200
 
 

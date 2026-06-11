@@ -5,6 +5,7 @@ from extensions import db
 from models.fortune_pk import FortunePKRecord, FortunePKStatus
 from models.user import User
 from services import fortune_service
+from utils.avatar import public_avatar_url
 
 
 def _user_payload(user):
@@ -13,7 +14,7 @@ def _user_payload(user):
     return {
         "uid": user.id,
         "nickname": user.nickname,
-        "avatar": user.avatar or "",
+        "avatar": public_avatar_url(user),
     }
 
 

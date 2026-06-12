@@ -1,3 +1,4 @@
+import hashlib
 import random as _random
 from datetime import date, datetime
 from pathlib import Path
@@ -120,6 +121,17 @@ _CHINESE_HOUR_RANGES = {
     "戌时": "19:00-21:00",
     "亥时": "21:00-23:00",
 }
+
+
+def _stable_lucky_hour(user_id, target_date, generation_context=None):
+    context = generation_context if isinstance(generation_context, dict) else {}
+    date_value = target_date.isoformat() if isinstance(target_date, date) else str(target_date or "")
+    birthday = context.get("birth_month_day") or context.get("birthday") or ""
+    key = f"{user_id or 'anonymous'}|{birthday}|{date_value}|lucky_hour"
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+    items = list(_CHINESE_HOUR_RANGES.items())
+    name, hour_range = items[int(digest[:12], 16) % len(items)]
+    return {"name": name, "range": hour_range}
 
 
 def _normalize_text(value, default="", limit=80):
@@ -314,8 +326,15 @@ def generate_profile(diary_entries, answer_questions):
     return normalized
 
 
-def generate_fallback_fortune(target_date):
+def generate_fallback_fortune(target_date, user_id=None, generation_context=None):
     normalized = _normalize_fortune_payload(_fallback_fortune(target_date))
+    lucky_hour = _stable_lucky_hour(
+        user_id=user_id,
+        target_date=target_date,
+        generation_context=generation_context,
+    )
+    normalized["lucky_hour_name"] = lucky_hour["name"]
+    normalized["lucky_hour_range"] = lucky_hour["range"]
     normalized["generatedBy"] = "fallback"
     return normalized
 
@@ -340,14 +359,14 @@ def generate_fortune(user_id, target_date):
         )
 
     profile_context = {
-        "mood_tendency": generation_context.get("mood_tendency", ""),
+        "mood_tendency": generation_context.get("tone", ""),
         "topic_interests": [
             item.strip()
-            for item in str(generation_context.get("topic_interests", "") or "").replace("，", ",").split(",")
+            for item in str(generation_context.get("focus_domain", "") or "").replace("，", ",").split(",")
             if item.strip()
         ],
-        "self_context_tag": generation_context.get("self_context_tag", ""),
-        "active_hour_bucket": generation_context.get("active_hour_bucket", ""),
+        "self_context_tag": generation_context.get("pressure_level", ""),
+        "active_hour_bucket": "",
     }
 
     prompts_dir = getattr(provider, "prompts_dir", None)
@@ -396,6 +415,13 @@ def generate_fortune(user_id, target_date):
     if generated_by == "provider" and score_controlled:
         normalized["score"] = score
         normalized["title"] = _score_to_title(score)
+    lucky_hour = _stable_lucky_hour(
+        user_id=user_id,
+        target_date=target_date,
+        generation_context=generation_context,
+    )
+    normalized["lucky_hour_name"] = lucky_hour["name"]
+    normalized["lucky_hour_range"] = lucky_hour["range"]
     normalized["generatedBy"] = generated_by
     return normalized
 

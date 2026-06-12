@@ -243,7 +243,7 @@ def test_generate_safe_fortune_uses_fallback_when_reviews_fail(monkeypatch):
     monkeypatch.setattr(
         fortune_service.content_generation_service,
         "generate_fallback_fortune",
-        lambda _target_date: {
+        lambda _target_date, **_kwargs: {
             "score": 70,
             "title": "fallback",
             "content_main": "safe",

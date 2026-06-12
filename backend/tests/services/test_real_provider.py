@@ -25,7 +25,7 @@ def test_chat_json_schema_falls_back_when_response_format_unsupported(monkeypatc
         calls.append(response_format)
         if response_format is not None:
             raise RuntimeError("unsupported response_format")
-        return '{"score":88,"content_main":"顺势而为","content_sub":"稳中有进","love":"中上","career":"平稳","health":"稳定","wealth":"向好","yi":["学习"],"ji":["熬夜"],"gua_meaning_lines":["火土相生","顺势加速，主动求进"],"lucky_hour_name":"巳时","lucky_hour_range":"09:00-11:00"}'
+        return '{"score":88,"content_main":"顺势而为","content_sub":"稳中有进","love":"中上","career":"平稳","health":"稳定","wealth":"向好","yi":["学习"],"ji":["熬夜"],"gua_meaning_lines":["火土相生","顺势加速，主动求进"]}'
 
     monkeypatch.setattr(provider, "_chat", fake_chat)
 
@@ -110,7 +110,7 @@ def test_chat_json_schema_uses_deepseek_json_object(monkeypatch):
     def fake_chat(messages, temperature=1.5, response_format=None, max_tokens=None):
         _ = (messages, temperature, max_tokens)
         captured["response_format"] = response_format
-        return '{"score":80,"content_main":"顺势而为","content_sub":"稳中求进","love":"中上","career":"平稳","health":"稳定","wealth":"向好","yi":["学习"],"ji":["熬夜"],"gua_meaning_lines":["阴阳守中","守正出新，稳步前行"],"lucky_hour_name":"午时","lucky_hour_range":"11:00-13:00"}'
+        return '{"score":80,"content_main":"顺势而为","content_sub":"稳中求进","love":"中上","career":"平稳","health":"稳定","wealth":"向好","yi":["学习"],"ji":["熬夜"],"gua_meaning_lines":["阴阳守中","守正出新，稳步前行"]}'
 
     monkeypatch.setattr(provider, "_chat", fake_chat)
 
@@ -141,8 +141,6 @@ def test_generate_fortune_normalizes_new_contract_fields(monkeypatch):
             "yi": ["学习打卡学习打卡学习打卡", "", 123, "运动"],
             "ji": ["熬夜熬夜熬夜熬夜熬夜", "拖延"],
             "gua_meaning_lines": ["第一句" * 20, "第二句" * 20, "多余一句"],
-            "lucky_hour_name": "午时午时午时午时",
-            "lucky_hour_range": "11:00-13:00加长版",
         }
 
     monkeypatch.setattr(provider, "_chat_json_schema", fake_chat_json_schema)
@@ -159,7 +157,8 @@ def test_generate_fortune_normalizes_new_contract_fields(monkeypatch):
     assert payload["yi"][0] == "学习打卡学习打卡学习打卡"
     assert payload["yi"][1] == "123"
     assert len(payload["gua_meaning_lines"]) == 2
-    assert payload["lucky_hour_name"].startswith("午时")
+    assert "lucky_hour_name" not in payload
+    assert "lucky_hour_range" not in payload
 
 
 def test_analyze_user_profile_keeps_free_text_and_normalizes_list(monkeypatch):
@@ -267,8 +266,6 @@ def test_generate_fortune_renders_profile_context_into_prompt(monkeypatch, tmp_p
             "yi": ["学习"],
             "ji": ["熬夜"],
             "gua_meaning_lines": ["阴阳守中", "守正出新，稳步前行"],
-            "lucky_hour_name": "午时",
-            "lucky_hour_range": "11:00-13:00",
         }
 
     monkeypatch.setattr(provider, "_chat_json_schema", fake_chat_json_schema)

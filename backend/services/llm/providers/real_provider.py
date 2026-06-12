@@ -24,8 +24,6 @@ FORTUNE_SCHEMA = {
         "yi",
         "ji",
         "gua_meaning_lines",
-        "lucky_hour_name",
-        "lucky_hour_range",
     ],
     "properties": {
         "score": {"type": "integer", "minimum": 0, "maximum": 100},
@@ -43,24 +41,7 @@ FORTUNE_SCHEMA = {
             "maxItems": 2,
             "items": {"type": "string", "maxLength": 40},
         },
-        "lucky_hour_name": {"type": "string", "maxLength": 20},
-        "lucky_hour_range": {"type": "string", "maxLength": 20},
     },
-}
-
-CHINESE_HOUR_RANGES = {
-    "子时": "23:00-01:00",
-    "丑时": "01:00-03:00",
-    "寅时": "03:00-05:00",
-    "卯时": "05:00-07:00",
-    "辰时": "07:00-09:00",
-    "巳时": "09:00-11:00",
-    "午时": "11:00-13:00",
-    "未时": "13:00-15:00",
-    "申时": "15:00-17:00",
-    "酉时": "17:00-19:00",
-    "戌时": "19:00-21:00",
-    "亥时": "21:00-23:00",
 }
 
 PROFILE_SCHEMA = {
@@ -98,7 +79,7 @@ DEFAULT_PROMPT_TEXT = {
     "fortune": (
         "你是心运岛的中文运势文案助手。"
         "只输出 JSON，不要输出 markdown 或额外解释。"
-        "字段必须包含：score,content_main,content_sub,love,career,health,wealth,yi,ji,gua_meaning_lines,lucky_hour_name,lucky_hour_range。"
+        "字段必须包含：score,content_main,content_sub,love,career,health,wealth,yi,ji,gua_meaning_lines。"
         "日期：{target_date}。score 必须严格等于 {score}。"
     ),
     "profile": (
@@ -292,14 +273,6 @@ class RealProvider(LLMProvider):
         if len(normalized_gua_lines) < 2:
             normalized_gua_lines = ["阴阳守中", "稳步前行，先稳后进"]
 
-        lucky_hour_name = str(data.get("lucky_hour_name", "午时")).strip()[:20] or "午时"
-        lucky_hour_range = str(data.get("lucky_hour_range", "11:00-13:00")).strip()[:20] or "11:00-13:00"
-        lucky_hour_name, lucky_hour_range = self._normalize_lucky_hour(
-            lucky_hour_name,
-            lucky_hour_range,
-            default_name="午时",
-        )
-
         return {
             "score": score,
             "content_main": str(
@@ -313,24 +286,7 @@ class RealProvider(LLMProvider):
             "yi": [str(item).strip()[:20] for item in yi[:5] if str(item).strip()],
             "ji": [str(item).strip()[:20] for item in ji[:5] if str(item).strip()],
             "gua_meaning_lines": normalized_gua_lines,
-            "lucky_hour_name": lucky_hour_name,
-            "lucky_hour_range": lucky_hour_range,
         }
-
-    def _normalize_lucky_hour(self, name, hour_range, default_name="午时"):
-        name = str(name or "").strip()[:20]
-        hour_range = str(hour_range or "").strip()[:20]
-
-        if name in CHINESE_HOUR_RANGES:
-            return name, CHINESE_HOUR_RANGES[name]
-
-        for candidate_name, candidate_range in CHINESE_HOUR_RANGES.items():
-            if hour_range == candidate_range:
-                return candidate_name, candidate_range
-
-        if default_name not in CHINESE_HOUR_RANGES:
-            default_name = "午时"
-        return default_name, CHINESE_HOUR_RANGES[default_name]
 
     def _normalize_profile(self, data):
         mood_tendency = str(data.get("mood_tendency", "calm")).strip()[:50] or "calm"
@@ -383,6 +339,8 @@ class RealProvider(LLMProvider):
             "self_context_tag": "",
             "mood_tendency": "",
             "active_hour_bucket": "",
+            "focus_domain": "general",
+            "pressure_level": "normal",
             "selected_style": "",
             "personalization_plan": "使用通用语气，保持安全、留白和低确定性。",
             "material_hints": "句式：留白短句；行动域：轻动作",
@@ -397,9 +355,6 @@ class RealProvider(LLMProvider):
             "rhythm": "留白",
             "length_rule": "11-14 个汉字",
             "action_domain": "整理",
-            "lucky_hour_guidance": "由 LLM 根据分数、今日基调和画像生成合法时辰。",
-            "assigned_lucky_hour_name": "",
-            "assigned_lucky_hour_range": "",
         }
 
     def _prompt_variables(self, values):

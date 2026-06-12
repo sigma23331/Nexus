@@ -168,7 +168,7 @@ def _generate_safe_fortune(user_id, target_date):
     if second_review.action == content_review_service.ACTION_PASS:
         return regenerated
 
-    return content_generation_service.generate_fallback_fortune(target_date)
+    return content_generation_service.generate_fallback_fortune(target_date, user_id=user_id)
 
 
 def get_today_fortune(user_id):

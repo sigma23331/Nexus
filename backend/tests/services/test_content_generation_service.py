@@ -74,8 +74,9 @@ def test_generate_fortune_returns_required_fields(monkeypatch):
     assert payload["health"] == "稳定"
     assert payload["wealth"] == "向好"
     assert payload["gua_meaning_lines"] == ["火土相生", "顺势加速，主动求进"]
-    assert payload["lucky_hour_name"] == "巳时"
-    assert payload["lucky_hour_range"] == "09:00-11:00"
+    lucky_hour = cgs._stable_lucky_hour("u1", date(2026, 4, 25), {})
+    assert payload["lucky_hour_name"] == lucky_hour["name"]
+    assert payload["lucky_hour_range"] == lucky_hour["range"]
     assert payload["generatedBy"] == "provider"
 
 
@@ -91,7 +92,8 @@ def test_generate_fortune_passes_profile_context_when_available(monkeypatch):
     class _Provider:
         def generate_fortune(self, user_id, target_date, profile_context=None):
             assert user_id == "u1"
-            assert profile_context["mood_tendency"] == "calm"
+            assert profile_context["topic_interests"] == ["career"]
+            assert profile_context["self_context_tag"] == "normal"
             return {
                 "score": 80,
                 "content_main": "稳步向前。",

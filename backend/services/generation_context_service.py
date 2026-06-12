@@ -14,6 +14,12 @@ TONES = ["温和", "克制", "明亮", "干净"]
 RHYTHMS = ["短促", "慢速", "留白"]
 ANSWER_LENGTH_RULES = ["8-10 个汉字", "11-14 个汉字", "15-18 个汉字"]
 ACTION_DOMAINS = ["整理", "沟通", "复盘", "交付", "休息"]
+FORTUNE_FOCUS_DOMAINS = {
+    "career": {"career", "job", "job_seek", "goal_job_change", "study", "work", "学习", "求职"},
+    "health": {"health", "sleep", "sleep_low", "low_energy", "recovery", "恢复", "疲惫"},
+    "love": {"love", "relationship", "family", "social", "关系", "伴侣"},
+    "wealth": {"wealth", "finance", "money", "财务", "预算"},
+}
 
 
 def _enum_value(value):
@@ -118,6 +124,23 @@ def _select_tone(tokens):
     if any(token in low_pressure_tokens for token in tokens):
         return random.choice(["温和", "克制"])
     return random.choice(TONES)
+
+
+def _select_focus_domain(tokens):
+    lowered_tokens = {str(token or "").strip().lower() for token in tokens if str(token or "").strip()}
+    for domain, aliases in FORTUNE_FOCUS_DOMAINS.items():
+        if lowered_tokens & aliases:
+            return domain
+    return "general"
+
+
+def _select_pressure_level(tokens):
+    lowered_tokens = {str(token or "").strip().lower() for token in tokens if str(token or "").strip()}
+    if lowered_tokens & {"anxious", "焦虑", "low_energy", "tired", "recovery", "sleep_low", "恢复", "疲惫"}:
+        return "low"
+    if lowered_tokens & {"optimistic", "energetic", "active", "明亮"}:
+        return "high"
+    return "normal"
 
 
 def _collect_answer_history(user_id, limit=8):
@@ -263,27 +286,25 @@ def build_fortune_context(user_id, target_date, score):
     except Exception:
         profile = None
 
-    context = _base_context(profile, task="fortune")
+    enabled = _profile_enabled(profile)
+    visible_profile = profile if enabled else None
+    tokens = _profile_tokens(visible_profile)
     history_terms = _extract_frequent_terms(_history_text(_collect_fortune_history(user_id), "fortune"))
-    taboo_terms = history_terms or DEFAULT_TABOO_TERMS
+    taboo_terms = (history_terms or DEFAULT_TABOO_TERMS)[:3]
     birthday, birth_month_day = _birthday_context(profile_model)
-    action_domain = random.choice(ACTION_DOMAINS)
 
-    context.update(
-        {
-            "target_date": target_date.isoformat() if isinstance(target_date, date) else str(target_date),
-            "score": str(max(0, min(int(score), 100))) if str(score).strip().lstrip("-").isdigit() else "70",
-            "birthday": birthday,
-            "birth_month_day": birth_month_day,
-            "imagery_domain": "",
-            "action_domain": action_domain,
-            "lucky_hour_guidance": "由 LLM 根据分数、今日基调和画像生成合法时辰，避免全部坍缩为同一时辰。",
-            "assigned_lucky_hour_name": "",
-            "assigned_lucky_hour_range": "",
-            "diversity_taboo_terms": "、".join(taboo_terms),
-            "avoid_instructions": "避免使用：" + "、".join(taboo_terms),
-            "diversify_key": f"{user_id}-{target_date}-{score}",
-            "recent_shown_ids": [],
-        }
-    )
-    return context
+    return {
+        "target_date": target_date.isoformat() if isinstance(target_date, date) else str(target_date),
+        "score": str(max(0, min(int(score), 100))) if str(score).strip().lstrip("-").isdigit() else "70",
+        "focus_domain": _select_focus_domain(tokens),
+        "tone": _select_tone(tokens),
+        "pressure_level": _select_pressure_level(tokens),
+        "sentence_shape": random.choice(SENTENCE_SHAPES),
+        "rhythm": random.choice(RHYTHMS),
+        "action_domain": random.choice(ACTION_DOMAINS),
+        "diversity_taboo_terms": "、".join(taboo_terms),
+        "birthday": birthday,
+        "birth_month_day": birth_month_day,
+        "diversify_key": f"{user_id}-{target_date}-{score}",
+        "recent_shown_ids": [],
+    }

@@ -24,8 +24,6 @@ FORTUNE_SCHEMA = {
         "yi",
         "ji",
         "gua_meaning_lines",
-        "lucky_hour_name",
-        "lucky_hour_range",
     ],
     "properties": {
         "score": {"type": "integer", "minimum": 0, "maximum": 100},
@@ -43,24 +41,7 @@ FORTUNE_SCHEMA = {
             "maxItems": 2,
             "items": {"type": "string", "maxLength": 40},
         },
-        "lucky_hour_name": {"type": "string", "maxLength": 20},
-        "lucky_hour_range": {"type": "string", "maxLength": 20},
     },
-}
-
-CHINESE_HOUR_RANGES = {
-    "子时": "23:00-01:00",
-    "丑时": "01:00-03:00",
-    "寅时": "03:00-05:00",
-    "卯时": "05:00-07:00",
-    "辰时": "07:00-09:00",
-    "巳时": "09:00-11:00",
-    "午时": "11:00-13:00",
-    "未时": "13:00-15:00",
-    "申时": "15:00-17:00",
-    "酉时": "17:00-19:00",
-    "戌时": "19:00-21:00",
-    "亥时": "21:00-23:00",
 }
 
 PROFILE_SCHEMA = {
@@ -81,9 +62,9 @@ PROFILE_SCHEMA = {
 
 
 DEFAULT_PROMPT_VERSIONS = {
-    "answer": "v7",
-    "fortune": "v15",
-    "profile": "v2",
+    "answer": "v4",
+    "fortune": "v4",
+    "profile": "v1",
 }
 
 
@@ -98,7 +79,7 @@ DEFAULT_PROMPT_TEXT = {
     "fortune": (
         "你是心运岛的中文运势文案助手。"
         "只输出 JSON，不要输出 markdown 或额外解释。"
-        "字段必须包含：score,content_main,content_sub,love,career,health,wealth,yi,ji,gua_meaning_lines,lucky_hour_name,lucky_hour_range。"
+        "字段必须包含：score,content_main,content_sub,love,career,health,wealth,yi,ji,gua_meaning_lines。"
         "日期：{target_date}。score 必须严格等于 {score}。"
     ),
     "profile": (
@@ -292,14 +273,6 @@ class RealProvider(LLMProvider):
         if len(normalized_gua_lines) < 2:
             normalized_gua_lines = ["阴阳守中", "稳步前行，先稳后进"]
 
-        lucky_hour_name = str(data.get("lucky_hour_name", "午时")).strip()[:20] or "午时"
-        lucky_hour_range = str(data.get("lucky_hour_range", "11:00-13:00")).strip()[:20] or "11:00-13:00"
-        lucky_hour_name, lucky_hour_range = self._normalize_lucky_hour(
-            lucky_hour_name,
-            lucky_hour_range,
-            default_name="午时",
-        )
-
         return {
             "score": score,
             "content_main": str(
@@ -313,24 +286,7 @@ class RealProvider(LLMProvider):
             "yi": [str(item).strip()[:20] for item in yi[:5] if str(item).strip()],
             "ji": [str(item).strip()[:20] for item in ji[:5] if str(item).strip()],
             "gua_meaning_lines": normalized_gua_lines,
-            "lucky_hour_name": lucky_hour_name,
-            "lucky_hour_range": lucky_hour_range,
         }
-
-    def _normalize_lucky_hour(self, name, hour_range, default_name="午时"):
-        name = str(name or "").strip()[:20]
-        hour_range = str(hour_range or "").strip()[:20]
-
-        if name in CHINESE_HOUR_RANGES:
-            return name, CHINESE_HOUR_RANGES[name]
-
-        for candidate_name, candidate_range in CHINESE_HOUR_RANGES.items():
-            if hour_range == candidate_range:
-                return candidate_name, candidate_range
-
-        if default_name not in CHINESE_HOUR_RANGES:
-            default_name = "午时"
-        return default_name, CHINESE_HOUR_RANGES[default_name]
 
     def _normalize_profile(self, data):
         mood_tendency = str(data.get("mood_tendency", "calm")).strip()[:50] or "calm"
@@ -376,44 +332,7 @@ class RealProvider(LLMProvider):
 
         return cutoff_text.strip()
 
-    def _default_generation_context(self):
-        return {
-            "answer_style": "philosophical",
-            "topic_interests": "",
-            "self_context_tag": "",
-            "mood_tendency": "",
-            "active_hour_bucket": "",
-            "selected_style": "",
-            "personalization_plan": "使用通用语气，保持安全、留白和低确定性。",
-            "material_hints": "句式：留白短句；行动域：轻动作",
-            "privacy_constraints": "不得复述用户问题、画像标签或可识别个人信息。",
-            "avoid_instructions": "避免复用近期高频表达。",
-            "diversity_taboo_terms": "",
-            "birthday": "",
-            "birth_month_day": "",
-            "imagery_domain": "",
-            "sentence_shape": "短句 + 轻动作",
-            "tone": "温和",
-            "rhythm": "留白",
-            "length_rule": "11-14 个汉字",
-            "action_domain": "整理",
-            "lucky_hour_guidance": "由 LLM 根据分数、今日基调和画像生成合法时辰。",
-            "assigned_lucky_hour_name": "",
-            "assigned_lucky_hour_range": "",
-        }
-
-    def _prompt_variables(self, values):
-        variables = self._default_generation_context()
-        for key, value in (values or {}).items():
-            if isinstance(value, list):
-                variables[key] = "、".join(str(item) for item in value)
-            elif value is None:
-                variables[key] = ""
-            else:
-                variables[key] = value
-        return variables
-
-    def generate_answer(self, question, user_id, generation_context=None):
+    def generate_answer(self, question, user_id):
         _ = user_id
         version = self.prompt_versions.get("answer")
         if version == "v4":
@@ -422,20 +341,13 @@ class RealProvider(LLMProvider):
         else:
             style = ""
 
-        variables = self._prompt_variables(generation_context)
-        if not variables.get("selected_style"):
-            variables["selected_style"] = style
-
         prompt_text = self._load_prompt_template("answer")
-        variables.update(
-            {
-                "question": question,
-                "selected_style": variables.get("selected_style") or style,
-            }
-        )
         rendered = self._render_inline(
             prompt_text,
-            variables,
+            {
+                "question": question,
+                "selected_style": style,
+            },
         )
         text = self._chat(
             messages=[{"role": "user", "content": rendered}],
@@ -452,18 +364,9 @@ class RealProvider(LLMProvider):
         title_template=None,
         keywords=None,
         yiji_items=None,
-        generation_context=None,
     ):
         _ = user_id
         profile_context = profile_context or {}
-        generation_context = generation_context or {}
-        if not profile_context:
-            profile_context = {
-                "mood_tendency": generation_context.get("mood_tendency", ""),
-                "topic_interests": generation_context.get("topic_interests", ""),
-                "self_context_tag": generation_context.get("self_context_tag", ""),
-                "active_hour_bucket": generation_context.get("active_hour_bucket", ""),
-            }
         if score is not None and title_template is not None:
             version = "v4"
         else:
@@ -478,12 +381,12 @@ class RealProvider(LLMProvider):
             score_value = int(score) if score is not None else 70
             score_value = max(0, min(score_value, 100))
             title_template = title_template or selector.select_title(score_value)
-            keywords = keywords or selector.select_keywords(profile_context, context=generation_context)
-            yiji_items = yiji_items or selector.select_yiji(profile_context, context=generation_context)
+            keywords = keywords or selector.select_keywords(profile_context)
+            yiji_items = yiji_items or selector.select_yiji(profile_context)
 
-            variables = self._prompt_variables(
+            rendered = self._render_inline(
+                prompt_text,
                 {
-                    **generation_context,
                     "target_date": target_date.isoformat(),
                     "score": str(score_value),
                     "title_main": title_template.get("main", "今日宜静待时机"),
@@ -494,23 +397,20 @@ class RealProvider(LLMProvider):
                     "wealth_keyword": keywords.get("wealth", "平稳"),
                     "yi_samples": "\n".join(yiji_items.get("yi", [])),
                     "ji_samples": "\n".join(yiji_items.get("ji", [])),
-                }
+                },
             )
-            rendered = self._render_inline(prompt_text, variables)
         else:
-            variables = self._prompt_variables(
+            rendered = self._render_inline(
+                prompt_text,
                 {
-                    **generation_context,
                     "target_date": target_date.isoformat(),
                     "mood_tendency": profile_context.get("mood_tendency", "calm"),
                     "topic_interests": ",".join(profile_context.get("topic_interests", []))
                     if isinstance(profile_context.get("topic_interests"), list)
                     else profile_context.get("topic_interests", "health"),
                     "self_context_tag": profile_context.get("self_context_tag", "日常"),
-                    "score": str(score if score is not None else generation_context.get("score", 70)),
-                }
+                },
             )
-            rendered = self._render_inline(prompt_text, variables)
 
         data = self._chat_json_schema(
             messages=[{"role": "user", "content": rendered}],

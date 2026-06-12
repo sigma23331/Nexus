@@ -322,8 +322,8 @@ class PromptLabProviderAdapter:
                 try:
                     selector = FortuneContentSelector(Path(provider_prompts_dir) / "fortune")
                     title_template = selector.select_title(score)
-                    keywords = selector.select_keywords(context, context=default_variables)
-                    yiji_items = selector.select_yiji(context, context=default_variables)
+                    keywords = selector.select_keywords(context)
+                    yiji_items = selector.select_yiji(context)
                 except Exception:
                     pass
 

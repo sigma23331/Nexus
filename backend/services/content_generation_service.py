@@ -1,5 +1,4 @@
 import hashlib
-import random as _random
 from datetime import date, datetime
 from pathlib import Path
 
@@ -7,7 +6,6 @@ from flask import current_app
 
 from services.llm.providers.mock_provider import MockProvider
 from services.llm.providers.real_provider import RealProvider
-from services import generation_context_service
 from services.user_profile_service import UserProfileService
 from tools.prompt_lab.selector import FortuneContentSelector
 
@@ -107,6 +105,37 @@ def _default_lucky_hour(score):
     return {"name": "酉时", "range": "17:00-19:00"}
 
 
+def _date_key(value):
+    return value.isoformat() if isinstance(value, date) else str(value or "")
+
+
+def _profile_birthday_key(profile_model=None, profile_context=None):
+    if isinstance(profile_context, dict):
+        birthday = profile_context.get("birth_month_day") or profile_context.get("birthday")
+        if birthday:
+            birthday = str(birthday)
+            return birthday[5:10] if len(birthday) >= 10 and birthday[4:5] == "-" else birthday
+
+    try:
+        birthday = getattr(getattr(profile_model, "user", None), "birthday", None)
+    except Exception:
+        birthday = None
+
+    if isinstance(birthday, date):
+        return birthday.strftime("%m-%d")
+    birthday = str(birthday or "")
+    if len(birthday) >= 10 and birthday[4:5] == "-":
+        return birthday[5:10]
+    return birthday
+
+
+def _stable_fortune_score(user_id, target_date, profile_model=None, profile_context=None):
+    birthday = _profile_birthday_key(profile_model=profile_model, profile_context=profile_context)
+    key = f"{user_id or 'anonymous'}|{birthday}|{_date_key(target_date)}|fortune_score"
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+    return int(digest[:12], 16) % 101
+
+
 _CHINESE_HOUR_RANGES = {
     "子时": "23:00-01:00",
     "丑时": "01:00-03:00",
@@ -125,7 +154,7 @@ _CHINESE_HOUR_RANGES = {
 
 def _stable_lucky_hour(user_id, target_date, generation_context=None):
     context = generation_context if isinstance(generation_context, dict) else {}
-    date_value = target_date.isoformat() if isinstance(target_date, date) else str(target_date or "")
+    date_value = _date_key(target_date)
     birthday = context.get("birth_month_day") or context.get("birthday") or ""
     key = f"{user_id or 'anonymous'}|{birthday}|{date_value}|lucky_hour"
     digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
@@ -245,9 +274,9 @@ def get_provider(force_refresh=False):
                 base_url=current_app.config.get("LLM_BASE_URL", "https://api.openai.com/v1"),
                 prompts_dir=current_app.config.get("LLM_PROMPTS_DIR"),
                 prompt_versions={
-                    "answer": current_app.config.get("LLM_PROMPT_ANSWER_VERSION", "v7"),
-                    "fortune": current_app.config.get("LLM_PROMPT_FORTUNE_VERSION", "v15"),
-                    "profile": current_app.config.get("LLM_PROMPT_PROFILE_VERSION", "v2"),
+                    "answer": current_app.config.get("LLM_PROMPT_ANSWER_VERSION", "v4"),
+                    "fortune": current_app.config.get("LLM_PROMPT_FORTUNE_VERSION", "v4"),
+                    "profile": current_app.config.get("LLM_PROMPT_PROFILE_VERSION", "v1"),
                 },
             )
             return _provider_cache
@@ -267,22 +296,7 @@ def generate_answer(question, user_id):
 
     provider = get_provider()
     try:
-        generation_context = generation_context_service.build_answer_context(
-            user_id=user_id,
-            question=text,
-        )
-    except Exception:
-        generation_context = generation_context_service.build_answer_context(user_id=None, question=text)
-
-    try:
-        try:
-            answer_text = provider.generate_answer(
-                question=text,
-                user_id=user_id,
-                generation_context=generation_context,
-            )
-        except TypeError:
-            answer_text = provider.generate_answer(question=text, user_id=user_id)
+        answer_text = provider.generate_answer(question=text, user_id=user_id)
         generated_by = "provider"
     except Exception:
         answer_text = _fallback_answer(text)
@@ -328,6 +342,9 @@ def generate_profile(diary_entries, answer_questions):
 
 def generate_fallback_fortune(target_date, user_id=None, generation_context=None):
     normalized = _normalize_fortune_payload(_fallback_fortune(target_date))
+    score = _stable_fortune_score(user_id=user_id, target_date=target_date, profile_context=generation_context)
+    normalized["score"] = score
+    normalized["title"] = _score_to_title(score)
     lucky_hour = _stable_lucky_hour(
         user_id=user_id,
         target_date=target_date,
@@ -344,77 +361,99 @@ def generate_fortune(user_id, target_date):
         raise ValueError("target_date must be a date")
 
     provider = get_provider()
-    score = _random.randint(0, 100)
+    version = getattr(provider, "prompt_versions", {}).get("fortune", "")
+    profile_model = None
+    profile_context = None
     try:
-        generation_context = generation_context_service.build_fortune_context(
-            user_id=user_id,
-            target_date=target_date,
-            score=score,
-        )
+        profile_model = UserProfileService.get_by_user_id(user_id)
+        if profile_model:
+            profile_context = UserProfileService.to_dict(profile_model)
     except Exception:
-        generation_context = generation_context_service.build_fortune_context(
-            user_id=None,
-            target_date=target_date,
-            score=score,
-        )
+        profile_model = None
+        profile_context = None
 
-    profile_context = {
-        "mood_tendency": generation_context.get("tone", ""),
-        "topic_interests": [
-            item.strip()
-            for item in str(generation_context.get("focus_domain", "") or "").replace("，", ",").split(",")
-            if item.strip()
-        ],
-        "self_context_tag": generation_context.get("pressure_level", ""),
-        "active_hour_bucket": "",
+    score = _stable_fortune_score(
+        user_id=user_id,
+        target_date=target_date,
+        profile_model=profile_model,
+        profile_context=profile_context,
+    )
+    generation_context = {
+        "birthday": _profile_birthday_key(profile_model=profile_model, profile_context=profile_context),
     }
 
-    prompts_dir = getattr(provider, "prompts_dir", None)
-    if prompts_dir:
-        selector = FortuneContentSelector(Path(prompts_dir) / "fortune")
-        title_template = selector.select_title(score)
-        keywords = selector.select_keywords(profile_context, context=generation_context)
-        yiji_items = selector.select_yiji(profile_context, context=generation_context)
+    if version == "v4":
+        prompts_dir = getattr(provider, "prompts_dir", None)
+        if prompts_dir:
+            selector = FortuneContentSelector(Path(prompts_dir) / "fortune")
+            title_template = selector.select_title(score)
+            keywords = selector.select_keywords(profile_context)
+            yiji_items = selector.select_yiji(profile_context)
+        else:
+            title_template = {"main": "今日宜静待时机", "sub": "稳中求进"}
+            keywords = {"love": "平稳", "career": "平稳", "health": "稳定", "wealth": "平稳"}
+            yiji_items = {"yi": [], "ji": []}
+
+        payload = None
+        generated_by = "fallback"
+        max_attempts = _get_generation_attempts(provider)
+        last_error = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                payload = provider.generate_fortune(
+                    user_id=user_id,
+                    target_date=target_date,
+                    score=score,
+                    title_template=title_template,
+                    keywords=keywords,
+                    yiji_items=yiji_items,
+                )
+                generated_by = "provider"
+                last_error = None
+                break
+            except TypeError as exc:
+                last_error = exc
+                break
+            except Exception as exc:
+                last_error = exc
+                if attempt < max_attempts:
+                    _log_generation_retry("fortune", attempt, max_attempts, exc)
+
+        if generated_by != "provider":
+            if last_error is not None:
+                _log_generation_fallback("fortune", last_error)
+            payload = _fallback_fortune(target_date)
     else:
-        title_template = {"main": "今日宜静待时机", "sub": "稳中求进"}
-        keywords = {"love": "平稳", "career": "平稳", "health": "稳定", "wealth": "平稳"}
-        yiji_items = {"yi": [], "ji": []}
+        payload = None
+        generated_by = "fallback"
+        max_attempts = _get_generation_attempts(provider)
+        last_error = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                try:
+                    payload = provider.generate_fortune(
+                        user_id=user_id,
+                        target_date=target_date,
+                        profile_context=profile_context,
+                    )
+                except TypeError:
+                    payload = provider.generate_fortune(user_id=user_id, target_date=target_date)
+                generated_by = "provider"
+                last_error = None
+                break
+            except Exception as exc:
+                last_error = exc
+                if attempt < max_attempts:
+                    _log_generation_retry("fortune", attempt, max_attempts, exc)
 
-    payload = None
-    score_controlled = False
-    generated_by = "fallback"
-    max_attempts = _get_generation_attempts(provider)
-    last_error = None
-    for attempt in range(1, max_attempts + 1):
-        try:
-            payload, score_controlled = _call_generate_fortune(
-                provider=provider,
-                user_id=user_id,
-                target_date=target_date,
-                score=score,
-                title_template=title_template,
-                keywords=keywords,
-                yiji_items=yiji_items,
-                profile_context=profile_context,
-                generation_context=generation_context,
-            )
-            generated_by = "provider"
-            last_error = None
-            break
-        except Exception as exc:
-            last_error = exc
-            if attempt < max_attempts:
-                _log_generation_retry("fortune", attempt, max_attempts, exc)
-
-    if generated_by != "provider":
-        if last_error is not None:
-            _log_generation_fallback("fortune", last_error)
-        payload = _fallback_fortune(target_date)
+        if generated_by != "provider":
+            if last_error is not None:
+                _log_generation_fallback("fortune", last_error)
+            payload = _fallback_fortune(target_date)
 
     normalized = _normalize_fortune_payload(payload)
-    if generated_by == "provider" and score_controlled:
-        normalized["score"] = score
-        normalized["title"] = _score_to_title(score)
+    normalized["score"] = score
+    normalized["title"] = _score_to_title(score)
     lucky_hour = _stable_lucky_hour(
         user_id=user_id,
         target_date=target_date,
@@ -424,54 +463,3 @@ def generate_fortune(user_id, target_date):
     normalized["lucky_hour_range"] = lucky_hour["range"]
     normalized["generatedBy"] = generated_by
     return normalized
-
-
-def _call_generate_fortune(
-    provider,
-    user_id,
-    target_date,
-    score,
-    title_template,
-    keywords,
-    yiji_items,
-    profile_context,
-    generation_context,
-):
-    attempts = [
-        {
-            "user_id": user_id,
-            "target_date": target_date,
-            "profile_context": profile_context,
-            "score": score,
-            "title_template": title_template,
-            "keywords": keywords,
-            "yiji_items": yiji_items,
-            "generation_context": generation_context,
-        },
-        {
-            "user_id": user_id,
-            "target_date": target_date,
-            "score": score,
-            "title_template": title_template,
-            "keywords": keywords,
-            "yiji_items": yiji_items,
-        },
-        {
-            "user_id": user_id,
-            "target_date": target_date,
-            "profile_context": profile_context,
-        },
-        {
-            "user_id": user_id,
-            "target_date": target_date,
-        },
-    ]
-    last_type_error = None
-    for index, kwargs in enumerate(attempts):
-        try:
-            return provider.generate_fortune(**kwargs), index <= 1
-        except TypeError as exc:
-            last_type_error = exc
-    if last_type_error is not None:
-        raise last_type_error
-    return provider.generate_fortune(user_id=user_id, target_date=target_date), False

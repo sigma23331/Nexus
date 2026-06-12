@@ -263,8 +263,8 @@ def _make_executor(adapter, prompts_dir):
             generation_context = _generation_context_for_sample(sample, task="fortune", score=score, repeat_index=case.get("repeat_index", 0))
             if fortune_selector:
                 title_template = fortune_selector.select_title(score)
-                keywords = fortune_selector.select_keywords(context, context=generation_context)
-                yiji_items = fortune_selector.select_yiji(context, context=generation_context)
+                keywords = fortune_selector.select_keywords(context)
+                yiji_items = fortune_selector.select_yiji(context)
             else:
                 title_template = {"main": "今日宜静待时机", "sub": "稳中求进"}
                 keywords = {"love": "平稳", "career": "平稳", "health": "稳定", "wealth": "平稳"}

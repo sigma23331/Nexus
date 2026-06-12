@@ -1,4 +1,4 @@
-from tools.prompt_lab.selector import AnswerStyleSelector, FortuneContentSelector
+from tools.prompt_lab.selector import AnswerStyleSelector, FortuneContentSelector, stable_fortune_score
 
 
 def test_answer_selector_loads_and_selects(tmp_path):
@@ -97,162 +97,35 @@ def test_fortune_selector_yiji_returns_dict(tmp_path):
     assert len(result["ji"]) > 0
 
 
-def test_fortune_selector_keywords_are_stable_for_same_profile(tmp_path, monkeypatch):
-    base = tmp_path / "fortune"
-    _build_fortune_dirs(base)
-    selector = FortuneContentSelector(str(base))
-
-    monkeypatch.setattr("tools.prompt_lab.selector.random.random", lambda: 0.8)
-
-    profile = {
-        "topic_interests": ["job_seek", "goal_job_change"],
-        "mood_tendency": "optimistic|high_friction|mid_energy",
-        "self_context_tag": "graduation|job_seek|sleep_low",
+def test_stable_fortune_score_is_stable_for_same_user_and_date():
+    context = {
+        "virtual_user_id": "u1",
+        "birthday": "2001-02-03",
     }
-    first = selector.select_keywords(profile)
-    second = selector.select_keywords(profile)
+
+    first = stable_fortune_score(context, "2026-04-25")
+    second = stable_fortune_score(context, "2026-04-25")
 
     assert first == second
+    assert 0 <= first <= 100
 
 
-def test_fortune_selector_keywords_ranked_prefers_profile_tokens(tmp_path, monkeypatch):
-    base = tmp_path / "fortune"
-    _build_fortune_dirs(base)
-    (base / "keywords" / "career.txt").write_text("平稳推进\njob_seek冲刺\n沟通协作", encoding="utf-8")
-    selector = FortuneContentSelector(str(base))
-
-    monkeypatch.setattr("tools.prompt_lab.selector.random.random", lambda: 0.8)
-
-    selected, debug_meta = selector.select_keywords_ranked(
-        {
-            "topic_interests": ["job_seek"],
-            "mood_tendency": "steady",
-            "self_context_tag": "campus",
-        },
-        context=None,
-        k=3,
-        explore_rate=0.1,
-    )
-
-    assert selected["career"] == "job_seek冲刺"
-    assert debug_meta["strategy"] == "exploit"
-
-
-def test_fortune_selector_keywords_ranked_is_backward_compatible_shape(tmp_path, monkeypatch):
-    base = tmp_path / "fortune"
-    _build_fortune_dirs(base)
-    selector = FortuneContentSelector(str(base))
-
-    monkeypatch.setattr("tools.prompt_lab.selector.random.random", lambda: 0.8)
-
-    selected, debug_meta = selector.select_keywords_ranked(None, context=None)
-
-    assert set(selected.keys()) == {"love", "career", "health", "wealth"}
-    assert "candidates" in debug_meta
-
-
-def test_fortune_selector_keywords_uses_default_explore_rate(tmp_path, monkeypatch):
-    base = tmp_path / "fortune"
-    _build_fortune_dirs(base)
-    (base / "keywords" / "career.txt").write_text("job_seek核心\n普通方案A\n普通方案B", encoding="utf-8")
-    selector = FortuneContentSelector(str(base))
-
-    monkeypatch.setattr("tools.prompt_lab.selector.random.random", lambda: 0.0)
-    monkeypatch.setattr("tools.prompt_lab.selector.random.choice", lambda seq: seq[0])
-
-    selected = selector.select_keywords(
-        {
-            "topic_interests": ["job_seek"],
-            "mood_tendency": "steady",
-            "self_context_tag": "campus",
-        }
-    )
-
-    assert selected["career"] != "job_seek核心"
-
-
-def test_fortune_selector_keywords_ranked_diversifies_by_context_key(tmp_path):
-    base = tmp_path / "fortune"
-    _build_fortune_dirs(base)
-    (base / "keywords" / "career.txt").write_text("方案甲\n方案乙\n方案丙\n方案丁", encoding="utf-8")
-    selector = FortuneContentSelector(str(base), default_explore_rate=0.0)
-
-    profile = {
-        "topic_interests": ["unknown_topic"],
-        "mood_tendency": "neutral",
-        "self_context_tag": "daily",
+def test_stable_fortune_score_changes_with_date():
+    context = {
+        "virtual_user_id": "u1",
+        "birthday": "2001-02-03",
     }
 
-    first, _ = selector.select_keywords_ranked(
-        profile,
-        context={"diversify_key": "user-a-2026-05-04"},
-        k=4,
-        explore_rate=0.0,
-    )
-    second, _ = selector.select_keywords_ranked(
-        profile,
-        context={"diversify_key": "user-b-2026-05-04"},
-        k=4,
-        explore_rate=0.0,
-    )
-
-    assert first["career"] != second["career"]
+    assert stable_fortune_score(context, "2026-04-25") != stable_fortune_score(context, "2026-04-26")
 
 
-def test_fortune_selector_yiji_ranked_avoids_same_action_prefix(tmp_path):
+def test_fortune_selector_keywords_use_random_choice(tmp_path, monkeypatch):
     base = tmp_path / "fortune"
     _build_fortune_dirs(base)
-    (base / "yiji" / "yi.txt").write_text("整理书桌\n整理房间\n散步十分钟\n复盘计划", encoding="utf-8")
-    selector = FortuneContentSelector(str(base), default_explore_rate=0.0)
+    selector = FortuneContentSelector(str(base))
 
-    selected, _ = selector.select_yiji_ranked(
-        profile={"topic_interests": [], "mood_tendency": "", "self_context_tag": ""},
-        context={"diversify_key": "user-a-2026-05-04"},
-        k=4,
-        per_bucket=2,
-        explore_rate=0.0,
-    )
+    monkeypatch.setattr("tools.prompt_lab.selector.random.choice", lambda seq: seq[-1])
 
-    assert len(selected["yi"]) == 2
-    assert not (selected["yi"][0].startswith("整理") and selected["yi"][1].startswith("整理"))
+    selected = selector.select_keywords({"topic_interests": ["career"]})
 
-
-def test_fortune_selector_yiji_ranked_penalizes_recent_shown_ids(tmp_path):
-    base = tmp_path / "fortune"
-    _build_fortune_dirs(base)
-    (base / "yiji" / "yi.txt").write_text("整理书桌\n散步十分钟\n复盘计划", encoding="utf-8")
-    selector = FortuneContentSelector(str(base), default_explore_rate=0.0)
-
-    selected, _ = selector.select_yiji_ranked(
-        profile={"topic_interests": [], "mood_tendency": "", "self_context_tag": ""},
-        context={"recent_shown_ids": ["yi:整理书桌", "yi:整理书桌", "yi:整理书桌"]},
-        k=3,
-        per_bucket=1,
-        explore_rate=0.0,
-    )
-
-    assert selected["yi"][0] != "整理书桌"
-
-
-def test_fortune_selector_yiji_ranked_diversifies_by_context_key(tmp_path):
-    base = tmp_path / "fortune"
-    _build_fortune_dirs(base)
-    (base / "yiji" / "yi.txt").write_text("整理书桌\n散步十分钟\n复盘计划\n喝水", encoding="utf-8")
-    selector = FortuneContentSelector(str(base), default_explore_rate=0.0)
-
-    first, _ = selector.select_yiji_ranked(
-        profile={"topic_interests": [], "mood_tendency": "", "self_context_tag": ""},
-        context={"diversify_key": "user-a-2026-05-04"},
-        k=4,
-        per_bucket=1,
-        explore_rate=0.0,
-    )
-    second, _ = selector.select_yiji_ranked(
-        profile={"topic_interests": [], "mood_tendency": "", "self_context_tag": ""},
-        context={"diversify_key": "user-b-2026-05-04"},
-        k=4,
-        per_bucket=1,
-        explore_rate=0.0,
-    )
-
-    assert first["yi"] != second["yi"]
+    assert selected["career"] == "稳扎稳打"

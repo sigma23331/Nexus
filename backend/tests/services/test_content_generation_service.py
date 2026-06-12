@@ -65,8 +65,9 @@ def test_generate_fortune_returns_required_fields(monkeypatch):
 
     payload = cgs.generate_fortune(user_id="u1", target_date=date(2026, 4, 25))
 
-    assert payload["score"] == 88
-    assert payload["title"] == "上上签"
+    expected_score = cgs._stable_fortune_score("u1", date(2026, 4, 25))
+    assert payload["score"] == expected_score
+    assert payload["title"] == cgs._score_to_title(expected_score)
     assert payload["content_main"] == "适合开启新计划。"
     assert payload["content_sub"] == "稳中求进，心静则明。"
     assert payload["love"] == "中上"
@@ -93,7 +94,7 @@ def test_generate_fortune_passes_profile_context_when_available(monkeypatch):
         def generate_fortune(self, user_id, target_date, profile_context=None):
             assert user_id == "u1"
             assert profile_context["topic_interests"] == ["career"]
-            assert profile_context["self_context_tag"] == "normal"
+            assert profile_context["self_context_tag"] == "日常"
             return {
                 "score": 80,
                 "content_main": "稳步向前。",
